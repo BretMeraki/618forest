@@ -949,41 +949,10 @@ class CleanForestServer {
     );
   }
 
-  /**
-   * @param {string} blockId
-   * @param {string} outcome
-   * @param {string} learned
-   * @param {string[]} nextQuestions
-   * @param {number} energyLevel
-   * @param {number} difficultyRating
-   * @param {boolean} breakthrough
-   * @param {number} engagementLevel
-   * @param {string[]} unexpectedResults
-   * @param {string[]} newSkillsRevealed
-   * @param {string[]} externalFeedback
-   * @param {string[]} socialReactions
-   * @param {string[]} viralPotential
-   * @param {string[]} industryConnections
-   * @param {string[]} serendipitousEvents
-   */
-  async completeBlock(blockId, outcome, learned, nextQuestions, energyLevel, difficultyRating, breakthrough, engagementLevel, unexpectedResults, newSkillsRevealed, externalFeedback, socialReactions, viralPotential, industryConnections, serendipitousEvents) {
-    return await this.taskCompletion.completeBlock(
-      blockId,
-      outcome,
-      learned,
-      /** @type {any} */ (nextQuestions),
-      energyLevel,
-      difficultyRating,
-      breakthrough,
-      engagementLevel,
-      unexpectedResults,
-      newSkillsRevealed,
-      externalFeedback,
-      socialReactions,
-      /** @type {any} */ (viralPotential),
-      industryConnections,
-      serendipitousEvents,
-    );
+  /** Complete a learning block. Accepts either an options object or legacy positional args (forwarded). */
+  async completeBlock(args) {
+    // Accept already-formed options object from ToolRouter or legacy positional array.
+    return await this.taskCompletion.completeBlock(args);
   }
 
   /** @param {string} feedback */

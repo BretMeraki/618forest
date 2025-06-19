@@ -130,15 +130,7 @@ export class ToolRouter {
           );
           break;
         case 'complete_block':
-          result = await this.forestServer.completeBlock(
-            args.block_id,
-            args.outcome,
-            args.learned || '',
-            args.next_questions || '',
-            args.energy_level,
-            args.difficulty_rating ?? args.difficulty ?? 1,
-            args.breakthrough || false
-          );
+          result = await this.forestServer.completeBlock(args);
           break;
         case 'complete_with_opportunities':
           result = await this.forestServer.completeBlock(
@@ -250,15 +242,7 @@ export class ToolRouter {
           );
           break;
         case 'complete_block_and_next': {
-          const completion = await this.forestServer.completeBlock(
-            args.block_id,
-            args.outcome,
-            args.learned || '',
-            args.next_questions || '',
-            args.energy_level,
-            args.difficulty_rating ?? args.difficulty ?? 1,
-            args.breakthrough || false
-          );
+          const completion = await this.forestServer.completeBlock(args);
 
           // CRITICAL FIX: Pass completion context for momentum building
           const momentumContext = args.breakthrough ?

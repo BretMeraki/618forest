@@ -14,9 +14,60 @@ export class TaskCompletion {
     this.eventBus = eventBus || bus; // Use provided eventBus or default to global bus
   }
 
-  async completeBlock(blockId, outcome, learned = '', nextQuestions = '', energyLevel, difficultyRating = 3, breakthrough = false,
+  /**
+   * Complete a learning block.
+   * @param {Object|any} options Either an options object (preferred) or legacy positional args.
+   */
+  async completeBlock(
+    options,
+    // Legacy positional args retained for a short transition period – will be removed later.
+    outcome,
+    learned = '', nextQuestions = '', energyLevel, difficultyRating = 3, breakthrough = false,
     engagementLevel = 5, unexpectedResults = [], newSkillsRevealed = [], externalFeedback = [],
-    socialReactions = [], viralPotential = false, industryConnections = [], serendipitousEvents = []) {
+    socialReactions = [], viralPotential = false, industryConnections = [], serendipitousEvents = []
+  ) {
+    // Convert legacy positional call to the new object form.
+    let opts;
+    if (typeof options === 'object' && options !== null && !Array.isArray(options) && options.blockId) {
+      opts = options;
+    } else {
+      opts = {
+        blockId: options,
+        outcome,
+        learned,
+        nextQuestions,
+        energyLevel,
+        difficultyRating,
+        breakthrough,
+        engagementLevel,
+        unexpectedResults,
+        newSkillsRevealed,
+        externalFeedback,
+        socialReactions,
+        viralPotential,
+        industryConnections,
+        serendipitousEvents
+      };
+    }
+
+    const {
+      blockId,
+      outcome: out,
+      learned: lrnd = '',
+      nextQuestions: nq = '',
+      energyLevel: en,
+      difficultyRating: diff = 3,
+      breakthrough: br = false,
+      engagementLevel: eng = 5,
+      unexpectedResults: unexp = [],
+      newSkillsRevealed: skills = [],
+      externalFeedback: feedbackArr = [],
+      socialReactions: reactions = [],
+      viralPotential: viral = false,
+      industryConnections: connections = [],
+      serendipitousEvents: serendip = []
+    } = opts;
+
     try {
       const projectId = await this.projectManagement.requireActiveProject();
       const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
@@ -63,24 +114,24 @@ export class TaskCompletion {
       // Mark block as completed
       block.completed = true;
       block.completedAt = new Date().toISOString();
-      block.outcome = outcome;
-      block.learned = learned;
-      block.nextQuestions = nextQuestions;
-      block.energyAfter = energyLevel;
-      block.difficultyRating = difficultyRating;
-      block.breakthrough = breakthrough;
+      block.outcome = out;
+      block.learned = lrnd;
+      block.nextQuestions = nq;
+      block.energyAfter = en;
+      block.difficultyRating = diff;
+      block.breakthrough = br;
 
       // Add opportunity detection context if provided
-      if (engagementLevel !== 5 || unexpectedResults.length > 0) {
+      if (eng !== 5 || unexp.length > 0) {
         block.opportunityContext = {
-          engagementLevel,
-          unexpectedResults,
-          newSkillsRevealed,
-          externalFeedback,
-          socialReactions,
-          viralPotential,
-          industryConnections,
-          serendipitousEvents
+          engagementLevel: eng,
+          unexpectedResults: unexp,
+          newSkillsRevealed: skills,
+          externalFeedback: feedbackArr,
+          socialReactions: reactions,
+          viralPotential: viral,
+          industryConnections: connections,
+          serendipitousEvents: serendip
         };
       }
 
@@ -91,7 +142,7 @@ export class TaskCompletion {
       await this.updateLearningHistory(projectId, config.activePath || DEFAULT_PATHS.GENERAL, block);
 
       // Emit block completion event for decoupled strategy evolution
-      if (learned || nextQuestions || breakthrough) {
+      if (lrnd || nq || br) {
         this.eventBus.emit('block:completed', {
           projectId,
           pathName: config.activePath || DEFAULT_PATHS.GENERAL,
@@ -115,7 +166,7 @@ export class TaskCompletion {
       };
 
     } catch (error) {
-      await this.dataPersistence.logError('completeBlock', error, { blockId, outcome });
+      await this.dataPersistence.logError('completeBlock', error, { blockId, outcome: out });
       return {
         content: [{
           type: 'text',
