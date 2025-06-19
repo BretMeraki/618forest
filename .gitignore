@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# IDE and Editor files
+.cursor/
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Snapshots and temporary files
+.snapshots/
+.tmp/
+.temp/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Jest cache
+.jest-cache/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache 
