@@ -1,830 +1,430 @@
-/**
- * HTA Tree Builder Module
- * Handles HTA tree construction and strategic task generation
- */
+// ============================================
+// HTA DEEP HIERARCHY SYSTEM
+// Supports multi-level depth based on goal complexity
+// ============================================
 
-import { HtaNode } from '../models/index.js';
+import { DEFAULT_PATHS, FILE_NAMES } from './constants.js'; // Assuming constants.js is in the same directory
 
 export class HtaTreeBuilder {
-  constructor(server, dataPersistence, projectManagement, llmInterface) {
-    this.server = server;
+  constructor(dataPersistence, projectManagement, claudeInterface) {
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
-
-    // Safe-guard: always provide an object with requestIntelligence()
-    if (llmInterface && typeof llmInterface.requestIntelligence === 'function') {
-      this.llm = llmInterface;
-    } else {
-      // Fallback dummy interface that signals the UI to queue a manual Claude request
-      this.llm = {
-        requestIntelligence: async (_purpose, { prompt }) => ({
-          request_for_claude: true,
-          prompt,
-          instructions: 'Please generate tasks based on this prompt'
-        })
-      };
-    }
-
-    // Collect Claude generation requests when an online LLM is not available.
-    this.pendingClaudeRequests = [];
+    this.claudeInterface = claudeInterface; // Will be available for future AI interaction logic
   }
 
   /**
-   * Get Claude interface from the server instance
-   * This method demonstrates the fix for the dependency injection flaw
+   * Build a deep, complexity-aware HTA tree
    */
-  getClaudeInterface() {
-    if (this.server && this.server.core && typeof this.server.core.getClaudeInterface === 'function') {
-      return this.server.core.getClaudeInterface();
-    }
-    return null;
-  }
-
-  async buildHTATree(pathName = null, learningStyle = 'mixed', focusAreas = []) {
+  async buildHTATree(pathName, learningStyle = 'mixed', focusAreas = []) {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
-      const config = await this.dataPersistence.loadProjectData(projectId, 'config.json');
+      const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
 
-      if (!config) {
-        const { ProjectConfigurationError } = await import('./errors.js');
-        throw new ProjectConfigurationError(projectId, 'config.json', null, { operation: 'buildHTATree' });
+      if (!config || !config.goal) { // Added check for config itself
+        throw new Error('Project must have a goal defined in config to build HTA tree');
       }
 
-      // Warn (but no longer block) if additional context is missing. Heuristic fallback now allowed.
-      const contextWarning = (!config.context || (typeof config.context === 'string' && config.context.trim() === ''))
-        ? '⚠️ Context not provided – using heuristic roadmap generation. Results may be less precise.'
-        : null;
+      // Analyze goal complexity to determine tree depth
+      const complexityAnalysis = this.analyzeGoalComplexity(config.goal, config.context);
 
-      // Determine which path to build for
-      const targetPath = pathName || config.activePath || 'general';
+      // Generate the collaborative prompt for deep branch creation
+      const branchPrompt = this.generateDeepBranchPrompt(config, learningStyle, focusAreas, complexityAnalysis);
 
-      // Check if path exists in learning paths
-      const pathExists = config.learning_paths?.some(p => p.path_name === targetPath) || targetPath === 'general';
-      if (!pathExists) {
-        const { ValidationError } = await import('./errors.js');
-        throw new ValidationError('learning_path', targetPath, 'existing path name', {
-          operation: 'buildHTATree',
-          availablePaths: config.learning_paths?.map(p => p.path_name) || []
-        });
-      }
-
-      // Load existing HTA data for this path
-      const existingHTA = await this.loadPathHTA(projectId, targetPath);
-
-      // Generate strategic framework
-      const htaData = await this.generateHTAFramework(config, targetPath, learningStyle, focusAreas, existingHTA);
-
-      // Save HTA data
-      await this.savePathHTA(projectId, targetPath, htaData);
-
-      // Update project config with active path
-      config.activePath = targetPath;
-      await this.dataPersistence.saveProjectData(projectId, 'config.json', config);
-
-      // Wait (up to 60 s) for LLM to respond before falling back heuristically.
-      if ((htaData.frontierNodes?.length || 0) === 0 && this.pendingClaudeRequests.length > 0) {
-        await this._waitForClaudeResponses(60000);
-        // After waiting, if we still have pending requests, we simply attach them so the UI can show a notice
-        // but we do NOT block the full HTA result from being returned.
-      }
-
-      // Format question tree for display
-      const formatQuestionTree = (node, indent = '') => {
-        if (!node) {return '';}
-        let output = `${indent}❓ ${node.question}\n`;
-        if (node.spawned_questions?.length > 0) {
-          for (const child of node.spawned_questions) {
-            output += formatQuestionTree(child, `${indent}  `);
-          }
+      // Initialize HTA structure with hierarchy support
+      const htaData = {
+        projectId,
+        pathName: pathName || DEFAULT_PATHS.GENERAL, // Use DEFAULT_PATHS
+        created: new Date().toISOString(),
+        learningStyle,
+        focusAreas,
+        goal: config.goal,
+        context: config.context || '',
+        complexity: complexityAnalysis,
+        strategicBranches: [],
+        frontierNodes: [],
+        completed_nodes: [], // Corrected typo from completed_nodes
+        collaborative_sessions: [],
+        hierarchy_metadata: {
+          total_depth: complexityAnalysis.recommended_depth,
+          total_branches: 0,
+          total_sub_branches: 0,
+          total_tasks: 0,
+          branch_task_distribution: {}
+        },
+        generation_context: {
+          method: 'deep_hierarchical_ai',
+          timestamp: new Date().toISOString(),
+          goal: config.goal,
+          complexity_score: complexityAnalysis.score,
+          awaiting_generation: true
         }
-        return output;
       };
 
-      const questionTreeDisplay = htaData.questionTree ?
-        `\n**🧠 Question Roadmap:**\n${formatQuestionTree(htaData.questionTree)}` : '';
+      // Save initial structure
+      await this.savePathHTA(projectId, pathName || DEFAULT_PATHS.GENERAL, htaData); // Use DEFAULT_PATHS
 
-      const summaryText = `🌳 HTA Question-Tree built successfully for "${targetPath}" path!\n\n` +
-               `**Complexity**: ${htaData.complexityProfile?.complexity_score || 'N/A'}/10\n` +
-               `**Target Depth**: ${htaData.depthConfig?.targetDepth || 'N/A'} levels\n` +
-               `**Questions Generated**: ${this.countTotalQuestions(htaData.questionTree)}\n` +
-               `**Learning Style**: ${learningStyle}\n` +
-               `**Focus Areas**: ${focusAreas.join(', ') || 'General exploration'}${
-                 questionTreeDisplay}\n\n` +
-        '✅ Ready to start with question-driven task generation!';
-
-      return {
-        content: [{ type: 'text', text: contextWarning ? `${contextWarning}\n\n${summaryText}` : summaryText }],
-        hta_tree: htaData,
-        active_path: targetPath,
-        warning: contextWarning || undefined
-      };
-    } catch (error) {
-      await this.dataPersistence.logError('buildHTATree', error, { pathName, learningStyle, focusAreas });
       return {
         content: [{
           type: 'text',
-          text: `Error building HTA tree: ${error.message}`
-        }]
+          text: `🌳 **Deep HTA Tree Framework Created!**
+
+**Your Goal**: ${config.goal}
+
+**Complexity Analysis**:
+• Complexity Score: ${complexityAnalysis.score}/10
+• Recommended Depth: ${complexityAnalysis.recommended_depth} levels
+• Estimated Total Tasks: ${complexityAnalysis.estimated_tasks}
+• Time to Mastery: ${complexityAnalysis.time_estimate}
+
+**Tree Structure**:
+• Main Branches: ${complexityAnalysis.main_branches}
+• Sub-branches per Branch: ${complexityAnalysis.sub_branches_per_main}
+• Tasks per Leaf: ${complexityAnalysis.tasks_per_leaf}
+
+The Forest system will create a ${complexityAnalysis.recommended_depth}-level deep hierarchy tailored to your goal's complexity.
+
+**Prompt for Branch Generation**:
+
+${branchPrompt}
+
+**Next Steps**:
+1. Copy the analysis prompt above
+2. Let Claude create your deep hierarchical structure
+3. Use \`generate_hta_tasks\` to store the complete tree
+
+Your goal deserves the depth and detail this system will provide!`
+        }],
+        generation_prompt: branchPrompt,
+        complexity_analysis: complexityAnalysis,
+        requires_branch_generation: true
       };
-    }
-  }
-
-  countTotalQuestions(questionTree) {
-    if (!questionTree) {return 0;}
-    let count = 1; // count this node
-    if (questionTree.spawned_questions?.length > 0) {
-      for (const child of questionTree.spawned_questions) {
-        count += this.countTotalQuestions(child);
-      }
-    }
-    return count;
-  }
-
-  async loadPathHTA(projectId, pathName) {
-    if (pathName === 'general') {
-      return await this.dataPersistence.loadProjectData(projectId, 'hta.json');
-    } else {
-      return await this.dataPersistence.loadPathData(projectId, pathName, 'hta.json');
-    }
-  }
-
-  async savePathHTA(projectId, pathName, htaData) {
-    if (pathName === 'general') {
-      return await this.dataPersistence.saveProjectData(projectId, 'hta.json', htaData);
-    } else {
-      return await this.dataPersistence.savePathData(projectId, pathName, 'hta.json', htaData);
-    }
-  }
-
-  async generateHTAFramework(config, pathName, learningStyle = 'mixed', focusAreas = [], existingHTA = null) {
-    const goal = config.goal;
-    const knowledgeLevel = config.knowledge_level || 1;
-    const interests = this.getPathInterests(config, pathName);
-
-    /* ─── NEW • analyse goal complexity & compute optimal depth ─── */
-    const targetTimeframe = config.target_timeframe || '';
-    const complexityProfile = await this.assessGoalComplexity(goal);
-    const depthConfig = this.calculateOptimalDepth(
-      complexityProfile?.complexity_score ?? 5,
-      knowledgeLevel,
-      targetTimeframe
-    );
-    /* ───────────────────────────────────────────────────────────── */
-
-    // ─── NEW • generate calibrated Question-Tree skeleton ───
-    const questionTree = await this.generateQuestionSkeleton(goal, depthConfig);
-    // ----------------------------------------------------------
-
-    // Generate strategic branches (legacy approach – will evolve to Q-driven soon)
-    const strategicBranches = await this.generateStrategicBranches(
-      goal,
-      pathName,
-      focusAreas,
-      knowledgeLevel
-    );
-
-    // Generate frontier nodes (kept empty for now)
-    const frontierNodes = await this.generateSequencedFrontierNodes(
-      strategicBranches,
-      interests,
-      learningStyle,
-      knowledgeLevel,
-      existingHTA,
-      ''
-    );
-
-    return {
-      pathName,
-      goal,
-      strategicBranches,
-      frontierNodes,
-      learningStyle,
-      focusAreas,
-      knowledgeLevel,
-      complexityProfile,
-      depthConfig,
-      questionTree,
-      created: new Date().toISOString(),
-      lastUpdated: new Date().toISOString()
-    };
-  }
-
-  getPathInterests(config, pathName) {
-    if (pathName === 'general') {
-      return config.specific_interests || [];
-    }
-
-    const path = config.learning_paths?.find(p => p.path_name === pathName);
-    return path?.interests || config.specific_interests || [];
-  }
-
-  async generateStrategicBranches(goal, pathName, focusAreas, knowledgeLevel) {
-    // 1. If focus areas are supplied, use them directly (purely user-driven, no hard-coding)
-    if (Array.isArray(focusAreas) && focusAreas.length > 0) {
-      const customBranches = focusAreas.map((raw) => {
-        const area = String(raw).trim();
-        return {
-          id: `focus_${area.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`.replace(/_+/g, '_').replace(/^_|_$/g, ''),
-          title: area.charAt(0).toUpperCase() + area.slice(1),
-          priority: 'high',
-          completed: false,
-          description: `Roadmap for developing expertise in ${area}`,
-          expected_duration: this.estimateDuration(knowledgeLevel),
-          subBranches: []
-        };
-      });
-
-      // Attempt to enrich with sub-branches just like auto-generated domains
-      for (const branch of customBranches) {
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          branch.subBranches = await this.generateSubBranches(branch.title, knowledgeLevel);
-        } catch (error) {
-          console.warn(`Failed to generate sub-branches for ${branch.title}:`, error.message);
-          branch.subBranches = [];
-        }
-      }
-
-      return customBranches;
-    }
-
-    // 2. ENHANCED: Perform Goal Complexity Analysis first
-    const complexityAnalysis = await this.assessGoalComplexity(goal);
-    const complexityRating = complexityAnalysis.complexity_score || 5;
-    const estimatedDurationYears = this.estimateDurationYears(complexityAnalysis.estimated_time);
-
-    // 3. Determine appropriate number of domains based on complexity
-    let targetDomainCount;
-    if (complexityRating <= 3) {
-      targetDomainCount = 2; // Simple goals: 2 domains (e.g., "Learn to Bake a Cake")
-    } else if (complexityRating <= 6) {
-      targetDomainCount = 4; // Moderate goals: 4 domains
-    } else if (complexityRating <= 8) {
-      targetDomainCount = 6; // Complex goals: 6 domains
-    } else {
-      targetDomainCount = 8; // Highly complex goals: 8 domains (e.g., "Become a Neurosurgeon")
-    }
-
-    // 4. Generate domains with a clear, robust prompt for strategic pillars
-    const prompt = `
-You are a world-class curriculum architect and strategic planner. Your task is to analyze a user's high-level goal and break it down into a set of 3-5 core, high-level strategic pillars.
-
-**RULES:**
-1.  Each pillar must be a short, actionable noun phrase (e.g., "Core Music Theory," "Brand Identity Development," "Market Analysis").
-2.  Do NOT ask clarifying questions. Use the provided goal and context to make a definitive strategic recommendation.
-3.  The output MUST be a valid JSON array of strings. Do not add any conversational text or wrappers around the JSON.
-
-**USER GOAL:** "${goal}"
-**KNOWLEDGE LEVEL:** ${knowledgeLevel}/10
-**FOCUS AREAS:** ${focusAreas.join(', ') || 'General'}
-
-**GOOD EXAMPLE OUTPUT:**
-["Foundational Music Theory", "Instrument Mastery", "Songwriting and Composition", "Performance Skills"]
-
-**BAD EXAMPLE OUTPUT:**
-"That's an interesting goal! To give you the best pillars, could you tell me more about what kind of music you want to play?"
-
-Now, generate the JSON array of strategic pillars.
-`;
-
-    const aiResp = await this.llm.requestIntelligence('hta-strategic-pillar-generation', {
-      prompt
-    });
-
-    let domains = [];
-    if (aiResp && !aiResp.request_for_claude) {
-      try {
-        const text = aiResp.completion || aiResp.answer || aiResp.text || '[]';
-        domains = JSON.parse(text);
-      } catch (parseError) {
-        console.warn('Failed to parse AI response for domain generation:', parseError.message);
-      }
-    }
-
-    // 5. Fallback: create complexity-appropriate generic domains
-    if (!Array.isArray(domains) || domains.length === 0) {
-      domains = this.generateFallbackDomains(complexityRating, targetDomainCount);
-    }
-
-    // Ensure we have the right number of domains
-    if (domains.length < targetDomainCount) {
-      domains = [...domains, ...this.generateFallbackDomains(complexityRating, targetDomainCount - domains.length)];
-    } else if (domains.length > targetDomainCount) {
-      domains = domains.slice(0, targetDomainCount);
-    }
-
-    // 6. Build enriched branch objects
-    const branches = domains.map((d, idx) => ({
-      id: `domain_${idx + 1}`,
-      title: d,
-      priority: 'high',
-      completed: false,
-      description: `Roadmap for ${d} (complexity: ${complexityRating}/10)`,
-      expected_duration: this.estimateDuration(knowledgeLevel),
-      complexity_rating: complexityRating,
-      subBranches: []
-    }));
-
-    // 7. For high complexity goals (>7), generate deeper sub-branch hierarchies
-    for (const branch of branches) {
-      try {
-        branch.subBranches = await this.generateSubBranches(branch.title, knowledgeLevel);
-
-        // For very high complexity goals, add another layer of depth
-        if (complexityRating > 7) {
-          for (const subBranch of branch.subBranches) {
-            try {
-              // eslint-disable-next-line no-await-in-loop
-              subBranch.subBranches = await this.generateSubBranches(subBranch.title, knowledgeLevel);
-            } catch (error) {
-              console.warn(`Failed to generate sub-sub-branches for ${subBranch.title}:`, error.message);
-              subBranch.subBranches = [];
-            }
-          }
-        }
-      } catch (error) {
-        console.warn(`Failed to generate sub-branches for ${branch.title}:`, error.message);
-        branch.subBranches = [];
-      }
-    }
-
-    return branches;
-  }
-
-  async generateSequencedFrontierNodes(strategicBranches, interests, learningStyle, knowledgeLevel, existingHTA, context = '') {
-    const frontierNodes = [];
-    let nodeId = 1;
-
-    // Extract existing completed tasks to avoid duplication
-    const completedTasks = existingHTA?.frontierNodes?.filter(n => n.completed)?.map(n => n.title) || [];
-
-    for (const branch of strategicBranches) {
-      // Pure AI generation: ask the LLM to generate tasks for this branch
-      const aiNodes = await this.generateBranchNodesAI(
-        branch,
-        interests,
-        learningStyle,
-        knowledgeLevel,
-        completedTasks,
-        nodeId,
-        context
-      );
-      frontierNodes.push(...aiNodes);
-      nodeId += aiNodes.length;
-    }
-
-    // Sort by priority and difficulty
-    return this.sortNodesBySequence(frontierNodes, knowledgeLevel);
-  }
-
-  // Remove all template-based code. Use LLM to generate nodes for each branch.
-  async generateBranchNodesAI(branch, interests, learningStyle, knowledgeLevel, completedTasks, startNodeId, context = '') {
-    // CRITICAL FIX: Much more explicit prompt for proper beginner handling
-    let levelGuidance = '';
-    if (knowledgeLevel <= 2) {
-      levelGuidance = `CRITICAL: This is a COMPLETE BEGINNER (level ${knowledgeLevel}/10). Tasks must be:
-- Extremely simple, basic actions that can be done in 15-25 minutes
-- Difficulty level 1 ONLY (no exceptions)
-- No prior knowledge assumed
-- Focus on "getting familiar" and "first steps"
-- Examples: "Hold a guitar for 5 minutes", "Find middle C on piano", "Crack an egg into a bowl"`;
-    } else if (knowledgeLevel <= 4) {
-      levelGuidance = `This is an EARLY LEARNER (level ${knowledgeLevel}/10). Tasks should be:
-- Simple but slightly more involved (25-45 minutes)
-- Difficulty 1-2 maximum
-- Build on very basic foundations
-- Examples: "Play a single note cleanly", "Make scrambled eggs", "Write a simple HTML page"`;
-    } else {
-      levelGuidance = `This is an INTERMEDIATE+ learner (level ${knowledgeLevel}/10). Tasks can be more complex.`;
-    }
-
-    const contextSection = context ? `\n\nIMPORTANT CONTEXT: ${context}\n` : '';
-
-    const prompt = 'You are an expert in learning design. Generate a list of 3-5 actionable, concrete, and appropriately-leveled tasks for a learner with the following context:\n\n' +
-      `Goal: ${branch.title}\n` +
-      `Branch Type: ${branch.title} (${branch.description})\n` +
-      `Knowledge Level: ${knowledgeLevel}/10\n` +
-      `${levelGuidance}${contextSection}\n` +
-      `Interests: ${interests.join(', ') || 'None'}\n` +
-      `Learning Style: ${learningStyle}\n\n` +
-      'ABSOLUTELY NO TEMPLATES OR GENERIC PLACEHOLDERS. Tasks must be specific, realistic, and tailored to the actual level and context.\n' +
-      'If context mentions "never done X" or "complete beginner", ensure tasks start from absolute zero.\n\n' +
-      'CRITICAL: Create a logical learning progression where later tasks build on earlier ones. Use the "prerequisites" field to reference the EXACT TITLE of previous tasks that must be completed first. For beginners, start with 1-2 foundation tasks that have no prerequisites, then build dependencies.\n\n' +
-      'Return the result as a JSON array of objects, each with: title, description, difficulty (1-5), duration (in minutes), and prerequisites (array of exact task titles from this same list).\n\n' +
-      'Example progression: [{"title": "Hold guitar comfortably", "description": "Practice holding the guitar in playing position for 5 minutes", "difficulty": 1, "duration": 15, "prerequisites": []}, {"title": "Find middle C and practice finger placement", "description": "Locate middle C and practice placing your index finger correctly", "difficulty": 1, "duration": 10, "prerequisites": ["Hold guitar comfortably"]}]';
-
-    // If the LLM interface is a fallback stub, queue manual request and exit
-    if (!this.llm || typeof this.llm.requestIntelligence !== 'function') {
-      this.pendingClaudeRequests.push({
-        claude_request: prompt,
-        type: 'tasks',
-        context: { branchId: branch.id, pathName: branch.title }
-      });
-      return [];
-    }
-
-    const aiResponse = await this.llm.requestIntelligence('hta-task-generation', { prompt });
-    let tasks = [];
-
-    // CRITICAL FIX: Check if we actually got a real AI response
-    if (aiResponse && aiResponse.request_for_claude) {
-      // Queue a Claude generation request to be returned to the client via MCP
-      this.pendingClaudeRequests.push({
-        claude_request: prompt,
-        type: 'tasks',
-        context: { branchId: branch.id, pathName: branch.title }
-      });
-      // Return no tasks – actual tasks will be supplied by Claude later
-      tasks = [];
-    } else {
-      // Try to parse real LLM response
-      try {
-        const responseText = aiResponse.completion || aiResponse.answer || aiResponse.text || '[]';
-        tasks = JSON.parse(responseText);
-        if (!Array.isArray(tasks) || tasks.length === 0) {
-          throw new Error('Empty or invalid response');
-        }
-      } catch (parseError) {
-        console.warn('⚠️  AI response parsing failed, using fallback tasks:', parseError.message);
-        tasks = this.generateFallbackTasks(branch, knowledgeLevel, interests);
-      }
-    }
-
-    // Filter out completed tasks and post-process for beginner appropriateness
-    const filtered = tasks.filter(t => !completedTasks.includes(t.title)).map(t => {
-      // CRITICAL FIX: Ensure difficulty matches knowledge level properly
-      if (knowledgeLevel <= 2) {
-        // Complete beginners (1-2) should only get difficulty 1
-        t.difficulty = 1;
-        // Cap duration to 25 minutes for beginners
-        if (typeof t.duration === 'number') {
-          t.duration = Math.min(25, t.duration);
-        }
-      } else if (knowledgeLevel <= 4) {
-        // Early learners (3-4) can handle difficulty 1-2
-        t.difficulty = Math.min(2, Math.max(1, t.difficulty || 1));
-        if (typeof t.duration === 'number') {
-          t.duration = Math.min(45, t.duration);
-        }
-      } else if (knowledgeLevel <= 6) {
-        // Intermediate learners (5-6) can handle difficulty 1-3
-        t.difficulty = Math.min(3, Math.max(1, t.difficulty || 2));
-        if (typeof t.duration === 'number') {
-          t.duration = Math.min(60, t.duration);
-        }
-      } else {
-        // Advanced learners (7+) can handle any difficulty
-        t.difficulty = Math.min(5, Math.max(1, t.difficulty || 3));
-      }
-      return t;
-    });
-
-    // Map to node format using HtaNode model
-    return filtered.map((t, i) => {
-      const nodeData = {
-        id: `node_${startNodeId + i}`,
-        title: t.title,
-        description: t.description,
-        branch: branch.id,
-        difficulty: t.difficulty || 1,
-        priority: 200 + (t.difficulty || 1) * 10,
-        duration: typeof t.duration === 'number' ? `${t.duration} minutes` : (t.duration || '30 minutes'),
-        prerequisites: this.mapPrerequisitesToNodeIds(t.prerequisites || [], filtered, startNodeId),
-        completed: false,
-        opportunityType: t.opportunityType || undefined
-      };
-
-      return new HtaNode(nodeData);
-    });
-  }
-
-  // NEW METHOD: Convert prerequisite titles to node IDs and validate dependencies
-  mapPrerequisitesToNodeIds(prerequisites, allTasks, startNodeId) {
-    if (!Array.isArray(prerequisites) || prerequisites.length === 0) {
-      return [];
-    }
-
-    const validPrerequisites = [];
-
-    for (const prereq of prerequisites) {
-      // Find the task by title
-      const prereqTaskIndex = allTasks.findIndex(task => task.title === prereq);
-      if (prereqTaskIndex !== -1) {
-        const prereqNodeId = `node_${startNodeId + prereqTaskIndex}`;
-        validPrerequisites.push(prereqNodeId);
-      }
-      // If prerequisite not found, skip it (don't create broken dependencies)
-    }
-
-    return validPrerequisites;
-  }
-
-  sortNodesBySequence(frontierNodes, knowledgeLevel) {
-    // Sort by priority (higher first), then by difficulty (appropriate for knowledge level)
-    return frontierNodes.sort((a, b) => {
-      // First by priority
-      if (a.priority !== b.priority) {
-        return b.priority - a.priority;
-      }
-
-      // CRITICAL FIX: Proper difficulty matching for beginners
-      let idealDifficulty;
-      if (knowledgeLevel <= 2) {
-        idealDifficulty = 1; // Beginners need difficulty 1 only
-      } else if (knowledgeLevel <= 4) {
-        idealDifficulty = 2; // Early learners prefer difficulty 2
-      } else if (knowledgeLevel <= 6) {
-        idealDifficulty = 3; // Intermediate learners prefer difficulty 3
-      } else {
-        idealDifficulty = Math.min(knowledgeLevel - 2, 5); // Advanced learners
-      }
-
-      const aDiffDistance = Math.abs(a.difficulty - idealDifficulty);
-      const bDiffDistance = Math.abs(b.difficulty - idealDifficulty);
-
-      return aDiffDistance - bDiffDistance;
-    });
-  }
-
-  generateFallbackTasks(branch, knowledgeLevel, interests) {
-    // Fallback disabled – require external Claude generation
-    return [];
-  }
-
-  // Disable template fallback – empty list signals need for Claude
-  generateFallbackTasksNode(branch, startNodeId) {
-    return [];
-  }
-
-  // ====== NEW HELPERS FOR MULTILAYER ROADMAP ======
-  /**
-   * Very rough duration estimate based on learner level.
-   * Beginners will have shorter domain time-frames; advanced learners may need longer.
-   */
-  estimateDuration(knowledgeLevel) {
-    if (knowledgeLevel <= 2) {return '0-3 months';}
-    if (knowledgeLevel <= 4) {return '2-6 months';}
-    if (knowledgeLevel <= 6) {return '4-9 months';}
-    return '6-12+ months';
-  }
-
-  /**
-   * Convert complexity analysis estimated_time to years for better prompt context.
-   * @param {string} estimatedTime - "short|months|years"
-   * @returns {string} - Human readable duration estimate
-   */
-  estimateDurationYears(estimatedTime) {
-    switch (estimatedTime) {
-    case 'short': return '0.1-0.5';
-    case 'months': return '0.5-2';
-    case 'years': return '2-10+';
-    default: return '1-3';
-    }
-  }
-
-  /**
-   * Generate fallback domains based on complexity rating when LLM fails.
-   * @param {number} complexityRating - 1-10 complexity score
-   * @param {number} targetCount - Number of domains to generate
-   * @returns {string[]} - Array of domain names
-   */
-  generateFallbackDomains(complexityRating, targetCount) {
-    const baseDomains = ['Fundamentals', 'Practice', 'Application'];
-    const intermediateDomains = ['Theory', 'Advanced Practice', 'Specialization'];
-    const advancedDomains = ['Research', 'Innovation', 'Mastery', 'Teaching', 'Leadership'];
-
-    const availableDomains = [...baseDomains];
-
-    if (complexityRating > 3) {
-      availableDomains.push(...intermediateDomains);
-    }
-
-    if (complexityRating > 6) {
-      availableDomains.push(...advancedDomains);
-    }
-
-    // Return the first targetCount domains, cycling if needed
-    const result = [];
-    for (let i = 0; i < targetCount; i++) {
-      result.push(availableDomains[i % availableDomains.length]);
-    }
-
-    return result;
-  }
-
-  /**
-   * Ask the LLM for 2-3 sub-domains within a given top-level domain.
-   * Falls back to an empty array on any failure.
-   * @param {string} domainTitle
-   * @param {number} knowledgeLevel
-   */
-  async generateSubBranches(domainTitle, knowledgeLevel) {
-    const prompt = `
-You are a senior strategic planner. Your task is to take a high-level strategic pillar and decompose it into 2-3 logical, concrete sub-domains.
-
-**RULES:**
-1.  Each sub-domain must be a short, actionable noun phrase (e.g., "Chord Progressions," "Client Acquisition," "A/B Testing").
-2.  Do NOT ask for more context. Your response must be definitive.
-3.  The output MUST be a valid JSON array of strings.
-
-**HIGH-LEVEL PILLAR:** "${domainTitle}"
-**LEARNER KNOWLEDGE LEVEL:** ${knowledgeLevel}/10
-
-**GOOD EXAMPLE OUTPUT (for Pillar "Core Music Theory"):**
-["Scales and Modes", "Chord Theory and Harmony", "Rhythm and Meter"]
-
-**BAD EXAMPLE OUTPUT:**
-"That's a broad pillar! To break it down, what instrument does the user play?"
-
-Now, generate the JSON array of sub-domains.
-`;
-
-    try {
-      const resp = await this.llm.requestIntelligence('hta-subdomain-generation', { prompt });
-      if (resp && !resp.request_for_claude) {
-        const text = resp.completion || resp.answer || resp.text || '[]';
-        const parsed = JSON.parse(text);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.slice(0, 3).map((s, idx) => ({
-            id: `${domainTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_sub_${idx + 1}`.replace(/_+/g, '_'),
-            title: s,
-            description: `Sub-domain of ${domainTitle}: ${s}`
-          }));
-        }
-      }
     } catch (error) {
-      console.warn('Failed to generate sub-branches via AI:', error.message);
-    }
-
-    // === Heuristic fallback: derive 2 simple sub-domains from the domain title ===
-    const words = domainTitle.split(/\s+/).filter(w => w.length>3);
-    if (words.length >= 2) {
-      const first = words[0];
-      const second = words[1];
-      return [first, second].map((w,idx) => ({
-        id: `${domainTitle.toLowerCase().replace(/[^a-z0-9]+/g,'_')}_sub_${idx+1}`.replace(/_+/g,'_'),
-        title: w.charAt(0).toUpperCase()+w.slice(1),
-        description: `Sub-domain of ${domainTitle}: ${w}`
-      }));
-    }
-
-    // If even heuristic fails, return empty array
-    return [];
-  }
-
-  // ====== NEW HELPERS – Complexity & Depth Calibration ======
-  /**
-   * Ask the LLM (or Claude) to analyse goal complexity.
-   * Falls back to a quick heuristic if the LLM is offline.
-   */
-  async assessGoalComplexity(goal) {
-    const prompt = `Analyse the complexity of the goal: "${goal}". 
-Return JSON: { "complexity_score": 1-10, "estimated_time": "short|months|years" }`;
-    try {
-      const resp = await this.llm.requestIntelligence('goal-complexity-analysis', { prompt });
-      if (resp && !resp.request_for_claude) {
-        return JSON.parse(resp.completion || resp.answer || resp.text || '{}');
-      }
-      if (resp?.request_for_claude) {
-        this.pendingClaudeRequests.push({
-          claude_request: prompt,
-          type: 'complexity',
-          context: { goal }
-        });
-      }
-    } catch (error) {
-      console.warn('Goal complexity analysis failed, using heuristic:', error.message);
-    }
-
-    // Heuristic fallback: rough guess by goal length
-    const wc = goal.split(/\s+/).length;
-    return {
-      complexity_score: Math.min(10, Math.max(3, Math.ceil(wc / 4))),
-      estimated_time  : wc > 12 ? 'years' : wc > 6 ? 'months' : 'short'
-    };
-  }
-
-  calculateOptimalDepth(score, userLevel, timeFrame = '') {
-    const base = Math.ceil(score * 0.7);
-    const lvlAdj = userLevel < 3 ? -1 : 0;
-    const tfAdj = /year/i.test(timeFrame) ? +1 : /month/i.test(timeFrame) ? -1 : 0;
-    return {
-      targetDepth          : Math.max(3, base + lvlAdj + tfAdj),
-      minQuestionsPerLevel : score > 7 ? 4 : 3,
-      maxInitialBreadth    : score < 4 ? 3 : 5
-    };
-  }
-
-  /* ─────────────────────────────────────────────────────────────
-   *  QUESTION-TREE SKELETON HELPERS
-   * ───────────────────────────────────────────────────────────── */
-
-  async generateQuestionSkeleton(goal, depthCfg) {
-    const rootQ = `What must be true for "${goal}" to become reality?`;
-    return await this._decomposeQuestion(rootQ, 0, depthCfg, []);
-  }
-
-  async _decomposeQuestion(question, level, depthCfg, parentPath) {
-    const nodeId = `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-
-    // Base case: reached target depth
-    if (level >= depthCfg.targetDepth) {
+      console.error('Error building HTA tree:', error);
+      // Ensure consistent error object structure
       return {
-        id: nodeId,
-        question,
-        answered: false,
-        answer_artifacts: [],
-        spawned_questions: [],
-        depth_level: level,
-        parent_path: parentPath
+        content: [{
+          type: 'text',
+          text: `❌ Error building HTA tree: ${error.message}`
+        }],
+        error: error.message,
+        error_details: error.stack // Added for better debugging
       };
     }
+  }
 
-    // Build prompt for sub-questions
-    const prompt = `Parent question: ${question}\n` +
-      `Goal: ${parentPath[0] || question}\n` +
-      `Depth level: ${level}/${depthCfg.targetDepth}\n\n` +
-      `Generate ${depthCfg.minQuestionsPerLevel} sub-questions that must be answered to fully resolve the parent.\n` +
-      'Return JSON: { \"sub\": string[] }';
-
-    let subQs = [];
-    try {
-      const aiResp = await this.llm.requestIntelligence('hta-question-decomposition', { prompt });
-      if (aiResp && !aiResp.request_for_claude) {
-        const parsed = JSON.parse(aiResp.completion || aiResp.answer || aiResp.text || '{}');
-        if (Array.isArray(parsed.sub)) { subQs = parsed.sub; }
-      } else if (aiResp?.request_for_claude) {
-        this.pendingClaudeRequests.push({
-          claude_request: prompt,
-          type: 'question_decomp',
-          context: { parent: question }
-        });
-      }
-    } catch (error) {
-      console.warn('Question decomposition parsing failed, using fallback:', error.message);
+  /**
+   * Analyze goal complexity to determine appropriate tree depth
+   */
+  analyzeGoalComplexity(goal, context = '') {
+    if (!goal) {
+      // Handle empty goal to prevent errors downstream
+      return this.calculateTreeStructure(1); // Default to lowest complexity
     }
+    const goalLower = goal.toLowerCase();
+    const combinedText = `${goal} ${context || ''}`.toLowerCase(); // Ensure context is not undefined
 
-    // Fallback: simple heuristic questions
-    if (subQs.length === 0) {
-      subQs = [
-        `How can we practically achieve ${question}?`,
-        `What resources are required for ${question}?`,
-        `Why is ${question} challenging and how do we mitigate that?`
-      ];
-    }
+    let complexityScore = 5; // Base complexity
 
-    // Ensure we have at least minQuestionsPerLevel items
-    while (subQs.length < depthCfg.minQuestionsPerLevel) {
-      subQs.push(`${question} – subtopic ${subQs.length + 1}`);
-    }
+    // Adjust based on goal indicators
+    if (combinedText.includes('professional') || combinedText.includes('expert')) complexityScore += 2;
+    if (combinedText.includes('master') || combinedText.includes('advanced')) complexityScore += 2;
+    if (combinedText.includes('career') || combinedText.includes('business')) complexityScore += 1;
+    // Adjusted: "from scratch" or "beginner" might not always mean higher overall complexity,
+    // but rather a different starting point. Context is key.
+    if (combinedText.includes('from scratch') || combinedText.includes('beginner')) complexityScore += 0; // Neutral impact on complexity score itself
+    if (combinedText.includes('certification') || combinedText.includes('degree')) complexityScore += 2;
+    if (combinedText.includes('simple') || combinedText.includes('basic')) complexityScore -= 2;
+    if (combinedText.includes('hobby') || combinedText.includes('fun')) complexityScore -= 1;
 
-    const children = [];
-    for (const sub of subQs) {
-      // eslint-disable-next-line no-await-in-loop
-      const child = await this._decomposeQuestion(sub, level + 1, depthCfg, [...parentPath, question]);
-      children.push(child);
-    }
+    // Count distinct skill domains mentioned
+    const skillDomains = ['technical', 'creative', 'business', 'social', 'physical', 'mental', 'financial', 'academic', 'language']; // Expanded list
+    const domainsPresent = skillDomains.filter(domain => combinedText.includes(domain)).length;
+    complexityScore += Math.min(domainsPresent, 3); // Cap contribution from domain count
+
+    // Normalize score
+    complexityScore = Math.max(1, Math.min(10, complexityScore));
+
+    // Calculate tree structure based on complexity
+    const treeStructure = this.calculateTreeStructure(complexityScore);
 
     return {
-      id: nodeId,
-      question,
-      answered: false,
-      answer_artifacts: [],
-      spawned_questions: children,
-      depth_level: level,
-      parent_path: parentPath
+      score: complexityScore,
+      level: complexityScore <= 3 ? 'simple' : complexityScore <= 6 ? 'moderate' : 'complex',
+      ...treeStructure
     };
   }
 
   /**
-   * Wait for Claude/LLM to respond to pending requests, polling periodically.
-   * Falls back after the timeout so the builder never hangs indefinitely.
-   * @param {number} timeoutMs Maximum time to wait in milliseconds (default 60 000).
+   * Calculate tree structure parameters based on complexity
+   * Production-ready: Consider making these factors configurable.
    */
-  async _waitForClaudeResponses(timeoutMs = 60000) {
-    const start = Date.now();
-    const POLL_INTERVAL = 3000;
+  calculateTreeStructure(complexityScore) {
+    let depth, mainBranches, subBranchesPerMain, tasksPerLeaf;
 
-    while (this.pendingClaudeRequests.length > 0 && Date.now() - start < timeoutMs) {
-      // Attempt to resolve each pending request again
-      for (const req of [...this.pendingClaudeRequests]) {
-        try {
-          const resp = await this.llm.requestIntelligence(req.type || 'followup', { prompt: req.claude_request });
-          if (resp && !resp.request_for_claude) {
-            // Mark as resolved by removing from pending list
-            this.pendingClaudeRequests = this.pendingClaudeRequests.filter(r => r !== req);
-          }
-        } catch (err) {
-          // Ignore errors during polling – we'll fall back if unresolved
+    // Define structure parameters based on complexity score bands
+    if (complexityScore <= 0) complexityScore = 1; // Ensure score is at least 1
+
+    if (complexityScore <= 2) { // Very Simple
+      depth = 2;
+      mainBranches = 3 + Math.floor(complexityScore / 2); // 3-4
+      subBranchesPerMain = 2;
+      tasksPerLeaf = 4 + complexityScore; // 5-6
+    } else if (complexityScore <= 4) { // Simple to Moderate
+      depth = 3;
+      mainBranches = 3 + Math.floor(complexityScore / 2); // 4-5
+      subBranchesPerMain = 2 + Math.floor(complexityScore / 3); // 2-3
+      tasksPerLeaf = 5 + complexityScore; // 8-9
+    } else if (complexityScore <= 7) { // Moderate to Complex
+      depth = 3;
+      mainBranches = 4 + Math.floor(complexityScore / 2); // 6-7
+      subBranchesPerMain = 3 + Math.floor(complexityScore / 4); // 3-4
+      tasksPerLeaf = 6 + complexityScore; // 11-13
+    } else { // Very Complex / Advanced
+      depth = 4;
+      mainBranches = 5 + Math.floor(complexityScore / 2); // 8-10
+      subBranchesPerMain = 4 + Math.floor(complexityScore / 5); // 4-6
+      tasksPerLeaf = 7 + complexityScore; // 15-17
+    }
+
+    // Calculate totals
+    let totalSubBranches = mainBranches;
+    if (depth > 1) {
+        totalSubBranches *= subBranchesPerMain;
+    }
+
+    let totalLeaves = mainBranches;
+    if (depth === 2) {
+        totalLeaves = mainBranches * subBranchesPerMain;
+    } else if (depth === 3) {
+        totalLeaves = mainBranches * subBranchesPerMain * (subBranchesPerMain > 0 ? (subBranchesPerMain -1) : 1) ; // Approximation for 3 levels
+         // A more common pattern is subBranchesPerMain at each non-leaf level.
+         // If depth 3 means Main -> Sub -> SubSub, then use subBranchesPerMain twice.
+         // If depth 3 means Main -> Sub -> Tasks, and another Main -> Sub -> SubSub -> Tasks, it's more complex.
+         // Assuming consistent branching factor for simplicity here.
+         // Let's assume sub_branches_per_main applies at each level of branching.
+         let currentLevelNodes = mainBranches;
+         totalLeaves = 0;
+         for(let i=1; i<depth; i++){
+            currentLevelNodes *= subBranchesPerMain;
+         }
+         totalLeaves = currentLevelNodes;
+
+    } else if (depth === 4) {
+        let currentLevelNodes = mainBranches;
+         for(let i=1; i<depth; i++){
+            currentLevelNodes *= subBranchesPerMain;
+         }
+         totalLeaves = currentLevelNodes;
+    }
+
+
+    const estimatedTasks = totalLeaves * tasksPerLeaf;
+
+    // Time estimate (rough) - consider making average task duration configurable
+    const avgTaskDurationMinutes = 30; // average minutes per task
+    const totalHoursEstimate = (estimatedTasks * avgTaskDurationMinutes) / 60;
+
+    let timeEstimate;
+    if (totalHoursEstimate < 40) timeEstimate = `${Math.ceil(totalHoursEstimate)} hours`; // Less than a week of full-time
+    else if (totalHoursEstimate < 160) timeEstimate = `${Math.ceil(totalHoursEstimate / 40)} weeks`; // 1-4 weeks
+    else if (totalHoursEstimate < 640) timeEstimate = `${Math.ceil(totalHoursEstimate / 160)} months`; // 1-4 months
+    else timeEstimate = `${Math.ceil(totalHoursEstimate / (160 * 12))} years`; // For very large goals
+
+    return {
+      recommended_depth: depth,
+      main_branches: mainBranches,
+      sub_branches_per_main: subBranchesPerMain,
+      tasks_per_leaf: tasksPerLeaf,
+      estimated_tasks: Math.round(estimatedTasks), // Round to whole number
+      time_estimate: timeEstimate
+    };
+  }
+
+  /**
+   * Generate prompt for deep hierarchical branch creation
+   */
+  generateDeepBranchPrompt(config, learningStyle, focusAreas, complexity) {
+    const focusDuration = config.life_structure_preferences?.focus_duration || '25 minutes';
+    let taskBlock = `"tasks": [
+            {
+              "title": "Specific actionable task",
+              "description": "Clear instructions and expected outcome",
+              "difficulty": "1-5 (integer)",
+              "duration": "Approximate minutes (e.g., ${focusDuration.replace(' minutes', '')}, consider focus blocks)",
+              "prerequisites": ["earlier_task_title_if_any"]
+            }
+          ]`;
+
+    let subBranchStructure = '';
+    if (complexity.recommended_depth === 2) {
+      subBranchStructure = `
+    {
+      "branch_name": "sub_branch_identifier (e.g., Core_Concept_1)",
+      "description": "Specific aspect of the main branch (e.g., Understanding X)",
+      ${taskBlock}
+    }`;
+    } else if (complexity.recommended_depth === 3) {
+      subBranchStructure = `
+    {
+      "branch_name": "sub_branch_identifier (e.g., Module_A)",
+      "description": "Specific aspect of the main branch (e.g., Advanced Topic Y)",
+      "sub_branches": [
+        {
+          "branch_name": "sub_sub_branch_identifier (e.g., Lesson_A1)",
+          "description": "Even more specific aspect (e.g., Practical Application of Y)",
+          ${taskBlock}
         }
+      ]
+    }`;
+    } else if (complexity.recommended_depth >= 4) {
+      // For depth 4 or more, illustrate one more level of nesting for clarity
+      subBranchStructure = `
+    {
+      "branch_name": "sub_branch_identifier (e.g., Phase_One)",
+      "description": "Specific aspect of the main branch",
+      "sub_branches": [
+        {
+          "branch_name": "sub_sub_branch_identifier (e.g., Unit_1.1)",
+          "description": "More specific aspect",
+          "sub_branches": [
+            {
+              "branch_name": "leaf_branch_identifier (e.g., Skill_1.1.1)",
+              "description": "Most granular topic, containing tasks",
+              ${taskBlock}
+            }
+          ]
+        }
+      ]
+    }`;
+    }
+
+
+    return \`Create a ${complexity.recommended_depth}-level deep Hierarchical Task Analysis (HTA) for this goal:
+
+**GOAL**: ${config.goal}
+**CONTEXT**: ${config.context || 'Starting from scratch'}
+**COMPLEXITY SCORE (1-10)**: ${complexity.score} (${complexity.level})
+**USER'S TARGET STRUCTURE BASED ON COMPLEXITY**:
+- ${complexity.main_branches} main strategic branches.
+- Each main branch should ideally have around ${complexity.sub_branches_per_main} sub-branches.
+- Each sub-branch (if not leading to further sub-branches) or leaf-node branch should contain approximately ${complexity.tasks_per_leaf} tasks.
+- The hierarchy should extend to ${complexity.recommended_depth} levels deep.
+- Aim for a total of ~${complexity.estimated_tasks} tasks.
+
+**USER CONSTRAINTS & PREFERENCES**:
+- Preferred focus duration for tasks: ${focusDuration}
+- Learning style: ${learningStyle}
+- Specific focus areas (if any): ${focusAreas.length > 0 ? focusAreas.join(', ') : 'Comprehensive approach, cover all necessary areas'}
+
+**OUTPUT STRUCTURE GUIDELINES**:
+Provide the output as a JSON array of main branches. Each branch follows this recursive structure:
+{
+  "branch_name": "main_branch_identifier (e.g., Foundational_Knowledge)",
+  "description": "What this major area or stage covers in relation to the main goal.",
+  "sub_branches": [ // If depth > 1 and this branch is not a leaf
+    ${subBranchStructure}
+    // ... more sub-branches as needed, adhering to complexity.sub_branches_per_main
+  ]
+  // If a branch is a leaf node (i.e., it directly contains tasks, not further sub-branches):
+  // "tasks": [ { "title": "...", "description": "...", ... } ] // (only if this branch itself is a leaf)
+}
+
+**DETAILED INSTRUCTIONS FOR AI**:
+1.  **Analyze Goal & Context**: Thoroughly understand the user's goal: "${config.goal}".
+2.  **Design Main Branches**: Create ${complexity.main_branches} top-level main branches. These should be distinct, comprehensive, and logically sequenced stages or components for achieving the goal.
+3.  **Develop Hierarchy**: For each main branch, create a hierarchy of sub-branches down to ${complexity.recommended_depth} levels.
+    - If a branch has \`sub_branches\`, it should NOT also have a direct \`tasks\` array. Tasks only exist at the LEAF nodes of the tree.
+    - A branch at depth ${complexity.recommended_depth} is a leaf node and MUST contain a \`tasks\` array.
+    - A branch at a depth less than ${complexity.recommended_depth} can either have \`sub_branches\` (if it's an intermediate node) or \`tasks\` (if it's a leaf node before max depth, though aim for full depth).
+4.  **Populate Leaf Nodes with Tasks**: At each terminal/leaf branch (typically at depth ${complexity.recommended_depth}), define ~${complexity.tasks_per_leaf} specific, actionable tasks.
+    - Task \`duration\` should be in minutes and respect the user's focus preference (e.g., ${focusDuration}).
+    - Task \`difficulty\` should be an integer from 1 (very easy) to 5 (very challenging).
+    - \`prerequisites\` should list titles of tasks that must be completed before this one. Use titles from tasks defined within THIS ENTIRE HTA structure.
+5.  **Naming and Descriptions**: Use clear, descriptive \`branch_name\` (snake_case_preferably) and \`description\` fields. Task titles should be actionable.
+6.  **Adherence to Structure**: Strictly follow the JSON structure. Ensure all required fields are present.
+7.  **Comprehensive Roadmap**: The final HTA should be a complete roadmap from the user's current state to achieving "${config.goal}".
+
+Example of a task within a leaf branch's \`tasks\` array:
+{
+  "title": "Example: Set up development environment",
+  "description": "Install Node.js, VS Code, and necessary libraries for the project.",
+  "difficulty": 2,
+  "duration": "60", // minutes
+  "prerequisites": [] // or ["Example: Research software options"]
+}
+
+Begin by defining the ${complexity.main_branches} main branches.
+Provide ONLY the JSON output.
+\`;
+  }
+
+  // ============================================
+  // Methods from Version 1 (Simpler HTA) to be included for persistence
+  // ============================================
+
+  /**
+   * Get or create HTA for a path
+   * Tries path-specific HTA first, then project-level for general path.
+   */
+  async loadPathHTA(projectId, pathName) {
+    try {
+      const actualPathName = pathName || DEFAULT_PATHS.GENERAL; // Ensure pathName is set
+
+      if (actualPathName === DEFAULT_PATHS.GENERAL) {
+        // For general path, attempt to load from path-specific storage first (if it was ever saved there)
+        // This handles a case where a general HTA might have been saved under a specific path name "general"
+        try {
+            const pathHTA = await this.dataPersistence.loadPathData(projectId, actualPathName, FILE_NAMES.HTA);
+            if (pathHTA) return pathHTA;
+        } catch (e) {
+            // If path-specific "general" doesn't exist or fails, that's okay, proceed to project HTA
+            if (e.code !== 'ENOENT' && e.name !== 'FileNotFoundError') { // Common error codes for not found
+                 console.warn(\`Warning: Error trying to load path-specific HTA for 'general' path: \${e.message}\`);
+            }
+        }
+
+        // Then try loading from the main project-level HTA file
+        const projectHTA = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.HTA);
+        if (projectHTA) return projectHTA;
+
+      } else {
+        // For specific paths, just load from path-specific storage
+        const hta = await this.dataPersistence.loadPathData(projectId, actualPathName, FILE_NAMES.HTA);
+        if (hta) return hta;
       }
 
-      if (this.pendingClaudeRequests.length === 0) {
-        break;
+      // Return null if no HTA exists after trying appropriate locations
+      return null;
+    } catch (error) {
+      // If any error occurs that indicates file not found, return null.
+      // This simplifies calling code, as it doesn't need to check for ENOENT specifically.
+      if (error.code === 'ENOENT' || error.name === 'FileNotFoundError' || error.message.includes('No such file or directory')) {
+        return null;
       }
+      // Log other errors and rethrow
+      console.error(\`Error loading HTA for project \${projectId}, path \${pathName || DEFAULT_PATHS.GENERAL}:\`, error);
+      throw error;
+    }
+  }
 
-      // Sleep before next poll iteration
-      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+  /**
+   * Save HTA for a path
+   * Saves to project-level for general path, path-specific for others.
+   */
+  async savePathHTA(projectId, pathName, htaData) {
+    const actualPathName = pathName || DEFAULT_PATHS.GENERAL; // Ensure pathName is set
+    if (!htaData) {
+        throw new Error("Attempted to save null or undefined HTA data.");
+    }
+    try {
+      if (actualPathName === DEFAULT_PATHS.GENERAL) {
+        await this.dataPersistence.saveProjectData(projectId, FILE_NAMES.HTA, htaData);
+      } else {
+        await this.dataPersistence.savePathData(projectId, actualPathName, FILE_NAMES.HTA, htaData);
+      }
+    } catch (error) {
+        console.error(\`Error saving HTA for project \${projectId}, path \${actualPathName}:\`, error);
+        throw error; // Rethrow to allow calling function to handle
     }
   }
 }

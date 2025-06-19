@@ -160,10 +160,9 @@ class CleanForestServer {
 
       // Initialize HTA system - USING CLEAN VERSIONS
       this.htaTreeBuilder = new HtaTreeBuilder(
-        this, // Pass the server instance itself
         this.dataPersistence,
         this.projectManagement,
-        claude,
+        claude, // Which is this.core.getClaudeInterface()
       );
       this.htaStatus = new HtaStatus(
         this.dataPersistence,
@@ -1551,77 +1550,193 @@ class CleanForestServer {
     return await this.identityEngine.analyzeIdentityTransformation();
   }
 
+  // Method to be REPLACED in CleanForestServer class
   /**
    * Persist Claude-generated tasks into the current HTA frontier.
-   * @param {Array<{branch_name:string,tasks:Array}>} branchTasks
+   * This version supports DEEP HIERARCHICAL structures.
+   * @param {Array<object>} branchTasks - Array of branch objects, potentially hierarchical.
    */
   async storeGeneratedTasks(branchTasks) {
-    const projectId = await this.requireActiveProject();
-    const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
-    const pathName = config.activePath || DEFAULT_PATHS.GENERAL;
-    const htaData = await this.loadPathHTA(projectId, pathName) || { frontierNodes: [] };
+    try {
+      const projectId = await this.requireActiveProject(); // Uses existing method
+      const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
+      const pathName = config.activePath || DEFAULT_PATHS.GENERAL;
 
-    let nextId = (htaData.frontierNodes?.length || 0) + 1;
-
-    // ----- Collaborative session logging -----
-    const sessionMeta = {
-      timestamp: new Date().toISOString(),
-      session_id: `sess_${Math.random().toString(36).slice(2, 10)}`,
-      tasks_count: branchTasks.reduce((sum, b) => sum + b.tasks.length, 0),
-      branches_populated: branchTasks.map(b => b.branch_name),
-      generation_context: 'collaborative_handoff'
-    };
-
-    htaData.collaborative_sessions = htaData.collaborative_sessions || [];
-    htaData.collaborative_sessions.push(sessionMeta);
-
-    const ensureBranchExists = (branchName) => {
-      htaData.strategicBranches = htaData.strategicBranches || [];
-      const exists = htaData.strategicBranches.find(b =>
-        b.id === branchName || b.title?.toLowerCase() === branchName.toLowerCase()
-      );
-      if (!exists) {
-        const slug = branchName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
-        htaData.strategicBranches.push({
-          id: slug,
-          title: branchName.charAt(0).toUpperCase()+branchName.slice(1),
-          priority: 'medium',
-          completed: false,
-          description: `Auto-added domain for ${branchName}`,
-          expected_duration: '0-3 months',
-          subBranches: []
-        });
-      }
-    };
-
-    for (const branch of branchTasks) {
-      const branchName = branch.branch_name;
-      ensureBranchExists(branchName);
-      for (const t of branch.tasks) {
+      let htaData = await this.loadPathHTA(projectId, pathName); // Uses existing method
+      if (!htaData) {
+        // Initialize htaData with hierarchy_metadata if it's new
+        htaData = {
+          projectId,
+          pathName,
+          created: new Date().toISOString(),
+          goal: config.goal, // Make sure goal is copied if HTA is new
+          context: config.context || '', // Copy context
+          learningStyle: config.learningStyle || 'mixed', // Copy learning style
+          focusAreas: config.focusAreas || [], // Copy focus areas
+          strategicBranches: [],
+          frontierNodes: [],
+          completed_nodes: [], // Corrected typo from completed_nodes
+          collaborative_sessions: [],
+          hierarchy_metadata: { // Initialize for deep structure
+            total_depth: 0,
+            total_branches: 0,
+            total_sub_branches: 0,
+            total_tasks: 0,
+            branch_task_distribution: {}
+          },
+          // Preserve complexity if it was set during buildHTATree
+          complexity: config.complexity || this.htaTreeBuilder?.analyzeGoalComplexity?.(config.goal, config.context) || null,
+          generation_context: { // Initialize generation_context
+             method: 'deep_hierarchical_ai',
+             timestamp: new Date().toISOString(),
+             goal: config.goal,
+             awaiting_generation: false // Tasks are being stored, so no longer awaiting
+          }
+        };
+      } else {
+        // Ensure essential arrays and objects exist if htaData is loaded
+        htaData.strategicBranches = htaData.strategicBranches || [];
         htaData.frontierNodes = htaData.frontierNodes || [];
-        const slug = branchName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
-        htaData.frontierNodes.push({
-          id: `node_${nextId++}`,
-          title: t.title,
-          description: t.description || '',
-          difficulty: t.difficulty || 1,
-          duration: typeof t.duration === 'number' ? `${t.duration} minutes` : (t.duration || '30 minutes'),
-          branch: slug,
-          prerequisites: t.prerequisites || [],
-          generated: true,
-          completed: false,
-          priority: 200
-        });
+        htaData.completed_nodes = htaData.completed_nodes || []; // Corrected typo
+        htaData.collaborative_sessions = htaData.collaborative_sessions || [];
+        htaData.hierarchy_metadata = htaData.hierarchy_metadata || {
+          total_depth: 0, total_branches: 0, total_sub_branches: 0, total_tasks: 0, branch_task_distribution: {}
+        };
+        htaData.generation_context = htaData.generation_context || {};
       }
+
+      // Session metadata
+      const sessionMeta = {
+        timestamp: new Date().toISOString(),
+        session_id: `sess_${Math.random().toString(36).slice(2, 10)}`,
+        tasks_count: this.countTasksInHierarchy(branchTasks), // New helper
+        branches_populated: branchTasks.map(b => b.branch_name),
+        generation_context: 'deep_hierarchical' // Context for this session
+      };
+
+      htaData.collaborative_sessions.push(sessionMeta);
+
+      // Process hierarchical branches
+      let stats = {
+        newMainBranches: 0, // Renamed for clarity
+        newSubBranches: 0,
+        newTasks: 0,
+        maxDepth: htaData.hierarchy_metadata.total_depth || 0 // Start with existing depth
+      };
+
+      let taskIdCounter = (htaData.frontierNodes.length || 0) + (htaData.completed_nodes.length || 0) + 1;
+
+
+      // Process each main branch from the input
+      for (const branch of branchTasks) {
+        const { processedBranch, taskCounter } = await this.processHierarchicalBranch(
+          branch,
+          htaData,
+          null, // no parent for main branches
+          1,    // depth level 1
+          stats,
+          taskIdCounter // Pass counter
+        );
+        taskIdCounter = taskCounter; // Update counter
+
+        // Add to strategic branches if new, or merge
+        const existingIndex = htaData.strategicBranches.findIndex(b => b.id === processedBranch.id);
+
+        if (existingIndex === -1) {
+          htaData.strategicBranches.push(processedBranch);
+          stats.newMainBranches++;
+        } else {
+          // Merge with existing: be careful with sub-branches and task counts
+          htaData.strategicBranches[existingIndex] = this.mergeBranches(
+            htaData.strategicBranches[existingIndex],
+            processedBranch
+          );
+        }
+      }
+
+      // Update hierarchy metadata
+      // Total branches should be the length of strategicBranches
+      // Total sub_branches is the sum of all sub_branch arrays at all levels (tracked by stats.newSubBranches for new ones)
+      // Total tasks is the sum of frontier and completed nodes.
+
+      // Recalculate total sub_branches accurately from the final structure
+      let totalSubBranchCount = 0;
+      function countSubBranchesRecursive(branches) {
+        for (const b of branches) {
+          if (b.sub_branches && b.sub_branches.length > 0) {
+            totalSubBranchCount += b.sub_branches.length;
+            countSubBranchesRecursive(b.sub_branches);
+          }
+        }
+      }
+      countSubBranchesRecursive(htaData.strategicBranches);
+
+      htaData.hierarchy_metadata = {
+        total_depth: stats.maxDepth,
+        total_branches: htaData.strategicBranches.length,
+        total_sub_branches: totalSubBranchCount, // More accurate count
+        total_tasks: (htaData.frontierNodes.length || 0) + (htaData.completed_nodes.length || 0),
+        branch_task_distribution: this.calculateTaskDistribution(htaData.strategicBranches) // New helper
+      };
+
+      // Update generation context
+      htaData.generation_context = {
+        ...htaData.generation_context,
+        last_updated: new Date().toISOString(),
+        awaiting_generation: false, // Tasks have been generated and stored
+        branches_active: htaData.strategicBranches.filter(b => !b.completed && (b.task_count > 0 || b.total_task_count > 0)).length,
+        total_tasks_in_hta: htaData.hierarchy_metadata.total_tasks
+      };
+
+      // Save updated HTA
+      await this.savePathHTA(projectId, pathName, htaData); // Uses existing method
+      await this.memorySync.syncActiveProjectToMemory(projectId); // Existing call
+
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ **Deep HTA Structure Successfully Stored!**
+
+**Hierarchy Processed**:
+• Main Branches Added/Updated: ${stats.newMainBranches} (Total: ${htaData.strategicBranches.length})
+• Sub-branches Added/Updated: ${stats.newSubBranches} (Total in HTA: ${htaData.hierarchy_metadata.total_sub_branches})
+• Maximum Depth Reached: ${stats.maxDepth} levels
+• New Tasks Added: ${stats.newTasks} (Total in HTA: ${htaData.hierarchy_metadata.total_tasks})
+
+**Task Distribution**:
+${Object.entries(htaData.hierarchy_metadata.branch_task_distribution)
+  .map(([branchTitle, count]) => `• ${branchTitle}: ${count} tasks`)
+  .join('
+') || 'No tasks assigned to branches yet.'}
+
+Your goal now has a comprehensive ${stats.maxDepth}-level deep roadmap with ${stats.newTasks} new specific tasks!
+
+**Next Step**: Use \`get_next_task\` to begin your journey!`
+        }],
+        storage_summary: {
+          new_main_branches: stats.newMainBranches,
+          new_sub_branches: stats.newSubBranches,
+          new_tasks: stats.newTasks,
+          max_depth: stats.maxDepth,
+          total_tasks_in_hta: htaData.hierarchy_metadata.total_tasks,
+          total_main_branches_in_hta: htaData.strategicBranches.length,
+          total_sub_branches_in_hta: htaData.hierarchy_metadata.total_sub_branches,
+          hierarchy_metadata: htaData.hierarchy_metadata,
+          session: sessionMeta
+        }
+      };
+    } catch (error) {
+      console.error('Error storing hierarchical tasks:', error);
+      this.logger.error('Error storing hierarchical tasks', { module: 'CleanForestServer', error: error.message, stack: error.stack });
+      return {
+        content: [{
+          type: 'text',
+          text: `❌ Error storing tasks: ${error.message}`
+        }],
+        error: error.message,
+        error_details: error.stack
+      };
     }
-
-    await this.savePathHTA(projectId, pathName, htaData);
-
-    return {
-      content: [{ type: 'text', text: `✅ Stored ${branchTasks.reduce((sum,b)=>sum+b.tasks.length,0)} generated tasks into HTA` }],
-      hta_frontier_count: htaData.frontierNodes.length,
-      session: sessionMeta
-    };
   }
 
   async getGenerationHistory(limit = 10) {
@@ -1648,6 +1763,408 @@ class CleanForestServer {
       return await this.dataPersistence.saveProjectData(projectId, FILE_NAMES.HTA, htaData);
     }
     return await this.dataPersistence.savePathData(projectId, pathName, FILE_NAMES.HTA, htaData);
+  }
+
+  // ===== HTA HELPER METHODS (New and V1) =====
+
+  // New helper method for CleanForestServer class
+  /**
+   * Process a branch and all its sub-branches recursively for deep HTA.
+   * Adds tasks to htaData.frontierNodes.
+   * Updates stats object.
+   */
+  async processHierarchicalBranch(branch, htaData, parentId, depth, stats, taskIdCounter) {
+    stats.maxDepth = Math.max(stats.maxDepth, depth);
+
+    const branchSlug = this.createSlug(branch.branch_name); // New helper
+    const branchId = parentId ? `${parentId}_${branchSlug}` : branchSlug;
+
+    // Find existing branch in htaData if it exists (e.g. from a previous partial generation)
+    let existingBranchData = null;
+    if (parentId) {
+        const parentBranch = this.findBranchByIdRecursive(htaData.strategicBranches, parentId);
+        if (parentBranch && parentBranch.sub_branches) {
+            existingBranchData = parentBranch.sub_branches.find(b => b.id === branchId);
+        }
+    } else {
+        existingBranchData = htaData.strategicBranches.find(b => b.id === branchId);
+    }
+
+    const branchData = existingBranchData || { // Use existing or create new
+      id: branchId,
+      title: this.formatBranchTitle(branch.branch_name), // Existing helper
+      description: branch.description || `Details for ${branch.branch_name}`,
+      priority: this.inferBranchPriority(branch.branch_name), // Existing helper
+      depth: depth,
+      parent_id: parentId,
+      completed: false,
+      created_at: new Date().toISOString(),
+      sub_branches: [],
+      task_count: 0,      // Tasks directly in this branch
+      total_task_count: 0 // Tasks in this branch + all descendant sub-branches
+    };
+    // Ensure sub_branches array exists
+    branchData.sub_branches = branchData.sub_branches || [];
+
+
+    // Process sub-branches if they exist
+    if (branch.sub_branches && branch.sub_branches.length > 0) {
+      if (depth === 1) stats.newSubBranches += branch.sub_branches.length; // Count only direct sub-branches of main branches for this particular stat for now
+      else stats.newSubBranches++;
+
+
+      for (const subBranch of branch.sub_branches) {
+        const { processedBranch: processedSub, taskCounter: updatedTaskCounter } = await this.processHierarchicalBranch(
+          subBranch,
+          htaData,
+          branchData.id,
+          depth + 1,
+          stats,
+          taskIdCounter // Pass counter
+        );
+        taskIdCounter = updatedTaskCounter; // Update counter
+
+        const existingSubIndex = branchData.sub_branches.findIndex(sb => sb.id === processedSub.id);
+        if (existingSubIndex === -1) {
+            branchData.sub_branches.push(processedSub);
+        } else {
+            branchData.sub_branches[existingSubIndex] = this.mergeBranches(branchData.sub_branches[existingSubIndex], processedSub);
+        }
+      }
+    }
+
+    // Process tasks if this is a leaf node (or a node that also has tasks)
+    if (branch.tasks && branch.tasks.length > 0) {
+      for (const task of branch.tasks) {
+        // Avoid adding duplicate tasks by title within the same branch
+        const taskAlreadyExists = htaData.frontierNodes.some(
+            fn => fn.title === task.title && fn.branch === branchData.id
+        ) || htaData.completed_nodes.some(
+            cn => cn.title === task.title && cn.branch === branchData.id
+        );
+
+        if (!taskAlreadyExists) {
+            const taskNode = {
+              id: `node_${taskIdCounter++}`,
+              title: task.title,
+              description: task.description || '',
+              difficulty: parseInt(task.difficulty) || 1,
+              duration: this.normalizeDuration(task.duration), // Existing helper
+              branch: branchData.id, // ID of the immediate parent branch
+              branch_path: this.getBranchPath(branchData.id), // New helper - full path
+              branch_depth: depth,
+              prerequisites: this.resolvePrerequisites(task.prerequisites, htaData), // Existing helper
+              priority: this.calculateDeepTaskPriority(task, branchData, depth), // New helper
+              created_at: new Date().toISOString(),
+              generated: true, // Mark as AI-generated
+              completed: false
+            };
+
+            htaData.frontierNodes.push(taskNode);
+            stats.newTasks++;
+            branchData.task_count = (branchData.task_count || 0) + 1;
+        }
+      }
+    }
+
+    // Recalculate total_task_count for this branch
+    branchData.total_task_count = (branchData.task_count || 0) +
+        (branchData.sub_branches || []).reduce((sum, sb) => sum + (sb.total_task_count || 0), 0);
+
+    return { processedBranch: branchData, taskCounter: taskIdCounter };
+  }
+
+  // New helper method for CleanForestServer class
+  findBranchByIdRecursive(branches, branchId) {
+    for (const branch of branches) {
+        if (branch.id === branchId) return branch;
+        if (branch.sub_branches && branch.sub_branches.length > 0) {
+            const found = this.findBranchByIdRecursive(branch.sub_branches, branchId);
+            if (found) return found;
+        }
+    }
+    return null;
+  }
+
+  // New helper method for CleanForestServer class
+  createSlug(name) {
+    if (!name || typeof name !== 'string') return `invalid_name_${Math.random().toString(36).slice(2, 7)}`;
+    return name.toLowerCase()
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^\w-]+/g, '') // Remove non-word characters (except hyphen)
+      .replace(/__+/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  }
+
+  // New helper method for CleanForestServer class
+  getBranchPath(branchId) {
+    // Converts a branch ID like 'main_sub_leaf' to a readable path "Main → Sub → Leaf"
+    if (!branchId || typeof branchId !== 'string') return '';
+    return branchId.split('_')
+      .map(part => this.formatBranchTitle(part)) // Reuses existing helper
+      .join(' → ');
+  }
+
+  // New helper method for CleanForestServer class
+  countTasksInHierarchy(branches) {
+    let count = 0;
+    if (!branches || !Array.isArray(branches)) return 0;
+
+    function countRecursive(branch) {
+      if (branch.tasks && Array.isArray(branch.tasks)) {
+        count += branch.tasks.length;
+      }
+      if (branch.sub_branches && Array.isArray(branch.sub_branches)) {
+        branch.sub_branches.forEach(sub => countRecursive(sub));
+      }
+    }
+
+    branches.forEach(branch => countRecursive(branch));
+    return count;
+  }
+
+  // New helper method for CleanForestServer class
+  calculateTaskDistribution(strategicBranches) {
+    const distribution = {};
+    if (!strategicBranches || !Array.isArray(strategicBranches)) return distribution;
+
+    function aggregateTasksRecursive(branch) {
+      let count = branch.task_count || 0; // Tasks directly in this branch
+      if (branch.sub_branches && branch.sub_branches.length > 0) {
+        for (const subBranch of branch.sub_branches) {
+          count += aggregateTasksRecursive(subBranch); // Add tasks from sub-branches
+        }
+      }
+      // Only add to distribution if this branch itself has tasks or its sub-branches do,
+      // and it's a main branch or a sub-branch that we want to report.
+      // For this function, we are interested in the distribution by top-level strategic branches.
+      // So, the count for a strategic branch should be its total_task_count.
+      // The function name implies we are distributing tasks among the *strategicBranches* passed.
+      return branch.total_task_count || 0;
+    }
+
+    for (const branch of strategicBranches) {
+        distribution[branch.title || branch.id] = branch.total_task_count || 0;
+    }
+    return distribution;
+  }
+
+  // New helper method for CleanForestServer class
+  calculateDeepTaskPriority(task, branchData, depth) {
+    let priority = 50; // Base priority score (0-100)
+
+    // 1. Depth Modifier (shallower tasks get higher priority)
+    // Max depth could be 4-5. If depth is 1, bonus = (5-1)*10 = 40. If depth 4, bonus = (5-4)*10 = 10.
+    const maxAssumedDepthForBonus = 5;
+    priority += Math.max(0, (maxAssumedDepthForBonus - depth) * 8); // Max +32 for depth 1
+
+    // 2. Branch Priority Modifier
+    const branchPriority = branchData.priority || this.inferBranchPriority(branchData.title);
+    if (branchPriority === 'high') priority += 20;
+    else if (branchPriority === 'medium') priority += 5; // Slight boost for medium
+    else if (branchPriority === 'low') priority -= 15;
+
+    // 3. Task Difficulty Modifier (easier tasks slightly higher priority)
+    // Difficulty 1-5. (5-diff)*3. Diff 1: +12. Diff 3: +6. Diff 5: +0.
+    priority += (5 - (task.difficulty || 3)) * 4;
+
+    // 4. Prerequisite Modifier (tasks with no prerequisites get a boost)
+    if (!task.prerequisites || task.prerequisites.length === 0) {
+      priority += 15;
+    } else {
+      // Slight penalty for more prerequisites
+      priority -= Math.min(task.prerequisites.length * 2, 10);
+    }
+
+    // 5. Duration (Shorter tasks can be slightly higher priority for quick wins, if not foundational)
+    // Only apply if not a foundational task (depth > 1 or not high priority branch)
+    if (depth > 1 || branchPriority !== 'high') {
+        const durationMinutes = parseInt(String(task.duration).replace(' minutes', '')) || 30;
+        if (durationMinutes <= 15) priority += 8;
+        else if (durationMinutes >= 60) priority -= 8;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(priority))); // Ensure priority is between 0 and 100
+  }
+
+  // New helper method for CleanForestServer class
+  mergeBranches(existingBranch, incomingBranch) {
+    // A more careful merge:
+    // Prioritize incoming for simple fields, intelligently merge arrays (sub_branches, tasks)
+    const merged = {
+      ...existingBranch,
+      title: incomingBranch.title || existingBranch.title,
+      description: incomingBranch.description || existingBranch.description,
+      priority: incomingBranch.priority || existingBranch.priority,
+      // Depth and parent_id should ideally not change if IDs match
+      updated_at: new Date().toISOString(),
+      sub_branches: [...(existingBranch.sub_branches || [])], // Start with existing sub-branches
+      // Task counts will be recalculated by processHierarchicalBranch or by summing up children
+    };
+
+    // Merge sub-branches by ID
+    if (incomingBranch.sub_branches && incomingBranch.sub_branches.length > 0) {
+      incomingBranch.sub_branches.forEach(inSub => {
+        const exSubIndex = merged.sub_branches.findIndex(exSub => exSub.id === inSub.id);
+        if (exSubIndex !== -1) {
+          merged.sub_branches[exSubIndex] = this.mergeBranches(merged.sub_branches[exSubIndex], inSub);
+        } else {
+          merged.sub_branches.push(inSub);
+        }
+      });
+    }
+
+    // Recalculate task_count and total_task_count based on potentially merged children
+    // Note: Direct tasks are usually handled by processHierarchicalBranch before merge is called for its parent.
+    // This merge is more about merging branch structures.
+    merged.task_count = (existingBranch.task_count || 0) + (incomingBranch.task_count || 0); // This might double count if tasks are also merged.
+                                                                                           // processHierarchicalBranch handles task addition to htaData.frontierNodes directly.
+                                                                                           // Branch.task_count should reflect tasks *directly* under it.
+                                                                                           // For simplicity here, we'll assume task_count is additive if structures are merged.
+                                                                                           // Better: task_count is derived from htaData.frontierNodes for this branch.id
+
+    // Recalculate total_task_count
+    merged.total_task_count = (merged.task_count || 0) +
+      (merged.sub_branches || []).reduce((sum, sb) => sum + (sb.total_task_count || 0), 0);
+
+    return merged;
+  }
+
+  // === Helper Methods from Version 1 (Simpler HTA) ===
+  // To be added to CleanForestServer class if not already present, or confirmed they exist.
+  // These are used by the new deep hierarchy logic or for general compatibility.
+
+  /** Infer branch priority based on name patterns */
+  inferBranchPriority(branchName) {
+    if (!branchName || typeof branchName !== 'string') return 'medium';
+    const name = branchName.toLowerCase();
+    if (name.includes('foundation') || name.includes('basic') || name.includes('fundamental') || name.includes('introduction')) {
+      return 'high';
+    } else if (name.includes('advanced') || name.includes('master') || name.includes('expert') || name.includes('deep dive')) {
+      return 'low'; // Often, advanced topics are lower priority until foundations are solid
+    } else if (name.includes('intermediate') || name.includes('core') || name.includes('essential')) {
+      return 'medium';
+    }
+    return 'medium'; // Default
+  }
+
+  /** Generate branch description from name and tasks (Simplified for general use) */
+  inferBranchDescription(branchName, tasks = []) {
+    const taskCount = tasks.length;
+    let avgDifficulty = 0;
+    if (taskCount > 0) {
+      avgDifficulty = tasks.reduce((sum, t) => sum + (parseInt(t.difficulty) || 3), 0) / taskCount;
+    }
+    const formattedTitle = this.formatBranchTitle(branchName);
+
+    if (taskCount > 0) {
+      return `${formattedTitle} - Contains ${taskCount} task(s). Average difficulty: ${avgDifficulty.toFixed(1)}/5.`;
+    }
+    return `${formattedTitle} - A key area of focus. Specific tasks to be defined.`;
+  }
+
+  /** Format branch title nicely (e.g., snake_case to Title Case) */
+  formatBranchTitle(branchName) {
+    if (!branchName || typeof branchName !== 'string') return "Untitled Branch";
+    return branchName
+      .replace(/_/g, ' ') // Replace underscores with spaces
+      .replace(/\s+/g, ' ') // Normalize multiple spaces to one
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize each word
+      .join(' ');
+  }
+
+  /** Estimate branch duration from tasks (Simplified) */
+  estimateBranchDuration(tasks = []) {
+    if (!tasks || tasks.length === 0) return 'Variable';
+    const totalMinutes = tasks.reduce((sum, t) => {
+        const durationStr = String(t.duration).toLowerCase();
+        if (durationStr.includes('minute')) {
+            return sum + (parseInt(durationStr) || 30);
+        }
+        return sum + 30; // Default if format is unexpected
+    }, 0);
+    const hours = totalMinutes / 60;
+
+    if (hours < 2) return 'A few hours';
+    if (hours < 10) return 'Several hours';
+    if (hours < 40) return '1-2 weeks (part-time)'; // Assuming ~20hr/week part-time
+    if (hours < 80) return '2-4 weeks (part-time)';
+    return '1-2 months (part-time)';
+  }
+
+  /** Normalize duration to consistent format (e.g., "X minutes") */
+  normalizeDuration(duration) {
+    if (typeof duration === 'number') {
+      return `${duration} minutes`;
+    }
+    if (typeof duration === 'string') {
+      const num = parseInt(duration);
+      if (!isNaN(num)) {
+        if (duration.toLowerCase().includes('hour')) {
+            return `${num * 60} minutes`;
+        }
+        if (duration.toLowerCase().includes('day')) {
+            return `${num * 8 * 60} minutes`; // Assuming 8hr day
+        }
+        // If it's just a number string or includes 'min'/'minutes'
+        return `${num} minutes`;
+      }
+    }
+    return '30 minutes'; // Default
+  }
+
+  /** Resolve prerequisite titles to task IDs */
+  resolvePrerequisites(prerequisites, htaData) {
+    if (!prerequisites || !Array.isArray(prerequisites) || prerequisites.length === 0) return [];
+    if (!htaData || (!htaData.frontierNodes && !htaData.completed_nodes)) return [];
+
+    const resolvedIds = [];
+    const allNodes = [
+        ...(htaData.frontierNodes || []),
+        ...(htaData.completed_nodes || [])
+    ];
+
+    for (const prereq of prerequisites) {
+      if (typeof prereq !== 'string') continue;
+
+      if (prereq.startsWith('node_')) { // Already an ID
+        resolvedIds.push(prereq);
+        continue;
+      }
+
+      // Find task by title (case-insensitive for robustness)
+      const task = allNodes.find(t => t.title && t.title.toLowerCase() === prereq.toLowerCase());
+      if (task && task.id) {
+        resolvedIds.push(task.id);
+      } else {
+        // Prerequisite title not found, could log a warning
+        this.logger.warn(`Prerequisite task with title "${prereq}" not found in HTA data.`, { module: 'CleanForestServer', projectId: htaData.projectId });
+      }
+    }
+    return [...new Set(resolvedIds)]; // Return unique IDs
+  }
+
+  /** Calculate task priority based on various factors (Simpler version) */
+  calculateTaskPriority(task, branchPriorityName) {
+    let priority = 50; // Base priority
+
+    const branchPrio = this.inferBranchPriority(branchPriorityName); // Use inferred priority
+
+    if (branchPrio === 'high') priority += 25;
+    else if (branchPrio === 'low') priority -= 15;
+
+    priority += (5 - (task.difficulty || 3)) * 5; // Easier tasks higher
+
+    const durationMinutes = parseInt(String(task.duration).replace(' minutes','')) || 30;
+    if (durationMinutes <= 15) priority += 10; // Shorter tasks higher
+    else if (durationMinutes >= 90) priority -= 10; // Very long tasks lower
+
+    if (!task.prerequisites || task.prerequisites.length === 0) {
+      priority += 15; // No prereqs higher
+    }
+
+    return Math.max(0, Math.min(100, Math.round(priority)));
   }
 
   async generateIntegratedSchedule(date, energyLevel = 3) {
