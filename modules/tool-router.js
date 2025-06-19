@@ -311,8 +311,8 @@ export class ToolRouter {
           tool_output: originalResult, // The original, unmodified output from the tool
           truthful_assessment: {
             // A new, dedicated section for the critique
-            response: response,
-            critique: critique,
+            response,
+            critique
           },
           // For easy display, we also include a formatted text block.
           content: [
@@ -322,9 +322,9 @@ export class ToolRouter {
                 typeof originalResult === 'string'
                   ? originalResult
                   : JSON.stringify(originalResult, null, 2)
-              }`,
-            },
-          ],
+              }`
+            }
+          ]
         };
 
         return finalResponse;

@@ -20,16 +20,16 @@ export class StrategyEvolver {
   setupEventListeners() {
     // Listen for block completion events
     this.eventBus.on('block:completed', this.handleBlockCompletion.bind(this), 'StrategyEvolver');
-    
+
     // Listen for learning milestone events
     this.eventBus.on('learning:breakthrough', this.handleBreakthrough.bind(this), 'StrategyEvolver');
-    
+
     // Listen for opportunity detection events
     this.eventBus.on('opportunity:detected', this.handleOpportunityDetection.bind(this), 'StrategyEvolver');
-    
+
     // Listen for strategy evolution requests
     this.eventBus.on('strategy:evolve_requested', this.handleEvolutionRequest.bind(this), 'StrategyEvolver');
-    
+
     console.log('🧠 StrategyEvolver event listeners registered');
   }
 
@@ -40,7 +40,7 @@ export class StrategyEvolver {
   async handleBlockCompletion({ projectId, pathName, block, _eventMetadata }) {
     try {
       console.log(`🔄 StrategyEvolver processing block completion: ${block.title}`);
-      
+
       // Only evolve if there's actual learning to process
       if (!block.learned && !block.nextQuestions && !block.breakthrough) {
         console.log('📝 No learning content to process, skipping HTA evolution');
@@ -48,12 +48,12 @@ export class StrategyEvolver {
       }
 
       await this.evolveHTABasedOnLearning(projectId, pathName, block);
-      
+
       // Emit follow-up events based on the learning content
       if (block.breakthrough) {
         this.eventBus.emit('learning:breakthrough', {
           projectId,
-          pathName, 
+          pathName,
           block,
           breakthroughContent: block.learned
         }, 'StrategyEvolver');
@@ -70,8 +70,8 @@ export class StrategyEvolver {
 
     } catch (error) {
       console.error('❌ StrategyEvolver failed to handle block completion:', error.message);
-      await this.dataPersistence.logError('StrategyEvolver.handleBlockCompletion', error, { 
-        projectId, pathName, blockTitle: block.title 
+      await this.dataPersistence.logError('StrategyEvolver.handleBlockCompletion', error, {
+        projectId, pathName, blockTitle: block.title
       });
     }
   }
@@ -83,17 +83,17 @@ export class StrategyEvolver {
   async handleBreakthrough({ projectId, pathName, block, breakthroughContent, _eventMetadata }) {
     try {
       console.log(`🎉 StrategyEvolver processing breakthrough: ${block.title}`);
-      
+
       // Generate breakthrough-specific follow-up tasks
       const htaData = await this.loadPathHTA(projectId, pathName);
-      if (!htaData) return;
+      if (!htaData) {return;}
 
       const breakthroughTasks = this.generateBreakthroughTasks(block, htaData, breakthroughContent);
       if (breakthroughTasks.length > 0) {
         htaData.frontierNodes = (htaData.frontierNodes || []).concat(breakthroughTasks);
         htaData.lastUpdated = new Date().toISOString();
         await this.savePathHTA(projectId, pathName, htaData);
-        
+
         console.log(`✨ Generated ${breakthroughTasks.length} breakthrough tasks`);
       }
 
@@ -109,16 +109,16 @@ export class StrategyEvolver {
   async handleOpportunityDetection({ projectId, pathName, block, opportunities, _eventMetadata }) {
     try {
       console.log(`🎯 StrategyEvolver processing opportunity detection: ${block.title}`);
-      
+
       const htaData = await this.loadPathHTA(projectId, pathName);
-      if (!htaData) return;
+      if (!htaData) {return;}
 
       const opportunityTasks = this.generateOpportunityTasks(block, htaData);
       if (opportunityTasks.length > 0) {
         htaData.frontierNodes = (htaData.frontierNodes || []).concat(opportunityTasks);
         htaData.lastUpdated = new Date().toISOString();
         await this.savePathHTA(projectId, pathName, htaData);
-        
+
         console.log(`🚀 Generated ${opportunityTasks.length} opportunity tasks`);
       }
 
@@ -134,7 +134,7 @@ export class StrategyEvolver {
   async handleEvolutionRequest({ projectId, pathName, feedback, analysis, _eventMetadata }) {
     try {
       console.log(`🔄 StrategyEvolver processing evolution request for project: ${projectId}`);
-      
+
       // This would integrate with the existing evolve strategy logic
       // For now, emit a completion event
       this.eventBus.emit('strategy:evolution_completed', {
@@ -158,7 +158,7 @@ export class StrategyEvolver {
    */
   async evolveHTABasedOnLearning(projectId, pathName, block) {
     const htaData = await this.loadPathHTA(projectId, pathName);
-    if (!htaData) return;
+    if (!htaData) {return;}
 
     // Mark corresponding HTA node as completed
     if (block.taskId) {
@@ -317,7 +317,7 @@ export class StrategyEvolver {
       difficulty: Math.min(5, (block.difficultyRating || 3) + 1),
       duration: '45 minutes',
       prerequisites: [block.taskId].filter(Boolean),
-      learningOutcome: `Practical application of breakthrough insight`,
+      learningOutcome: 'Practical application of breakthrough insight',
       priority: 350,
       generated: true,
       sourceBlock: block.id,
@@ -376,4 +376,4 @@ export class StrategyEvolver {
       return await this.dataPersistence.savePathData(projectId, pathName, FILE_NAMES.HTA, htaData);
     }
   }
-} 
+}

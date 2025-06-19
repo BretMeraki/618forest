@@ -249,4 +249,4 @@ export class TaskScorer {
       return task.branch === 'life_adaptation' || task.generated === true;
     }
   }
-} 
+}

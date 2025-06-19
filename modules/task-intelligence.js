@@ -209,10 +209,6 @@ export class TaskIntelligence {
     }
   }
 
-
-
-
-
   async analyzeCurrentStrategy(projectId, pathName, feedback) {
     const htaData = await this.loadPathHTA(projectId, pathName) || {};
     const learningHistory = await this.loadLearningHistory(projectId, pathName) || {};
@@ -756,8 +752,6 @@ export class TaskIntelligence {
     ];
   }
 
-
-
   async loadPathHTA(projectId, pathName) {
     if (pathName === DEFAULT_PATHS.GENERAL) {
       return await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.HTA);
@@ -781,6 +775,5 @@ export class TaskIntelligence {
       return await this.dataPersistence.loadPathData(projectId, pathName, FILE_NAMES.LEARNING_HISTORY);
     }
   }
-
 
 }

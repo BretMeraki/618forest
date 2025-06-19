@@ -28,6 +28,8 @@ import { initErrorLogger } from "./modules/error-logger.js";
 import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from "./modules/constants.js";
 import { bus } from "./modules/utils/event-bus.js";
 import { StrategyEvolver } from "./modules/strategy-evolver.js";
+import { SystemClock } from "./modules/system-clock.js";
+import { ProactiveInsightsHandler } from "./modules/proactive-insights-handler.js";
 
 // Initialize logger immediately so that ALL subsequent console output is captured
 initErrorLogger();
@@ -138,6 +140,21 @@ class CleanForestServer {
       this.analyticsTools = new AnalyticsTools(
         this.dataPersistence,
         this.projectManagement,
+      );
+
+      // Initialize proactive reasoning layer - FROM INTELLIGENCE TO WISDOM
+      this.systemClock = new SystemClock(
+        this.dataPersistence,
+        this.projectManagement,
+        this.reasoningEngine,
+        this.identityEngine,
+        this.eventBus
+      );
+
+      this.proactiveInsightsHandler = new ProactiveInsightsHandler(
+        this.dataPersistence,
+        this.projectManagement,
+        this.eventBus
       );
 
       // Initialize debug integration
@@ -349,6 +366,134 @@ class CleanForestServer {
       handler: async (args) => {
         return await this.getGenerationHistory(args.limit || 10);
       }
+    };
+
+    // Integrated Scheduling Tools
+    this.tools['integrated_schedule'] = {
+      description: 'Generate an integrated daily schedule using the new task pool system',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: {
+            type: 'string',
+            description: 'Date in YYYY-MM-DD format'
+          },
+          energyLevel: {
+            type: 'number',
+            description: 'Energy level (1-5)',
+            minimum: 1,
+            maximum: 5
+          }
+        },
+        required: ['date']
+      },
+      handler: this.generateIntegratedSchedule.bind(this)
+    };
+
+    // ===== PROACTIVE REASONING LAYER TOOLS =====
+    
+    this.tools['start_proactive_reasoning'] = {
+      description: 'Start the proactive reasoning system for background strategic analysis',
+      parameters: {
+        type: 'object',
+        properties: {
+          strategicAnalysisHours: {
+            type: 'number',
+            description: 'Hours between strategic analysis (default: 24)',
+            minimum: 1,
+            maximum: 168
+          },
+          riskDetectionHours: {
+            type: 'number',
+            description: 'Hours between risk detection (default: 12)',
+            minimum: 1,
+            maximum: 72
+          },
+          opportunityScansHours: {
+            type: 'number',
+            description: 'Hours between opportunity scans (default: 6)',
+            minimum: 1,
+            maximum: 24
+          },
+          identityReflectionDays: {
+            type: 'number',
+            description: 'Days between identity reflection (default: 7)',
+            minimum: 1,
+            maximum: 30
+          }
+        },
+        required: []
+      },
+      handler: this.startProactiveReasoning.bind(this)
+    };
+
+    this.tools['stop_proactive_reasoning'] = {
+      description: 'Stop the proactive reasoning system',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      },
+      handler: this.stopProactiveReasoning.bind(this)
+    };
+
+    this.tools['get_proactive_status'] = {
+      description: 'Get status of the proactive reasoning system',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      },
+      handler: this.getProactiveStatus.bind(this)
+    };
+
+    this.tools['trigger_immediate_analysis'] = {
+      description: 'Trigger immediate strategic analysis of a specific type',
+      parameters: {
+        type: 'object',
+        properties: {
+          analysisType: {
+            type: 'string',
+            enum: ['strategic', 'risk', 'opportunity', 'identity'],
+            description: 'Type of analysis to perform immediately'
+          }
+        },
+        required: ['analysisType']
+      },
+      handler: this.triggerImmediateAnalysis.bind(this)
+    };
+
+    this.tools['get_proactive_insights'] = {
+      description: 'Get recent proactive insights and recommendations',
+      parameters: {
+        type: 'object',
+        properties: {
+          days: {
+            type: 'number',
+            description: 'Number of days to look back (default: 7)',
+            minimum: 1,
+            maximum: 30
+          }
+        },
+        required: []
+      },
+      handler: this.getProactiveInsights.bind(this)
+    };
+
+    this.tools['get_strategic_recommendations'] = {
+      description: 'Get current strategic recommendations based on proactive analysis',
+      parameters: {
+        type: 'object',
+        properties: {
+          priority: {
+            type: 'string',
+            enum: ['all', 'high', 'medium', 'low'],
+            description: 'Filter by priority level (default: all)'
+          }
+        },
+        required: []
+      },
+      handler: this.getStrategicRecommendations.bind(this)
     };
   }
 
@@ -1162,59 +1307,329 @@ class CleanForestServer {
   }
 
   async generateIntegratedSchedule(date, energyLevel = 3) {
-    return await this.integratedScheduleGenerator.generateIntegratedSchedule(date, energyLevel);
+    try {
+      return await this.integratedScheduleGenerator.generateDailySchedule(date, energyLevel);
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.generateIntegratedSchedule', error);
+      throw error;
+    }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // INTERNAL: CLAUDE ⇄ TOOL DRIVER LOOP
-  // ──────────────────────────────────────────────────────────────
+  // ===== PROACTIVE REASONING LAYER METHODS =====
+
   /**
-   * Feed an initial prompt to Claude and continue dispatching any tool calls
-   * it produces until a terminal condition is met.
-   * @param {string} initialPrompt
-   * @param {number} maxTurns
+   * Start the proactive reasoning system
    */
-  async runToolLoop(initialPrompt, maxTurns = 8) {
-    const history = [];
-    let prompt = initialPrompt;
+  async startProactiveReasoning(config = {}) {
+    try {
+      console.log('🧠 Starting proactive reasoning system...');
+      
+      this.systemClock.start(config);
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `🧠 **Proactive Reasoning System Started**
 
-    for (let turn = 0; turn < maxTurns; turn++) {
-      // 1. Ask Claude
-      const claudeResp = await this.askTruthfulClaude(prompt);
-      const answerText = claudeResp.answer || '';
+The Forest system has evolved from reactive to proactive intelligence. Your system is now:
 
-      // 2. Parse tool call
-      let toolCall;
-      try { toolCall = JSON.parse(answerText); } catch {
-        return { error: 'Claude output was not valid JSON', raw: answerText, history };
-      }
+🔮 **Strategic Analysis**: Running every ${config.strategicAnalysisHours || 24} hours
+⚠️ **Risk Detection**: Scanning every ${config.riskDetectionHours || 12} hours  
+🎯 **Opportunity Scanning**: Monitoring every ${config.opportunityScansHours || 6} hours
+🧘 **Identity Reflection**: Deep analysis every ${config.identityReflectionDays || 7} days
 
-      const { name, arguments: args } = toolCall || {};
-      if (!name || typeof name !== 'string') {
-        return { error: 'Claude output missing tool name', raw: toolCall, history };
-      }
+**What This Means:**
+• The system will proactively identify learning opportunities and risks
+• You'll receive strategic insights even when not actively using the system
+• Patterns and trends will be detected before they become problems
+• Your learning strategy will continuously evolve based on background analysis
 
-      // 3. Dispatch tool via normal router (this enforces whitelist)
-      let toolResult;
-      try {
-        toolResult = await this.toolRouter.dispatchTool(name, args || {});
-      } catch (err) {
-        return { error: `Tool execution failed: ${err.message}`, call: toolCall, history };
-      }
+**From Intelligence to Wisdom** - Your Forest system now thinks about your progress even when you're not here, providing the kind of strategic foresight that transforms good learners into exceptional ones.
 
-      history.push({ call: toolCall, result: toolResult });
-
-      // 4. Terminal check
-      const terminal = toolResult?.next_suggested_action?.type === 'day_complete';
-      if (terminal) {
-        return { status: 'complete', turns: turn + 1, history };
-      }
-
-      // 5. Prepare next prompt for Claude
-      prompt = JSON.stringify(toolResult);
+The system will begin background analysis shortly and notify you of any insights or recommendations.`
+        }],
+        proactive_reasoning_status: this.systemClock.getStatus()
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.startProactiveReasoning', error);
+      throw error;
     }
+  }
 
-    return { status: 'max_turns_reached', turns: maxTurns, history };
+  /**
+   * Stop the proactive reasoning system
+   */
+  async stopProactiveReasoning() {
+    try {
+      console.log('🛑 Stopping proactive reasoning system...');
+      
+      this.systemClock.stop();
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `🛑 **Proactive Reasoning System Stopped**
+
+The background strategic analysis has been deactivated. The system has returned to reactive mode.
+
+• Strategic analysis: **Stopped**
+• Risk detection: **Stopped**  
+• Opportunity scanning: **Stopped**
+• Identity reflection: **Stopped**
+
+The Forest system will continue to function normally for direct interactions, but will no longer provide proactive insights or background analysis.
+
+To restart proactive reasoning, use the \`start_proactive_reasoning\` tool.`
+        }],
+        proactive_reasoning_status: this.systemClock.getStatus()
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.stopProactiveReasoning', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get proactive reasoning system status
+   */
+  async getProactiveStatus() {
+    try {
+      const status = this.systemClock.getStatus();
+      const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(
+        await this.projectManagement.requireActiveProject()
+      );
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `🧠 **Proactive Reasoning System Status**
+
+**System State**: ${status.isRunning ? '🟢 Active' : '🔴 Stopped'}
+
+${status.isRunning ? `
+**Active Background Processes**:
+${status.activeIntervals.map(interval => `• ${interval.replace('_', ' ')}`).join('\n')}
+
+**Last Analysis Times**:
+${Object.entries(status.lastAnalyses).map(([type, time]) => 
+  `• ${type.replace('_', ' ')}: ${time ? new Date(time).toLocaleString() : 'Not yet run'}`
+).join('\n')}` : ''}
+
+**Recent Proactive Alerts**: ${recentAlerts.length}
+${recentAlerts.length > 0 ? 
+  recentAlerts.slice(0, 3).map(alert => `• ${alert.title}`).join('\n') : 
+  '• No recent alerts'
+}
+
+${status.isRunning ? 
+  'The system is actively monitoring your learning patterns and will provide strategic insights.' :
+  'The system is dormant. Use `start_proactive_reasoning` to activate strategic analysis.'
+}`
+        }],
+        system_status: status,
+        recent_alerts: recentAlerts
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.getProactiveStatus', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger immediate analysis of specific type
+   */
+  async triggerImmediateAnalysis(analysisType) {
+    try {
+      console.log(`⚡ Triggering immediate ${analysisType} analysis...`);
+      
+      await this.systemClock.triggerImmediateAnalysis(analysisType);
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `⚡ **Immediate ${analysisType.charAt(0).toUpperCase() + analysisType.slice(1)} Analysis Triggered**
+
+The system is now performing an immediate ${analysisType} analysis of your current learning state. This includes:
+
+${analysisType === 'strategic' ? `
+🔮 **Strategic Overview Analysis**:
+• Overall trajectory assessment
+• Strategic alignment evaluation  
+• Capability gap identification
+• Momentum pattern analysis` : ''}
+
+${analysisType === 'risk' ? `
+⚠️ **Risk Detection Analysis**:
+• Stagnation risk assessment
+• Skill silo detection
+• Burnout risk evaluation
+• Goal drift identification
+• Engagement decline monitoring` : ''}
+
+${analysisType === 'opportunity' ? `
+🎯 **Opportunity Detection Analysis**:
+• Breakthrough momentum windows
+• Skill synergy opportunities
+• Difficulty readiness assessment
+• Cross-pollination potential
+• Strategic timing analysis` : ''}
+
+${analysisType === 'identity' ? `
+🧘 **Identity Reflection Analysis**:
+• Identity development momentum
+• Authenticity alignment check
+• Strategic positioning assessment
+• Identity risk identification
+• Development opportunity detection` : ''}
+
+Results will be available shortly through proactive insights and recommendations. Check back in a few moments or use \`get_proactive_insights\` to see the analysis results.`
+        }],
+        analysis_triggered: analysisType,
+        triggered_at: new Date().toISOString()
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.triggerImmediateAnalysis', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent proactive insights and recommendations
+   */
+  async getProactiveInsights(days = 7) {
+    try {
+      const projectId = await this.projectManagement.requireActiveProject();
+      
+      // Get recent alerts and insights
+      const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(projectId);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      const filteredAlerts = recentAlerts.filter(alert => 
+        new Date(alert.createdAt) >= cutoffDate
+      );
+      
+      // Get insight history
+      const strategicHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'strategic');
+      const riskHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'risks');
+      const opportunityHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'opportunities');
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `🧠 **Proactive Insights & Recommendations** (Last ${days} days)
+
+${filteredAlerts.length === 0 ? `No proactive insights generated in the last ${days} days.
+
+This could mean:
+• The proactive reasoning system hasn't been running long enough
+• Your learning patterns are stable and not triggering alerts
+• The system is in observation mode building baseline patterns
+
+Try using \`trigger_immediate_analysis\` to generate fresh insights.` : 
+
+`**Recent Strategic Alerts** (${filteredAlerts.length}):
+${filteredAlerts.slice(0, 5).map(alert => `
+📋 **${alert.title}** 
+   ${alert.message}
+   *${new Date(alert.createdAt).toLocaleDateString()}*`).join('\n')}
+
+**Analysis Activity**:
+• Strategic insights: ${strategicHistory.length} recent analyses
+• Risk assessments: ${riskHistory.length} recent scans  
+• Opportunity detection: ${opportunityHistory.length} recent scans
+
+**System Wisdom**: Your proactive reasoning system is ${filteredAlerts.length >= 3 ? 'highly active' : filteredAlerts.length >= 1 ? 'moderately active' : 'building baseline'}, providing ${filteredAlerts.filter(a => a.urgency === 'high').length} high-priority insights.`}
+`
+        }],
+        insights_summary: {
+          total_alerts: filteredAlerts.length,
+          high_priority: filteredAlerts.filter(a => a.urgency === 'high').length,
+          strategic_analyses: strategicHistory.length,
+          risk_assessments: riskHistory.length,
+          opportunity_scans: opportunityHistory.length,
+          days_analyzed: days
+        },
+        recent_alerts: filteredAlerts
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.getProactiveInsights', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get strategic recommendations from proactive analysis
+   */
+  async getStrategicRecommendations(priority = 'all') {
+    try {
+      const projectId = await this.projectManagement.requireActiveProject();
+      const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(projectId);
+      
+      // Filter alerts that contain recommendations
+      let recommendations = recentAlerts.filter(alert => 
+        alert.type === 'strategic' || alert.items?.some(item => item.recommendation)
+      );
+      
+      if (priority !== 'all') {
+        recommendations = recommendations.filter(rec => 
+          rec.urgency === priority || rec.items?.some(item => item.priority === priority)
+        );
+      }
+      
+      // Sort by urgency and recency
+      recommendations.sort((a, b) => {
+        const urgencyOrder = { high: 3, medium: 2, low: 1 };
+        const urgencyDiff = (urgencyOrder[b.urgency] || 0) - (urgencyOrder[a.urgency] || 0);
+        if (urgencyDiff !== 0) return urgencyDiff;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `🎯 **Strategic Recommendations** ${priority !== 'all' ? `(${priority} priority)` : ''}
+
+${recommendations.length === 0 ? 
+  `No strategic recommendations available${priority !== 'all' ? ` for ${priority} priority items` : ''}.
+
+To generate fresh recommendations:
+• Use \`trigger_immediate_analysis strategic\` for strategic insights
+• Use \`trigger_immediate_analysis opportunity\` for opportunity recommendations
+• Ensure the proactive reasoning system is running with \`start_proactive_reasoning\`
+
+The system provides its most valuable recommendations when it has sufficient learning history and activity to analyze.` :
+
+`**Current Strategic Recommendations**:
+
+${recommendations.slice(0, 5).map((rec, index) => `
+**${index + 1}. ${rec.title}** ${rec.urgency === 'high' ? '🔥' : rec.urgency === 'medium' ? '⚡' : '💡'}
+${rec.message}
+
+${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item => 
+  `• ${item.recommendation}`
+).join('\n') || ''}
+
+*Generated: ${new Date(rec.createdAt).toLocaleString()}*`).join('\n')}
+
+**Strategic Focus**: ${recommendations.filter(r => r.urgency === 'high').length > 0 ? 
+  'High-priority strategic adjustments needed' : 
+  'Maintain current trajectory with minor optimizations'}`}
+`
+        }],
+        recommendations_summary: {
+          total_count: recommendations.length,
+          high_priority: recommendations.filter(r => r.urgency === 'high').length,
+          medium_priority: recommendations.filter(r => r.urgency === 'medium').length,
+          low_priority: recommendations.filter(r => r.urgency === 'low').length,
+          filter_applied: priority
+        },
+        strategic_recommendations: recommendations.slice(0, 10)
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('CleanForestServer.getStrategicRecommendations', error);
+      throw error;
+    }
   }
 }
 

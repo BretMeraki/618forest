@@ -132,4 +132,4 @@ export class TaskSelector {
 
     return sortedByBranchRarity[0];
   }
-} 
+}

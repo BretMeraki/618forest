@@ -4,7 +4,7 @@ export default [
   {
     files: ['**/*.js'],
     languageOptions: {
-      ecmaVersion: 2021,
+      ecmaVersion: 2022,
       sourceType: 'module',
       globals: {
         // Node.js globals
@@ -58,7 +58,7 @@ export default [
       'promise/prefer-await-to-then': 'warn',
       'no-await-in-loop': 'warn',
       'require-atomic-updates': 'error',
-      'no-return-await': 'error',
+      'no-return-await': 'warn',
 
       'no-unreachable': 'error',
       'no-unreachable-loop': 'error',
@@ -140,6 +140,17 @@ export default [
   },
   {
     files: ['**/*.test.js', '**/test-*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        /** Jest globals */
+        describe: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        jest: 'readonly'
+      }
+    },
     rules: {
       'no-magic-numbers': 'off',
       'no-unused-expressions': 'off'

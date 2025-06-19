@@ -386,7 +386,7 @@ export class HtaTreeBuilder {
         completed: false,
         opportunityType: t.opportunityType || undefined
       };
-      
+
       return new HtaNode(nodeData);
     });
   }
