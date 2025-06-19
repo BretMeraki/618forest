@@ -8,7 +8,69 @@ import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Import all modular components - USING CLEAN VERSIONS
+// STEP 1: Detect MCP mode BEFORE importing anything that might console.log
+// MCP mode: When running as MCP server, stdin/stdout are used for JSON-RPC communication
+// More aggressive MCP detection - default to MCP mode unless explicitly interactive
+const isExplicitlyInteractive = process.stdin.isTTY && process.stdout.isTTY && process.argv.includes('--interactive');
+const isMcpMode = !isExplicitlyInteractive;
+// Alias for backward compatibility
+const isInteractive = isExplicitlyInteractive;
+
+// Additional MCP detection: if arguments suggest MCP usage
+if (process.argv.includes('--mcp') || process.env.NODE_ENV === 'mcp' || process.env.MCP_MODE === 'true') {
+  process.env.MCP_MODE = 'true';
+}
+
+// Debug: Log mode detection to a file (using already imported fs and path)
+const debugLogPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mode-detection.log');
+if (!fs.existsSync(path.dirname(debugLogPath))) {
+  fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
+}
+fs.appendFileSync(debugLogPath, `${new Date().toISOString()} - TTY: stdin=${!!process.stdin.isTTY}, stdout=${!!process.stdout.isTTY}, isExplicitlyInteractive=${isExplicitlyInteractive}, isMcpMode=${isMcpMode}, args=${JSON.stringify(process.argv)}\n`);
+
+// STEP 2: IMMEDIATELY redirect console output if in MCP mode BEFORE error logger setup
+if (isMcpMode) {
+  const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
+  const logDir = path.dirname(logPath);
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  
+  const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+  
+  // Completely silence console output in MCP mode
+  const silentLogger = (...args) => {
+    logStream.write(`${new Date().toISOString()} [CONSOLE]: ${args.join(' ')}\n`);
+  };
+  
+  console.error = silentLogger;
+  console.log = silentLogger;
+  console.warn = silentLogger;
+  console.info = silentLogger;
+  console.debug = silentLogger;
+  
+  // Also redirect process stdout/stderr writes that bypass console
+  const originalStdoutWrite = process.stdout.write;
+  const originalStderrWrite = process.stderr.write;
+  
+  process.stdout.write = function(chunk, encoding, callback) {
+    // Only allow JSON-RPC responses to pass through
+    if (typeof chunk === 'string' && chunk.startsWith('{"')) {
+      return originalStdoutWrite.call(this, chunk, encoding, callback);
+    }
+    logStream.write(`${new Date().toISOString()} [STDOUT]: ${chunk}`);
+    if (callback) callback();
+    return true;
+  };
+  
+  process.stderr.write = function(chunk, encoding, callback) {
+    logStream.write(`${new Date().toISOString()} [STDERR]: ${chunk}`);
+    if (callback) callback();
+    return true;
+  };
+}
+
+// STEP 3: Now safe to import modules that might console.log during initialization
 import { CoreInfrastructure } from "./modules/core-infrastructure.js";
 import { McpHandlers } from "./modules/mcp-handlers.js";
 import { ToolRouter } from "./modules/tool-router.js";
@@ -27,30 +89,52 @@ import { IdentityEngine } from "./modules/identity-engine.js";
 import { IntegratedTaskPool } from "./modules/integrated-task-pool.js";
 import { IntegratedScheduleGenerator } from "./modules/integrated-schedule-generator.js";
 import { initErrorLogger } from "./modules/error-logger.js";
-import { initForestLogging, getForestLogger } from "./modules/winston-logger.js";
+import { debugLogger } from "./modules/utils/debug-logger.js";
 import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from "./modules/constants.js";
 import { bus } from "./modules/utils/event-bus.js";
 import { StrategyEvolver } from "./modules/strategy-evolver.js";
 import { SystemClock } from "./modules/system-clock.js";
 import { ProactiveInsightsHandler } from "./modules/proactive-insights-handler.js";
 
-// Initialize enhanced winston-based logging system
-const forestLogger = initForestLogging({
-  logLevel: process.env.LOG_LEVEL || 'info',
-  enableConsole: true,
-  enableFileLogging: true,
-  enableRealTimeLogging: true,
-  memoryThreshold: 500 * 1024 * 1024 // 500MB
-});
-
-// Initialize legacy error logger for compatibility
+// STEP 4: Initialize error logger (after console redirection is in place)
 initErrorLogger();
 
-// Debug infrastructure (disabled for testing)
-// import { createRequire } from 'module';
-// const require = createRequire(import.meta.url);
-// require("../debug/debug-core.js");
-// const { ForestDebugIntegration } = require("../debug/debug-integration.js");
+// Lightweight file/console logger that never writes to STDOUT/STDERR in MCP mode
+class SimpleLogger {
+  constructor() {
+    this.logFile = null;
+    if (isMcpMode) {
+      const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'forest-mcp.log');
+      const logDir = path.dirname(logPath);
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      this.logFile = fs.createWriteStream(logPath, { flags: 'a' });
+    }
+  }
+
+  log(level, message, meta = {}) {
+    const timestamp = new Date().toISOString();
+    const entry = `${timestamp} [${level}] ${message} ${JSON.stringify(meta)}\n`;
+    if (this.logFile) {
+      this.logFile.write(entry);
+    } else if (isExplicitlyInteractive) {
+      console.error(entry);
+    }
+  }
+  info(msg, meta) { this.log('INFO', msg, meta); }
+  warn(msg, meta) { this.log('WARN', msg, meta); }
+  error(msg, meta) { this.log('ERROR', msg, meta); }
+  debug(msg, meta) { this.log('DEBUG', msg, meta); }
+  // stubs for compatibility
+  startTimer() {}
+  endTimer() { return 0; }
+  getStats() { return { uptime: process.uptime() }; }
+  formatBytes(b) { return `${b} bytes`; }
+}
+
+// Initialize global logger instance
+const forestLogger = new SimpleLogger();
 
 // Minimal debug integration for testing
 class MinimalDebugIntegration {
@@ -78,17 +162,24 @@ class MinimalDebugIntegration {
 class CleanForestServer {
   constructor() {
     // Use logging instead of console.error to avoid MCP interference
-    const isTerminal = isInteractive;
-    if (isTerminal) {
+    if (isExplicitlyInteractive) {
       console.error("🏗️ CleanForestServer constructor starting...");
     }
 
+    // Start comprehensive debugging
+    debugLogger.logEvent('CONSTRUCTOR_START');
+    debugLogger.startMonitoring();
+
     try {
       // Initialize core infrastructure
+      debugLogger.logEvent('INIT_CORE_INFRASTRUCTURE');
       this.core = new CoreInfrastructure();
+      debugLogger.logEvent('CORE_INFRASTRUCTURE_COMPLETE');
 
       // Initialize data layer
+      debugLogger.logEvent('INIT_DATA_PERSISTENCE');
       this.dataPersistence = new DataPersistence(this.core.getDataDir());
+      debugLogger.logEvent('DATA_PERSISTENCE_COMPLETE');
 
       // Initialize memory and sync layer
       this.memorySync = new MemorySync(this.dataPersistence);
@@ -173,8 +264,8 @@ class CleanForestServer {
         this.eventBus
       );
 
-      // Initialize enhanced logging for Forest.os components
-      this.logger = getForestLogger();
+      // Initialize lightweight logger in MCP mode
+      this.logger = forestLogger;
       this.logger.info('Forest.os server initializing', {
         module: 'CleanForestServer',
         version: '2.0',
@@ -190,8 +281,13 @@ class CleanForestServer {
       this.addLLMTools();
 
       // Initialize MCP handlers and routing
+      debugLogger.logEvent('INIT_MCP_HANDLERS');
       this.mcpHandlers = new McpHandlers(this.core.getServer());
+      debugLogger.logEvent('MCP_HANDLERS_COMPLETE');
+      
+      debugLogger.logEvent('INIT_TOOL_ROUTER');
       this.toolRouter = new ToolRouter(this.core.getServer(), this);
+      debugLogger.logEvent('TOOL_ROUTER_COMPLETE');
 
       // Integrated scheduler
       this.integratedTaskPool = new IntegratedTaskPool(this.dataPersistence, this.projectManagement);
@@ -203,16 +299,19 @@ class CleanForestServer {
         this.scheduleGenerator,
       );
 
-      // Setup the server
-      this.setupServer();
-      if (isTerminal) {
+      debugLogger.logEvent('CONSTRUCTOR_COMPLETE');
+      if (isExplicitlyInteractive) {
         console.error(
           "✓ CleanForestServer constructor completed - NO HARDCODED RESPONSES",
         );
       }
 
     } catch (/** @type {any} */ error) {
-      if (isTerminal) {
+      debugLogger.logCritical('CONSTRUCTOR_ERROR', {
+        error: error.message,
+        stack: error.stack
+      });
+      if (isExplicitlyInteractive) {
         console.error("❌ Error in CleanForestServer constructor:", error.message);
         console.error("Stack:", error.stack);
       }
@@ -220,15 +319,31 @@ class CleanForestServer {
     }
   }
 
-  setupServer() {
+  async setupServer() {
+    const opId = debugLogger.logAsyncStart('SETUP_SERVER');
     try {
-      // Setup MCP handlers and tool routing
-      this.mcpHandlers.setupHandlers();
-      this.toolRouter.setupRouter();
+      debugLogger.logEvent('SETUP_SERVER_START');
       
-      // NOTE: Truthful filtering is now built into the tool router - no need to wrap here
+      // Setup MCP handlers and tool routing
+      debugLogger.logEvent('SETUP_HANDLERS_START');
+      const handlerOpId = debugLogger.logAsyncStart('MCP_HANDLERS_SETUP');
+      await this.mcpHandlers.setupHandlers();
+      debugLogger.logAsyncEnd(handlerOpId, true);
+      debugLogger.logEvent('SETUP_HANDLERS_COMPLETE');
+      
+      debugLogger.logEvent('SETUP_ROUTER_START');
+      this.toolRouter.setupRouter();
+      debugLogger.logEvent('SETUP_ROUTER_COMPLETE');
+      
+      debugLogger.logEvent('SETUP_SERVER_COMPLETE');
+      debugLogger.logAsyncEnd(opId, true);
       
     } catch (error) {
+      debugLogger.logAsyncError(opId, error);
+      debugLogger.logCritical('SETUP_SERVER_ERROR', {
+        error: error.message,
+        stack: error.stack
+      });
       console.error("❌ Error in setupServer:", error.message);
       console.error("Stack:", error.stack);
       throw error;
@@ -1020,17 +1135,34 @@ class CleanForestServer {
   // ===== SERVER LIFECYCLE METHODS =====
 
   async run() {
+    const runOpId = debugLogger.logAsyncStart('SERVER_RUN');
     try {
       const isTerminal = isInteractive;
+      debugLogger.logEvent('RUN_START');
       
       if (isTerminal) {
         console.error("🚀 Starting Clean Forest MCP Server...");
       }
 
+      // Setup the server handlers before connecting
+      debugLogger.logEvent('PRE_SETUP_SERVER');
+      const setupOpId = debugLogger.logAsyncStart('PRE_CONNECT_SETUP');
+      await this.setupServer();
+      debugLogger.logAsyncEnd(setupOpId, true);
+      debugLogger.logEvent('POST_SETUP_SERVER');
+
+      debugLogger.logEvent('PRE_SERVER_CONNECT');
       const server = this.core.getServer();
       const transport = new StdioServerTransport();
+      
+      const connectOpId = debugLogger.logAsyncStart('SERVER_CONNECT');
       await server.connect(transport);
+      debugLogger.logAsyncEnd(connectOpId, true);
+      debugLogger.logEvent('POST_SERVER_CONNECT');
 
+      debugLogger.logEvent('SERVER_STARTED_SUCCESSFULLY');
+      debugLogger.logAsyncEnd(runOpId, true);
+      
       if (isTerminal) {
         console.error("🌳 Clean Forest MCP Server v2 started successfully!");
         console.error("📁 Data directory:", this.core.getDataDir());
@@ -1079,7 +1211,7 @@ class CleanForestServer {
         console.error("Stack:", error.stack);
       } else {
         // Log to MCP startup log for debugging
-        const logPath = path.join(process.cwd(), 'logs', 'mcp-startup.log');
+        const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
         fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL RUN]: ${error.message}\n${error.stack}\n`);
       }
       throw error;
@@ -2287,7 +2419,7 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
   async getLoggingStatus() {
     try {
       const stats = this.logger.getStats();
-      const logDirectory = path.resolve(process.cwd(), 'logs');
+      const logDirectory = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'logs');
       
       // Check which log files exist
       const logFiles = [
@@ -2540,7 +2672,7 @@ The specified timer was not found. Make sure you've started a timer with this la
    */
   async viewRecentLogs({ level, component, lines = 20, logFile = 'forest-app.log' }) {
     try {
-      const logDirectory = path.resolve(process.cwd(), 'logs');
+      const logDirectory = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'logs');
       const logPath = path.join(logDirectory, logFile);
       
       if (!fs.existsSync(logPath)) {
@@ -2640,30 +2772,8 @@ ${displayLines.join('\n')}
 
 // ===== MAIN EXECUTION =====
 
-// Detect interactive (human) run vs MCP/pipe
-const isInteractive = !!process.stdin.isTTY;
-const isMcpMode = !isInteractive;
-
-// If running as MCP server, redirect console output to a log file to avoid interfering with MCP protocol
-if (isMcpMode) {
-  const logPath = path.join(process.cwd(), 'logs', 'mcp-startup.log');
-  const logDir = path.dirname(logPath);
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  
-  const logStream = fs.createWriteStream(logPath, { flags: 'a' });
-  const originalConsoleError = console.error;
-  const originalConsoleLog = console.log;
-  
-  console.error = (...args) => {
-    logStream.write(`${new Date().toISOString()} [ERROR]: ${args.join(' ')}\n`);
-  };
-  
-  console.log = (...args) => {
-    logStream.write(`${new Date().toISOString()} [LOG]: ${args.join(' ')}\n`);
-  };
-}
+// Detect interactive (human) run vs MCP/pipe (already declared above)
+// MCP mode detection and console redirection is now handled at the top of the file
 
 // Create and run the server
 if (!isMcpMode) {
@@ -2675,7 +2785,7 @@ try {
   server.run().catch((/** @type {any} */ error) => {
     if (isMcpMode) {
       // For MCP mode, write error to log file and exit cleanly
-      const logPath = path.join(process.cwd(), 'logs', 'mcp-startup.log');
+      const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
       fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL]: ${error.message}\n${error.stack}\n`);
     } else {
       console.error("❌ Error in server.run():", error.message);
@@ -2686,7 +2796,7 @@ try {
 } catch (/** @type {any} */ error) {
   if (isMcpMode) {
     // For MCP mode, write error to log file and exit cleanly
-    const logPath = path.join(process.cwd(), 'logs', 'mcp-startup.log');
+    const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
     fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL]: ${error.message}\n${error.stack}\n`);
   } else {
     console.error("❌ Error creating/running server:", error.message);

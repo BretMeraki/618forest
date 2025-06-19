@@ -30,15 +30,23 @@ export class DataPersistence {
       return cachedData;
     }
 
+    const filePath = FileSystem.join(this.getProjectDir(projectId), filename);
+
+    // If the file doesn't exist yet (e.g. brand-new project), return null gracefully
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
+      return null;
+    }
+
     try {
-      const filePath = FileSystem.join(this.getProjectDir(projectId), filename);
       const parsed = await FileSystem.readJSON(filePath);
 
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
-    } catch {
-      return null;
+    } catch (error) {
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { projectId, filename });
     }
   }
 
@@ -69,15 +77,22 @@ export class DataPersistence {
       return cachedData;
     }
 
+    const filePath = FileSystem.join(this.getPathDir(projectId, pathName), filename);
+
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
+      return null;
+    }
+
     try {
-      const filePath = FileSystem.join(this.getPathDir(projectId, pathName), filename);
       const parsed = await FileSystem.readJSON(filePath);
 
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
-    } catch {
-      return null;
+    } catch (error) {
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { projectId, pathName, filename });
     }
   }
 
@@ -100,11 +115,18 @@ export class DataPersistence {
   }
 
   async loadGlobalData(filename) {
-    try {
-      const filePath = FileSystem.join(this.dataDir, filename);
-      return await FileSystem.readJSON(filePath);
-    } catch {
+    const filePath = FileSystem.join(this.dataDir, filename);
+
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
       return null;
+    }
+
+    try {
+      return await FileSystem.readJSON(filePath);
+    } catch (error) {
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { filename });
     }
   }
 
@@ -133,9 +155,9 @@ export class DataPersistence {
       await FileSystem.ensureDir(this.dataDir);
       const logPath = FileSystem.join(this.dataDir, FILE_NAMES.ERROR_LOG);
       await FileSystem.appendFile(logPath, `${JSON.stringify(logEntry)}\n`);
-    } catch {
+    } catch (logError) {
       // If we can't log the error, just console.error it
-      console.error('Failed to log error:', logEntry);
+      console.error('Failed to log error:', logEntry, 'Log error:', logError.message);
     }
   }
 
@@ -152,8 +174,9 @@ export class DataPersistence {
   async fileExists(filePath) {
     try {
       return await FileSystem.exists(filePath);
-    } catch {
-      return false;
+    } catch (error) {
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('exists', filePath, error);
     }
   }
 
