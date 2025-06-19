@@ -1,14 +1,17 @@
 /**
  * Task Completion Module
  * Handles task completion and learning evolution
+ * Now uses event-driven architecture for decoupled strategy evolution
  */
 
 import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG } from './constants.js';
+import { bus } from './utils/event-bus.js';
 
 export class TaskCompletion {
-  constructor(dataPersistence, projectManagement) {
+  constructor(dataPersistence, projectManagement, eventBus = null) {
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
+    this.eventBus = eventBus || bus; // Use provided eventBus or default to global bus
   }
 
   async completeBlock(blockId, outcome, learned = '', nextQuestions = '', energyLevel, difficultyRating = 3, breakthrough = false,
@@ -87,9 +90,13 @@ export class TaskCompletion {
       // Update learning history
       await this.updateLearningHistory(projectId, config.activePath || DEFAULT_PATHS.GENERAL, block);
 
-      // Evolve HTA tree based on learning
+      // Emit block completion event for decoupled strategy evolution
       if (learned || nextQuestions || breakthrough) {
-        await this.evolveHTABasedOnLearning(projectId, config.activePath || DEFAULT_PATHS.GENERAL, block);
+        this.eventBus.emit('block:completed', {
+          projectId,
+          pathName: config.activePath || DEFAULT_PATHS.GENERAL,
+          block
+        }, 'TaskCompletion');
       }
 
       // Handle opportunity detection for impossible dream orchestration
@@ -182,241 +189,9 @@ export class TaskCompletion {
     await this.savePathLearningHistory(projectId, pathName, learningHistory);
   }
 
-  async evolveHTABasedOnLearning(projectId, pathName, block) {
-    const htaData = await this.loadPathHTA(projectId, pathName);
-    if (!htaData) {return;}
-
-    // Mark corresponding HTA node as completed
-    if (block.taskId) {
-      const node = htaData.frontierNodes?.find(n => n.id === block.taskId);
-      if (node) {
-        node.completed = true;
-        node.completedAt = block.completedAt;
-        node.actualDifficulty = block.difficultyRating;
-        node.actualDuration = block.duration;
-      }
-    }
-
-    // Generate follow-up tasks based on learning and questions
-    if (block.nextQuestions || block.breakthrough) {
-      const newTasks = this.generateFollowUpTasks(block, htaData);
-      if (newTasks.length > 0) {
-        htaData.frontierNodes = (htaData.frontierNodes || []).concat(newTasks);
-      }
-    }
-
-    // Handle opportunity-driven task generation
-    if (block.opportunityContext) {
-      const opportunityTasks = this.generateOpportunityTasks(block, htaData);
-      if (opportunityTasks.length > 0) {
-        htaData.frontierNodes = (htaData.frontierNodes || []).concat(opportunityTasks);
-      }
-    }
-
-    htaData.lastUpdated = new Date().toISOString();
-    await this.savePathHTA(projectId, pathName, htaData);
-  }
-
-  generateFollowUpTasks(block, htaData) {
-    const newTasks = [];
-    let taskId = (htaData.frontierNodes?.length || 0) + TASK_CONFIG.EXPLORE_TASK_BASE;
-
-    // CRITICAL: Enhanced momentum building - parse specific outcomes for targeted tasks
-    const momentumTasks = this.generateMomentumBuildingTasks(block, taskId);
-    newTasks.push(...momentumTasks);
-    taskId += momentumTasks.length;
-
-    // Generate tasks from next questions (as secondary priority)
-    if (block.nextQuestions) {
-      const questions = block.nextQuestions.split('.').filter(q => q.trim().length > 0);
-
-      for (const question of questions.slice(0, 2)) { // Limit to 2 follow-up tasks
-        newTasks.push({
-          id: `followup_${taskId++}`,
-          title: `Explore: ${question.trim()}`,
-          description: `Investigation stemming from ${block.title}`,
-          branch: block.branch || 'exploration',
-          difficulty: Math.max(1, (block.difficultyRating || 3) - 1),
-          duration: '20 minutes',
-          prerequisites: [block.taskId].filter(Boolean),
-          learningOutcome: `Understanding of ${question.trim()}`,
-          priority: block.breakthrough ? 250 : 200,
-          generated: true,
-          sourceBlock: block.id
-        });
-      }
-    }
-
-    return newTasks;
-  }
-
-  generateMomentumBuildingTasks(block, startTaskId) {
-    const momentumTasks = [];
-    const outcome = (block.outcome || '').toLowerCase();
-    let taskId = startTaskId;
-
-    // Parse specific outcomes for momentum building
-    const outcomePatterns = [
-      {
-        pattern: /professor|teacher|instructor|academic/i,
-        task: {
-          title: 'Follow up with professor contact',
-          description: 'Reach out to the professor who showed interest and explore collaboration opportunities',
-          branch: 'academic_networking',
-          difficulty: 2,
-          duration: '25 minutes',
-          priority: 400, // High priority for momentum
-          learningOutcome: 'Professional academic connection and mentorship'
-        }
-      },
-      {
-        pattern: /viral|shares|social media|linkedin|twitter/i,
-        task: {
-          title: 'Capitalize on viral momentum',
-          description: 'Engage with the viral response and create follow-up content to maintain visibility',
-          branch: 'content_amplification',
-          difficulty: 2,
-          duration: '30 minutes',
-          priority: 390,
-          learningOutcome: 'Understanding of viral content strategy and audience engagement'
-        }
-      },
-      {
-        pattern: /contacted|reached out|email|message/i,
-        task: {
-          title: 'Respond to incoming connections',
-          description: 'Follow up with people who contacted you and explore potential collaborations',
-          branch: 'response_networking',
-          difficulty: 2,
-          duration: '20 minutes',
-          priority: 380,
-          learningOutcome: 'Professional networking and relationship building'
-        }
-      },
-      {
-        pattern: /journalist|media|reporter|news/i,
-        task: {
-          title: 'Engage with journalism contacts',
-          description: 'Follow up with journalism professionals who showed interest in your work',
-          branch: 'media_relations',
-          difficulty: 3,
-          duration: '35 minutes',
-          priority: 420,
-          learningOutcome: 'Media relations and professional journalism connections'
-        }
-      },
-      {
-        pattern: /expert|professional|industry/i,
-        task: {
-          title: 'Connect with industry experts',
-          description: 'Reach out to industry professionals who can provide advanced guidance',
-          branch: 'expert_networking',
-          difficulty: 3,
-          duration: '30 minutes',
-          priority: 400,
-          learningOutcome: 'Expert mentorship and industry connections'
-        }
-      }
-    ];
-
-    // CRITICAL FIX: Generate momentum tasks for ALL matching patterns, not just first one
-    for (const pattern of outcomePatterns) {
-      if (pattern.pattern.test(outcome)) {
-        momentumTasks.push({
-          id: `momentum_${taskId++}`,
-          title: pattern.task.title,
-          description: pattern.task.description,
-          branch: pattern.task.branch,
-          difficulty: pattern.task.difficulty,
-          duration: pattern.task.duration,
-          prerequisites: [], // CRITICAL FIX: No prerequisites for momentum tasks to avoid orphaning
-          learningOutcome: pattern.task.learningOutcome,
-          priority: pattern.task.priority,
-          generated: true,
-          sourceBlock: block.id,
-          momentumBuilding: true
-        });
-        // Continue checking other patterns instead of breaking after first match
-      }
-    }
-
-    // If breakthrough but no specific patterns detected, generate generic momentum task
-    if (block.breakthrough && momentumTasks.length === 0) {
-      momentumTasks.push({
-        id: `momentum_${taskId++}`,
-        title: 'Build on breakthrough momentum',
-        description: `Capitalize on the success and insights from ${block.title}`,
-        branch: 'breakthrough_scaling',
-        difficulty: Math.min(5, (block.difficultyRating || 3) + 1),
-        duration: '40 minutes',
-        prerequisites: [], // CRITICAL FIX: No prerequisites for momentum tasks to avoid orphaning
-        learningOutcome: 'Advanced expertise building on breakthrough insights',
-        priority: 350,
-        generated: true,
-        sourceBlock: block.id,
-        momentumBuilding: true
-      });
-    }
-
-    return momentumTasks;
-  }
-
-  generateOpportunityTasks(block, htaData) {
-    const opportunityTasks = [];
-    const context = block.opportunityContext;
-    let taskId = (htaData.frontierNodes?.length || 0) + TASK_CONFIG.SAMPLE_TASK_BASE;
-
-    // High engagement detection - indicates natural talent/interest
-    if (context.engagementLevel >= 8) {
-      opportunityTasks.push({
-        id: `breakthrough_${taskId++}`,
-        title: `Amplify: ${block.title} Success`,
-        description: `Build on the breakthrough momentum from ${block.title}`,
-        branch: block.branch || 'opportunity',
-        difficulty: Math.min(5, (block.difficultyRating || 3) + 1),
-        duration: '45 minutes',
-        prerequisites: [block.taskId].filter(Boolean),
-        learningOutcome: 'Amplified skills and deeper mastery',
-        priority: 350, // High priority for breakthrough amplification
-        opportunityType: 'breakthrough_amplification'
-      });
-    }
-
-    // External feedback opportunities
-    if (context.externalFeedback?.length > 0) {
-      const positiveFeedback = context.externalFeedback.filter(f => f.sentiment === 'positive');
-      if (positiveFeedback.length > 0) {
-        opportunityTasks.push({
-          id: `network_${taskId++}`,
-          title: 'Follow Up: External Interest',
-          description: `Connect with people who showed interest in your ${block.title} work`,
-          branch: 'networking',
-          difficulty: 2,
-          duration: '30 minutes',
-          learningOutcome: 'Professional connections and feedback',
-          priority: 300,
-          opportunityType: 'networking'
-        });
-      }
-    }
-
-    // Viral potential tasks
-    if (context.viralPotential) {
-      opportunityTasks.push({
-        id: `viral_${taskId++}`,
-        title: 'Leverage: Viral Momentum',
-        description: `Capitalize on the viral potential of your ${block.title} work`,
-        branch: 'marketing',
-        difficulty: 3,
-        duration: '60 minutes',
-        learningOutcome: 'Understanding of viral content and audience building',
-        priority: 320,
-        opportunityType: 'viral_leverage'
-      });
-    }
-
-    return opportunityTasks;
-  }
+  // NOTE: Strategy evolution methods (evolveHTABasedOnLearning, generateFollowUpTasks, 
+  // generateMomentumBuildingTasks, generateOpportunityTasks) have been moved to StrategyEvolver module
+  // TaskCompletion now emits 'block:completed' events instead of directly calling evolution logic
 
   async handleOpportunityDetection(projectId, block) {
     const context = block.opportunityContext;

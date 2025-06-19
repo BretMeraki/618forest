@@ -26,6 +26,8 @@ import { IntegratedTaskPool } from "./modules/integrated-task-pool.js";
 import { IntegratedScheduleGenerator } from "./modules/integrated-schedule-generator.js";
 import { initErrorLogger } from "./modules/error-logger.js";
 import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from "./modules/constants.js";
+import { bus } from "./modules/utils/event-bus.js";
+import { StrategyEvolver } from "./modules/strategy-evolver.js";
 
 // Initialize logger immediately so that ALL subsequent console output is captured
 initErrorLogger();
@@ -99,10 +101,19 @@ class CleanForestServer {
         this.projectManagement,
       );
 
-      // Initialize task system - USING CLEAN VERSIONS
+      // Initialize event bus for decoupled module communication
+      this.eventBus = bus;
+
+      // Initialize strategy evolver (event-driven HTA evolution)  
+      this.strategyEvolver = new StrategyEvolver(
+        this.dataPersistence,
+        this.projectManagement
+      );
+
+      // Initialize task system - USING CLEAN VERSIONS with event bus
       this.taskCompletion = new TaskCompletion(
         this.dataPersistence,
-        this.projectManagement,
+        this.projectManagement
       );
       this.taskIntelligence = new TaskIntelligence(
         this.dataPersistence,
@@ -1228,3 +1239,4 @@ try {
 }
 
 export { CleanForestServer };
+export { CleanForestServer as ModularForestServer };
