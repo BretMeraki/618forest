@@ -285,28 +285,17 @@ export class ToolRouter {
         // Step 1: Execute the tool as normal.
         const originalResult = await this.dispatchTool(toolName, args);
 
-        // Step 2: Get the truthful critique of the tool's result.
-        // The critique logic is called here as a simple internal method.
-        const { response, critique } = this.forestServer.getTruthfulCritique(originalResult);
+        // Step 2: Get the truthful critique (async rich object)
+        const critique = await this.forestServer._getTruthfulCritique(originalResult);
 
-        // Step 3: Combine the original result with the critique into a single, final response.
-        // We will structure the final output to always contain both parts.
+        // Step 3: Combine into final response
         const finalResponse = {
-          tool_output: originalResult, // The original, unmodified output from the tool
-          truthful_assessment: {
-            // A new, dedicated section for the critique
-            response,
-            critique
-          },
-          // For easy display, we also include a formatted text block.
+          tool_output: originalResult,
+          truthful_assessment: critique,
           content: [
             {
               type: 'text',
-              text: `🧠 **Truthful Assessment & Critique**:\n${critique}\n\n---\n\n**Original Tool Output for '${toolName}':**\n${
-                typeof originalResult === 'string'
-                  ? originalResult
-                  : JSON.stringify(originalResult, null, 2)
-              }`
+              text: `🧠 **Honest Assessment** (Confidence: ${critique.confidence_score}%):\n${critique.assessment}\n\n🔍 **Critique**:\n${critique.critique}\n\n💡 **Suggestion**:\n${critique.suggested_improvement}`
             }
           ]
         };

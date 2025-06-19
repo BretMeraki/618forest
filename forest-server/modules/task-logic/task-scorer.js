@@ -31,38 +31,38 @@ export class TaskScorer {
     // Energy level matching
     const taskDifficulty = task.difficulty || 3;
     const energyMatch = 5 - Math.abs(energyLevel - taskDifficulty);
-    score += energyMatch * 20;
+    score += energyMatch * SCORING.ENERGY_MATCH_WEIGHT;
 
     // CRITICAL FIX: Better time constraint handling
     const taskDuration = this.parseTimeToMinutes(task.duration || '30 minutes');
 
     if (timeInMinutes >= taskDuration) {
       // Task fits perfectly within time constraint
-      score += 50;
+      score += SCORING.TIME_FIT_BONUS;
     } else if (timeInMinutes >= taskDuration * 0.8) {
       // Task is slightly longer but could be adapted
-      score += 20;
+      score += SCORING.TIME_ADAPT_BONUS;
     } else if (timeInMinutes >= taskDuration * 0.5) {
       // Task is much longer but could be partially completed
-      score -= 20;
+      score += SCORING.TIME_ADAPT_BONUS * -1;
     } else {
       // Task is way too long
-      score -= 100;
+      score += SCORING.TIME_TOO_LONG_PENALTY;
     }
 
     // Domain context relevance
     if (this.isDomainRelevant(task, projectContext)) {
-      score += 100;
+      score += SCORING.DOMAIN_RELEVANCE_BONUS;
     }
 
     // Context relevance from memory
     if (contextFromMemory && this.isContextRelevant(task, contextFromMemory)) {
-      score += 50;
+      score += SCORING.CONTEXT_RELEVANCE_BONUS;
     }
 
     // CRITICAL: Momentum building tasks get HIGHEST priority with slight variations for diversity
     if (task.momentumBuilding) {
-      const baseBoost = 500;
+      const baseBoost = SCORING.MOMENTUM_TASK_BASE_BOOST;
       const branchVariation = this.getBranchVariation(task.branch);
       const randomVariation = Math.random() * 10; // 0-10 points for diversity
       score += baseBoost + branchVariation + randomVariation;
@@ -70,12 +70,12 @@ export class TaskScorer {
 
     // Breakthrough potential
     if (task.opportunityType === 'breakthrough_amplification') {
-      score += 100;
+      score += SCORING.BREAKTHROUGH_AMPLIFICATION_BONUS;
     }
 
     // Recently generated tasks get boost
     if (task.generated) {
-      score += 25;
+      score += SCORING.GENERATED_TASK_BOOST;
     }
 
     // ===== ENHANCED RICH CONTEXT SCORING =====
@@ -331,7 +331,7 @@ export class TaskScorer {
     const matches = timeStr.match(/(\d+)\s*(minute|hour|min|hr)/i);
     if (!matches) { return 30; }
 
-    const value = parseInt(matches[1]);
+    const value = parseInt(matches[1], 10);
     const unit = matches[2].toLowerCase();
 
     return unit.startsWith('hour') || unit.startsWith('hr') ? value * 60 : value;

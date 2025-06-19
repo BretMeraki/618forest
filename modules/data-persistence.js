@@ -30,15 +30,28 @@ export class DataPersistence {
       return cachedData;
     }
 
+    const filePath = FileSystem.join(this.getProjectDir(projectId), filename);
+
+    // Gracefully handle brand-new projects with no data yet
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
+      return null;
+    }
+
     try {
-      const filePath = FileSystem.join(this.getProjectDir(projectId), filename);
       const parsed = await FileSystem.readJSON(filePath);
 
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
-    } catch {
-      return null;
+    } catch (error) {
+      // If the file disappeared between the exists check and read
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { projectId, filename });
     }
   }
 
@@ -69,15 +82,26 @@ export class DataPersistence {
       return cachedData;
     }
 
+    const filePath = FileSystem.join(this.getPathDir(projectId, pathName), filename);
+
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
+      return null;
+    }
+
     try {
-      const filePath = FileSystem.join(this.getPathDir(projectId, pathName), filename);
       const parsed = await FileSystem.readJSON(filePath);
 
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
-    } catch {
-      return null;
+    } catch (error) {
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { projectId, pathName, filename });
     }
   }
 
@@ -100,11 +124,22 @@ export class DataPersistence {
   }
 
   async loadGlobalData(filename) {
-    try {
-      const filePath = FileSystem.join(this.dataDir, filename);
-      return await FileSystem.readJSON(filePath);
-    } catch {
+    const filePath = FileSystem.join(this.dataDir, filename);
+
+    const exists = await FileSystem.exists(filePath);
+    if (!exists) {
       return null;
+    }
+
+    try {
+      return await FileSystem.readJSON(filePath);
+    } catch (error) {
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
+      const { DataPersistenceError } = await import('./errors.js');
+      throw new DataPersistenceError('load', filePath, error, { filename });
     }
   }
 

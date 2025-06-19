@@ -64,7 +64,14 @@ export class SystemClock {
     const clockConfig = { ...defaultConfig, ...config };
     this.isRunning = true;
 
-    console.log('🕰️ SystemClock starting with config:', clockConfig);
+    // Skip intervals in MCP mode to prevent event loop interference
+    const isMcpMode = !process.stdin.isTTY;
+    if (isMcpMode) {
+      console.log('🕰️ SystemClock starting in MCP mode (intervals disabled to prevent initialization timeout)');
+      clockConfig.enableBackgroundTicks = false;
+    } else {
+      console.log('🕰️ SystemClock starting with config:', clockConfig);
+    }
 
     // Schedule different types of background analysis
     if (clockConfig.enableBackgroundTicks) {
@@ -81,7 +88,11 @@ export class SystemClock {
       startedAt: new Date().toISOString()
     }, 'SystemClock');
 
-    console.log('✅ SystemClock started - Proactive reasoning engaged');
+    if (isMcpMode) {
+      console.log('✅ SystemClock started in MCP mode - Event-driven analysis only');
+    } else {
+      console.log('✅ SystemClock started - Proactive reasoning engaged');
+    }
   }
 
   /**

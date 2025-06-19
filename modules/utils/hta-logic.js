@@ -16,8 +16,8 @@ export function getAvailableNodes(frontierNodes = [], completedNodes = []) {
   const completedTitles = new Set(completedNodes.map(n => n.title));
 
   return frontierNodes.filter(node => {
-    if (!node || node.completed) return false;
-    if (!node.prerequisites || node.prerequisites.length === 0) return true;
+    if (!node || node.completed) {return false;}
+    if (!node.prerequisites || node.prerequisites.length === 0) {return true;}
 
     // All prerequisites must be met by id OR by title.
     return node.prerequisites.every(prereq =>

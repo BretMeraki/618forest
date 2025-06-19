@@ -5,7 +5,7 @@
  */
 
 import { bus } from './utils/event-bus.js';
-import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG } from './constants.js';
+import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG, THRESHOLDS } from './constants.js';
 import { TaskFormatter } from './task-logic/index.js';
 
 export class StrategyEvolver {
@@ -468,7 +468,7 @@ export class StrategyEvolver {
 
     const recentCompletions = learningHistory.completedTopics?.filter(t => {
       const daysDiff = (Date.now() - new Date(t.completedAt)) / (1000 * 60 * 60 * 24);
-      return daysDiff <= 7;
+      return daysDiff <= THRESHOLDS.RECENT_DAYS;
     }) || [];
 
     if (recentCompletions.length === 0) {
@@ -476,7 +476,7 @@ export class StrategyEvolver {
     }
 
     const avgEngagement = recentCompletions.reduce((sum, c) => sum + (c.energyAfter || 3), 0) / Math.max(recentCompletions.length, 1);
-    if (avgEngagement < 2.5) {
+    if (avgEngagement < THRESHOLDS.LOW_ENGAGEMENT) {
       indicators.push('low_engagement');
     }
 
@@ -603,7 +603,7 @@ export class StrategyEvolver {
   }
 
   generateConcernAddressingTasks(feedback, startId, existingTaskTitles = new Set()) {
-    const tasks = [ {
+    const tasks = [{
       id: `concern_${startId}`, title: 'Address: Specific user concern', description: `Investigate and resolve the issue: ${feedback.original.substring(0, 60)}...`, difficulty: 2, duration: '30 minutes', branch: 'concern_resolution', priority: 260, generated: true, learningOutcome: 'Resolution strategies for user concern' }
     ];
     return tasks.filter(t => !existingTaskTitles.has(t.title));
@@ -669,12 +669,12 @@ export class StrategyEvolver {
   }
 
   generateHealthCrisisTasks(config, startId, existingTaskTitles = new Set()) {
-    const tasks = [ { id: `rest_${startId}`, title: 'Gentle learning while recovering', description: 'Light, low-energy learning activities', difficulty: 1, duration: '15 minutes', branch: 'recovery_compatible', priority: 400, generated: true, learningOutcome: 'Maintained progress during recovery' } ];
+    const tasks = [{ id: `rest_${startId}`, title: 'Gentle learning while recovering', description: 'Light, low-energy learning activities', difficulty: 1, duration: '15 minutes', branch: 'recovery_compatible', priority: 400, generated: true, learningOutcome: 'Maintained progress during recovery' }];
     return tasks.filter(t => !existingTaskTitles.has(t.title));
   }
 
   generateGenericAdaptationTasks(config, startId, existingTaskTitles = new Set()) {
-    const tasks = [ { id: `adapt_${startId}`, title: 'Adaptation strategy planning', description: 'Plan how to adapt goals to new circumstances', difficulty: 2, duration: '30 minutes', branch: 'life_adaptation', priority: 400, generated: true, learningOutcome: 'Realistic adaptation plan' } ];
+    const tasks = [{ id: `adapt_${startId}`, title: 'Adaptation strategy planning', description: 'Plan how to adapt goals to new circumstances', difficulty: 2, duration: '30 minutes', branch: 'life_adaptation', priority: 400, generated: true, learningOutcome: 'Realistic adaptation plan' }];
     return tasks.filter(t => !existingTaskTitles.has(t.title));
   }
 

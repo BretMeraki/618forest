@@ -2,10 +2,10 @@
 
 /**
  * Forest.os Real-Time Logging System Demo
- * 
+ *
  * This script demonstrates the comprehensive winston-based logging system
  * integrated into Forest.os, showcasing:
- * 
+ *
  * - Multi-level structured logging
  * - Performance timing capabilities
  * - Memory monitoring

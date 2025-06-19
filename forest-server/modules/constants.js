@@ -142,7 +142,33 @@ export const SCORING = {
   FINANCIAL_SCALE_SMALL: 1000,
   TEAM_SIZE_LARGE: 10,
   TEAM_SIZE_MEDIUM: 3,
-  COORDINATION_COMPLEXITY_THRESHOLD: 2
+  COORDINATION_COMPLEXITY_THRESHOLD: 2,
+  ENERGY_MATCH_WEIGHT: 20,
+  TIME_FIT_BONUS: 50,
+  TIME_ADAPT_BONUS: 20,
+  TIME_TOO_LONG_PENALTY: -100,
+  DOMAIN_RELEVANCE_BONUS: 100,
+  CONTEXT_RELEVANCE_BONUS: 50,
+  MOMENTUM_TASK_BASE_BOOST: 500,
+  BREAKTHROUGH_AMPLIFICATION_BONUS: 100,
+  GENERATED_TASK_BOOST: 25
+};
+
+// Threshold values for analysis & reasoning engines
+export const THRESHOLDS = {
+  LOW_ENGAGEMENT: 2.5,
+  RECENT_DAYS: 7,
+  MIN_TASKS_FOR_ANALYSIS: 3,
+  COMPLEXITY_ESCALATION: 2, // Difficulty bump after breakthrough
+  STUCK_TASK_COUNT: 3
+};
+
+// String constants for strategy-evolution decisions
+export const EVOLUTION_STRATEGIES = {
+  ESCALATE: 'escalate_after_breakthrough',
+  ADAPT_BUDGET: 'adapt_to_zero_budget',
+  ADAPT_CAREGIVING: 'adapt_to_caregiving'
+  // ... extend with additional strategy strings as needed
 };
 
 // Time conversion constants
@@ -233,6 +259,8 @@ export default {
   PATHS,
   TOOL_NAMES,
   SCORING,
+  THRESHOLDS,
+  EVOLUTION_STRATEGIES,
   TIME_CONVERSION,
   WEB_CONTEXT,
   DEFAULTS,

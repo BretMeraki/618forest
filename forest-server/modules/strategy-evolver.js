@@ -5,7 +5,7 @@
  */
 
 import { bus } from './utils/event-bus.js';
-import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG } from './constants.js';
+import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG, THRESHOLDS, EVOLUTION_STRATEGIES } from './constants.js';
 
 export class StrategyEvolver {
   constructor(dataPersistence, projectManagement, eventBus = null) {

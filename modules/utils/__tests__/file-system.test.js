@@ -9,7 +9,7 @@ jest.unstable_mockModule('fs/promises', () => ({
   default: {
     readFile: mockReadFile,
     writeFile: mockWriteFile,
-    access: mockAccess,
+    access: mockAccess
   }
 }));
 
@@ -20,7 +20,7 @@ const mockJoin = jest.fn();
 jest.unstable_mockModule('path', () => ({
   default: {
     dirname: mockDirname,
-    join: mockJoin,
+    join: mockJoin
   }
 }));
 
@@ -39,7 +39,7 @@ describe('FileSystem Utility', () => {
       mockReadFile.mockResolvedValue(JSON.stringify(mockData));
 
       const data = await FileSystem.readJSON('dummy/path.json');
-      
+
       expect(data).toEqual(mockData);
       expect(mockReadFile).toHaveBeenCalledWith('dummy/path.json', 'utf8');
     });
@@ -60,7 +60,7 @@ describe('FileSystem Utility', () => {
 
       await expect(FileSystem.readFile('nonexistent.txt'))
         .rejects.toThrow('Failed to read file nonexistent.txt: File not found');
-      
+
       expect(mockReadFile).toHaveBeenCalledWith('nonexistent.txt', 'utf8');
     });
   });
@@ -142,4 +142,4 @@ describe('FileSystem Utility', () => {
       expect(mockJoin).toHaveBeenCalledWith('/base', 'sub', 'file.txt');
     });
   });
-}); 
+});

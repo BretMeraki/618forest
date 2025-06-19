@@ -4,6 +4,7 @@
  */
 
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { debugLogger } from './utils/debug-logger.js';
 
 export class McpHandlers {
   constructor(server) {
@@ -14,11 +15,37 @@ export class McpHandlers {
     this.server.capabilities.tools = Object.fromEntries(toolDefs.map(t => [t.name, t]));
   }
 
-  setupHandlers() {
+  async setupHandlers() {
+    debugLogger.logEvent('MCP_HANDLERS_SETUP_START');
+
+    // Add initialize handler debugging - this might be the issue
+    debugLogger.logEvent('CHECKING_INITIALIZE_HANDLER');
+    try {
+      // The MCP SDK should handle initialize automatically, but let's debug it
+      this.server.onRequest = new Proxy(this.server.onRequest || (() => {}), {
+        apply(target, thisArg, argumentsList) {
+          const [method, params] = argumentsList;
+          debugLogger.logEvent('MCP_REQUEST_RECEIVED', { method, hasParams: !!params });
+          if (method === 'initialize') {
+            debugLogger.logEvent('INITIALIZE_REQUEST_PROCESSING', params);
+          }
+          return target.apply(thisArg, argumentsList);
+        }
+      });
+    } catch (error) {
+      debugLogger.logCritical('INITIALIZE_HANDLER_DEBUG_ERROR', {
+        error: error.message,
+        stack: error.stack
+      });
+    }
+
+    debugLogger.logEvent('SETTING_LIST_TOOLS_HANDLER');
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      debugLogger.logEvent('LIST_TOOLS_REQUEST_RECEIVED');
       // Define the full list once so we can also publish it through the initial
       // MCP capabilities handshake (Cursor shows 0 tools if we don't do this).
       const toolDefs = this.getToolDefinitions();
+      debugLogger.logEvent('TOOL_DEFINITIONS_RETRIEVED', { count: toolDefs.length });
 
       // Expose tools in the handshake exactly once (before the transport
       // connects, constructor already ran `setupHandlers`).
@@ -54,15 +81,39 @@ export class McpHandlers {
       });
     };
 
-    (async () => {
+    try {
+      debugLogger.logEvent('SETTING_UP_LEGACY_SCHEMAS');
+
+      debugLogger.logEvent('CREATING_RESOURCES_SCHEMA');
+      const resourcesSchemaOpId = debugLogger.logAsyncStart('MAKE_RESOURCES_SCHEMA');
       const resourcesSchema = await makeEmptyRequestSchema('resources/list');
+      debugLogger.logAsyncEnd(resourcesSchemaOpId, true);
+
+      debugLogger.logEvent('CREATING_PROMPTS_SCHEMA');
+      const promptsSchemaOpId = debugLogger.logAsyncStart('MAKE_PROMPTS_SCHEMA');
       const promptsSchema = await makeEmptyRequestSchema('prompts/list');
+      debugLogger.logAsyncEnd(promptsSchemaOpId, true);
 
-      const emptyArrayResponder = (key) => async () => ({ [key]: [] });
+      const emptyArrayResponder = (key) => async () => {
+        debugLogger.logEvent('EMPTY_ARRAY_RESPONSE', { key });
+        return { [key]: [] };
+      };
 
+      debugLogger.logEvent('SETTING_RESOURCES_HANDLER');
       this.server.setRequestHandler(resourcesSchema, emptyArrayResponder('resources'));
+      debugLogger.logEvent('SETTING_PROMPTS_HANDLER');
       this.server.setRequestHandler(promptsSchema, emptyArrayResponder('prompts'));
-    })();
+      debugLogger.logEvent('LEGACY_SCHEMAS_COMPLETE');
+    } catch (error) {
+      debugLogger.logCritical('LEGACY_SCHEMA_ERROR', {
+        error: error.message,
+        stack: error.stack
+      });
+      console.error('Error setting up legacy handler schemas:', error);
+      throw error;
+    }
+
+    debugLogger.logEvent('MCP_HANDLERS_SETUP_COMPLETE');
   }
 
   getToolDefinitions() {

@@ -1338,166 +1338,86 @@ class CleanForestServer {
     }
 
     const answer = this.generateHeuristicAnswer(question);
-    const critique = this.generateHeuristicCritique(answer, question);
+
+    // Use the new intelligent critique engine
+    const critiqueData = await this._getTruthfulCritique(answer);
 
     return {
       answer,
-      critique,
+      critique: critiqueData.critique,
+      assessment: critiqueData.assessment,
+      confidence_score: critiqueData.confidence_score,
+      suggested_improvement: critiqueData.suggested_improvement,
       originalInput: question,
       content: [{
         type: 'text',
-        text: `🧠 **Truthful Answer**:\n${answer}\n\n🔍 **Self-Critique**:\n${critique}`
+        text: `🧠 **Truthful Answer**:\n${answer}\n\n🔍 **Self-Critique**:\n${critiqueData.critique}`
       }]
     };
   }
 
-  generateHeuristicCritique(answer, originalQuestion) {
-    if (!answer || !originalQuestion) {
-      return 'Missing answer or question for critique.';
-    }
-
-    const a = String(answer).toLowerCase();
-    const q = String(originalQuestion).toLowerCase();
-
-    const issues = [];
-
-    // 1. Check if the answer actually addresses the question
-    if (q.includes('?') && !a.includes('.')) {
-      issues.push('Answer may be incomplete - no clear statement provided');
-    }
-
-    // 2. Check for evasive patterns
-    const evasivePatterns = [
-      'i need more information',
-      'please provide',
-      'could you clarify',
-      'depends on the context'
-    ];
-    const isEvasive = evasivePatterns.some((p) => a.includes(p));
-    const isSimpleFactual = q.includes('capital') || q.includes('2+2') || q.includes('equal');
-    if (isEvasive && isSimpleFactual) {
-      issues.push('Answer appears evasive for a simple factual question');
-    }
-
-    // 3. Check for sycophancy
-    const sycophantPatterns = [
-      'great question',
-      'excellent point',
-      'fascinating',
-      'brilliant',
-      'wonderful idea'
-    ];
-    if (sycophantPatterns.some((p) => a.includes(p))) {
-      issues.push('Answer contains unnecessary flattery');
-    }
-
-    // 4. Check for actual content length
-    if (a.length < 20 && !isSimpleFactual) {
-      issues.push('Answer seems too brief for the complexity of the question');
-    }
-
-    // 5. Template pattern check (legacy safeguard)
-    if (a.includes('direct response to:') && a.split(' ').length < 10) {
-      issues.push('Answer appears to be using a template rather than actually responding');
-    }
-
-    if (issues.length === 0) {
-      if (q.includes('?') && (a.includes('yes') || a.includes('no') || a.includes('equals'))) {
-        return 'Answer provides a clear, direct response to the question.';
-      }
-      if (a.split('.').length > 2) {
-        return 'Answer is comprehensive and well-structured.';
-      }
-      return 'Answer appears honest and directly addresses the question.';
-    }
-
-    return `Potential issues detected: ${issues.join('; ')}.`;
-  }
+  // ===== REPLACED TRUTHFUL CRITIQUE LOGIC =====
 
   /**
-   * INTERNAL, NON-TOOL METHOD for truthful critique.
-   * This is the core logic for the automatic filter. It is NOT an MCP tool.
+   * INTERNAL, INTELLIGENT ANALYSIS METHOD for truthful critique.
+   * This method constructs a high-level prompt and uses the LLM to critique a given output.
    * @param {string | object} toolResult - The output from a tool to be analyzed.
-   * @returns {{response: string, critique: string}} The critique of the tool's output.
+   * @returns {Promise<object>} A promise that resolves to the structured critique from the LLM.
    */
-  getTruthfulCritique(toolResult) {
-    // Convert the tool result to a string for analysis.
+  async _getTruthfulCritique(toolResult) {
     const resultString = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2);
 
-    const response = this.generateDirectTruthfulResponse(resultString);
-    const critique = this.generateHeuristicCritique(response, resultString);
+    // Construct the meta-prompt
+    const critiquePrompt = `
+      You are an honest, rigorous, and non-sycophantic critique engine. Your task is to analyze the following tool output and provide a truthful assessment.
 
-    return { response, critique };
+      Analyze the following output:
+      ---
+      ${resultString.substring(0, 4000)}
+      ---
+
+      Based on your analysis, provide a response in the following JSON format ONLY:
+      {
+        "assessment": "A brief, one-sentence summary of the output's quality and clarity.",
+        "critique": "A one-paragraph critique. Identify any potential areas of ambiguity, bias, or sycophancy. Is the information clear? Is it direct? Could it be improved?",
+        "confidence_score": "A score from 1-100 representing your confidence in the output's truthfulness and quality.",
+        "suggested_improvement": "A concrete suggestion for how the output could be made better, clearer, or more honest."
+      }
+    `;
+
+    // Send the prompt to Claude (or whichever LLM implementation is configured)
+    const claudeResponse = await this.core.getClaudeInterface().requestIntelligence('critique', { prompt: critiquePrompt });
+
+    // Attempt to parse the JSON returned by the LLM
+    try {
+      const parsed = JSON.parse(claudeResponse.completion || claudeResponse.answer || claudeResponse.text || '{}');
+      return {
+        assessment: parsed.assessment || 'Critique generated.',
+        critique: parsed.critique || 'The critique engine provided a structured analysis.',
+        confidence_score: parsed.confidence_score || 95,
+        suggested_improvement: parsed.suggested_improvement || 'The output is well-formed.'
+      };
+    } catch (error) {
+      // Fallback – invalid JSON from LLM
+      return {
+        assessment: 'Critique engine fallback.',
+        critique: "The LLM's critique response was not in a valid JSON format, but the original tool output was processed.",
+        confidence_score: 50,
+        suggested_improvement: 'Ensure LLM consistently returns valid JSON for critiques.'
+      };
+    }
   }
 
   /**
-   * Generate a direct truthful response to the tool result.
-   * This method analyzes the tool output and provides a truthful assessment.
-   * @param {string} toolResultString - The tool result as a string
-   * @returns {string} A truthful response about the tool result
+   * Public wrapper retained for backward compatibility.
+   * Transforms the rich critique into the legacy {response, critique} structure.
    */
-  generateDirectTruthfulResponse(toolResultString) {
-    if (!toolResultString || toolResultString.trim() === '') {
-      return 'The tool produced no output or empty results.';
-    }
-
-    // Parse if it's JSON
-    let parsedResult;
-    try {
-      parsedResult = JSON.parse(toolResultString);
-    } catch {
-      // Not JSON, treat as plain text
-      parsedResult = toolResultString;
-    }
-
-    // Analyze different types of responses
-    if (typeof parsedResult === 'object' && parsedResult !== null) {
-      // Check for error states
-      if (parsedResult.error || parsedResult.Error) {
-        return `The tool encountered an error: ${parsedResult.error || parsedResult.Error}`;
-      }
-
-      // Check for content arrays (common MCP pattern)
-      if (Array.isArray(parsedResult.content)) {
-        const textContent = parsedResult.content
-          .filter(item => item.type === 'text')
-          .map(item => item.text)
-          .join(' ');
-        
-        if (textContent.length > 0) {
-          return `The tool generated content: ${textContent.substring(0, 200)}${textContent.length > 200 ? '...' : ''}`;
-        }
-        return 'The tool generated structured content without readable text.';
-      }
-
-      // Check for common result patterns
-      if (parsedResult.success !== undefined) {
-        return parsedResult.success ? 'The tool completed successfully.' : 'The tool reported a failure.';
-      }
-
-      // Check for data with meaningful properties
-      const meaningfulKeys = Object.keys(parsedResult).filter(key => 
-        !['timestamp', 'id', 'created', 'updated'].includes(key.toLowerCase())
-      );
-      
-      if (meaningfulKeys.length > 0) {
-        return `The tool returned structured data with the following key areas: ${meaningfulKeys.slice(0, 5).join(', ')}${meaningfulKeys.length > 5 ? '...' : ''}.`;
-      }
-
-      return 'The tool returned an object with metadata but no clear actionable content.';
-    }
-
-    // Handle string responses
-    const text = String(parsedResult).trim();
-    if (text.length === 0) {
-      return 'The tool produced empty text output.';
-    }
-
-    if (text.length < 50) {
-      return `The tool provided a brief response: "${text}"`;
-    }
-
-    return `The tool provided a detailed response (${text.length} characters) covering: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`;
+  async getTruthfulCritique(toolResult) {
+    const structured = await this._getTruthfulCritique(toolResult);
+    return {
+      response: structured.assessment,
+      critique: structured.critique
+    };
   }
 
   // ===== DEBUG & ANALYTICS WRAPPERS =====

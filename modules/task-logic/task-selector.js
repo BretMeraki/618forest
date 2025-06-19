@@ -6,6 +6,10 @@
 import { TaskScorer } from './task-scorer.js';
 import { getAvailableNodes } from '../utils/hta-logic.js';
 
+// Lint-friendly constants
+const TIME_TOLERANCE_FACTOR = 1.2; // Allow task duration up to 120% of available time
+const RANDOM_TIE_BREAK_EPSILON = 0.5; // Random threshold for tie-breaks
+
 export class TaskSelector {
   /**
    * Select the optimal task from available tasks
@@ -18,9 +22,6 @@ export class TaskSelector {
    */
   static selectOptimalTask(htaData, energyLevel, timeAvailable, contextFromMemory, projectContext) {
     const nodes = htaData.frontierNodes || [];
-
-    // Pre-compute completed node IDs as a Set for O(1) lookup
-    const completedNodeIds = new Set(nodes.filter(n => n.completed).map(n => n.id));
 
     // Create a map for fast node lookup by title (for legacy prerequisite support)
     const nodesByTitle = new Map();
@@ -38,16 +39,15 @@ export class TaskSelector {
     const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
     for (const node of availableBase) {
       const taskMinutes = TaskScorer.parseTimeToMinutes(node.duration || '30 minutes');
-      if (taskMinutes > timeInMinutes * 1.2) continue;
+      if (taskMinutes > timeInMinutes * TIME_TOLERANCE_FACTOR) {
+        continue;
+      }
       availableTasks.push(node);
     }
 
     if (availableTasks.length === 0) {
       return null;
     }
-
-    // Parse time available once
-    const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
 
     // Score all tasks and collect high-scoring ones for diversity
     const scoredTasks = availableTasks.map(task => ({
@@ -105,7 +105,7 @@ export class TaskSelector {
 
       // Add some randomness to break final ties
       if (momentumA === momentumB) {
-        return Math.random() - 0.5;
+        return Math.random() - RANDOM_TIE_BREAK_EPSILON;
       }
 
       return momentumB - momentumA; // Prefer momentum tasks

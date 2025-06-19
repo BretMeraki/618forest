@@ -45,6 +45,11 @@ export class DataPersistence {
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
     } catch (error) {
+      // If file genuinely doesn't exist between the exists() check and the read attempt
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
       const { DataPersistenceError } = await import('./errors.js');
       throw new DataPersistenceError('load', filePath, error, { projectId, filename });
     }
@@ -91,6 +96,10 @@ export class DataPersistence {
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
     } catch (error) {
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
       const { DataPersistenceError } = await import('./errors.js');
       throw new DataPersistenceError('load', filePath, error, { projectId, pathName, filename });
     }
@@ -125,6 +134,10 @@ export class DataPersistence {
     try {
       return await FileSystem.readJSON(filePath);
     } catch (error) {
+      if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
+        return null;
+      }
+
       const { DataPersistenceError } = await import('./errors.js');
       throw new DataPersistenceError('load', filePath, error, { filename });
     }

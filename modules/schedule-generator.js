@@ -130,7 +130,7 @@ export class ScheduleGenerator {
 
     // Parse available hours if provided
     const priorityHours = availableHours ?
-      availableHours.split(',').map(h => parseInt(h.trim())) : [];
+      availableHours.split(',').map(h => parseInt(h.trim(), 10)) : [];
 
     // Create blocks from wake to sleep
     while (currentTime < endTime) {
@@ -385,7 +385,7 @@ export class ScheduleGenerator {
       const matches = durationStr.match(/(\d+)\s*(minute|hour)/i);
       if (!matches) {return 30;} // Default 30 minutes
 
-      const value = parseInt(matches[1]);
+      const value = parseInt(matches[1], 10);
       const unit = matches[2].toLowerCase();
 
       return unit.startsWith('hour') ? value * 60 : value;

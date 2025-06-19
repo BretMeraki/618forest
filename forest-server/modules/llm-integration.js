@@ -123,7 +123,7 @@ export class LlmIntegration {
       const dollarMatches = text.match(/\$\d+/g);
       if (dollarMatches) {
         for (const match of dollarMatches) {
-          const amount = parseInt(match.replace('$', '').replace(',', ''));
+          const amount = parseInt(match.replace('$', '').replace(',', ''), 10);
           indicators.financialScale = Math.max(indicators.financialScale, amount);
         }
       }

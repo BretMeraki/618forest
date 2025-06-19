@@ -21,7 +21,8 @@ export class TaskIntelligence {
       const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
 
       if (!config) {
-        throw new Error(`Project configuration not found for project '${projectId}' in getNextTask. Ensure project exists and config.json is valid.`);
+        const { ProjectConfigurationError } = await import('./errors.js');
+        throw new ProjectConfigurationError(projectId, FILE_NAMES.CONFIG, null, { operation: 'getNextTask' });
       }
 
       // Extract project context
@@ -170,7 +171,8 @@ export class TaskIntelligence {
       const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
 
       if (!config) {
-        throw new Error(`Project configuration not found for project '${projectId}' in evolveStrategy. Check if config.json exists and is valid.`);
+        const { ProjectConfigurationError } = await import('./errors.js');
+        throw new ProjectConfigurationError(projectId, FILE_NAMES.CONFIG, null, { operation: 'evolveStrategy' });
       }
 
       const activePath = config.activePath || DEFAULT_PATHS.GENERAL;

@@ -490,7 +490,7 @@ if (process.argv[1] === __filename) {
       break;
     case '--lines':
     case '-n':
-      options.lines = parseInt(args[++i]);
+      options.lines = parseInt(args[++i], 10);
       break;
     case '--no-follow':
       options.follow = false;

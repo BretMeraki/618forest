@@ -82,7 +82,7 @@ export default [
       'no-implied-eval': 'error',
       'no-lone-blocks': 'error',
       'no-magic-numbers': ['warn', {
-        'ignore': [-1, 0, 1, 2, 3, 4, 5, 10, 100, 1000],
+        'ignore': [-1, 0, 1],
         'ignoreArrayIndexes': true,
         'enforceConst': true,
         'detectObjects': false
@@ -148,7 +148,11 @@ export default [
         describe: 'readonly',
         test: 'readonly',
         expect: 'readonly',
-        jest: 'readonly'
+        jest: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly'
       }
     },
     rules: {

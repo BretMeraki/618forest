@@ -12,7 +12,7 @@ import winston from 'winston';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, URL } from 'url';
 
 // Custom log levels for Forest.os
 const customLevels = {
@@ -50,11 +50,17 @@ const isInteractive = !!process.stdin.isTTY;
  * Create the main winston logger instance
  */
 export function createWinstonLogger(options = {}) {
+  // Use module location to resolve logs directory, not current working directory
+  // This fixes issues when Claude Desktop runs the server from a different working directory
+  const moduleDir = path.dirname(new URL(import.meta.url).pathname);
+  const projectRoot = path.resolve(moduleDir, '../'); // modules -> project root
+  const defaultLogDirectory = path.resolve(projectRoot, 'logs');
+
   const {
     logLevel = 'info',
     enableConsole = true,
     enableFileLogging = true,
-    logDirectory = path.resolve(process.cwd(), 'logs'),
+    logDirectory = defaultLogDirectory,
     maxFileSize = 50 * 1024 * 1024, // 50MB
     maxFiles = 30, // Keep 30 days of logs
     enableRealTimeLogging = true
@@ -68,8 +74,8 @@ export function createWinstonLogger(options = {}) {
       console.error(`Process CWD: ${process.cwd()}`);
       console.error('Options passed:', JSON.stringify(options, null, 2));
     }
-    // Force to use relative path
-    resolvedLogDirectory = path.resolve(process.cwd(), 'logs');
+    // Force to use project root instead of current working directory
+    resolvedLogDirectory = defaultLogDirectory;
     if (isInteractive) {
       console.error(`Corrected to: ${resolvedLogDirectory}`);
     }
@@ -85,20 +91,20 @@ export function createWinstonLogger(options = {}) {
     }
   } catch (error) {
     // Fallback to the project root (directory of the main script) if CWD is root or invalid
-    let projectRoot;
+    let fallbackProjectRoot;
     try {
       const currentFile = fileURLToPath(import.meta.url);
-      projectRoot = path.dirname(currentFile);
+      fallbackProjectRoot = path.resolve(path.dirname(currentFile), '../'); // modules -> project root
     } catch {
-      projectRoot = process.cwd();
+      fallbackProjectRoot = projectRoot; // Use the already-calculated project root
     }
 
     // If the derived project root is still '/', use the home directory as a final resort
-    if (projectRoot === path.sep) {
-      projectRoot = path.join(os.homedir(), '.forest-logs');
+    if (fallbackProjectRoot === path.sep) {
+      fallbackProjectRoot = path.join(os.homedir(), '.forest-logs');
     }
 
-    const fallbackLogDir = path.join(projectRoot, 'logs');
+    const fallbackLogDir = path.join(fallbackProjectRoot, 'logs');
     if (isInteractive) {
       console.error(`Attempting fallback to: ${fallbackLogDir}`);
     }

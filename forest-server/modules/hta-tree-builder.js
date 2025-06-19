@@ -20,7 +20,8 @@ export class HtaTreeBuilder {
       const config = await this.dataPersistence.loadProjectData(projectId, 'config.json');
 
       if (!config) {
-        throw new Error('Project configuration not found');
+        const { ProjectConfigurationError } = await import('./errors.js');
+        throw new ProjectConfigurationError(projectId, 'config.json', null, { operation: 'buildHTATree' });
       }
 
       // Warn (but no longer block) if additional context is missing. Heuristic fallback now allowed.
@@ -34,7 +35,11 @@ export class HtaTreeBuilder {
       // Check if path exists in learning paths
       const pathExists = config.learning_paths?.some(p => p.path_name === targetPath) || targetPath === 'general';
       if (!pathExists) {
-        throw new Error(`Learning path "${targetPath}" not found in project configuration`);
+        const { ValidationError } = await import('./errors.js');
+        throw new ValidationError('learning_path', targetPath, 'existing path name', {
+          operation: 'buildHTATree',
+          availablePaths: config.learning_paths?.map(p => p.path_name) || []
+        });
       }
 
       // Load existing HTA data for this path
@@ -204,7 +209,8 @@ export class HtaTreeBuilder {
         try {
           // eslint-disable-next-line no-await-in-loop
           branch.subBranches = await this.generateSubBranches(branch.title, knowledgeLevel);
-        } catch (_) {
+        } catch (error) {
+          console.warn(`Failed to generate sub-branches for ${branch.title}:`, error.message);
           branch.subBranches = [];
         }
       }
@@ -253,7 +259,9 @@ Domains must be short noun phrases (e.g. "Core Grammar", "Cultural Fluency"). Re
       try {
         const text = aiResp.completion || aiResp.answer || aiResp.text || '[]';
         domains = JSON.parse(text);
-      } catch (_) { /* ignore parsing failure */ }
+      } catch (parseError) {
+        console.warn('Failed to parse AI response for domain generation:', parseError.message);
+      }
     }
 
     // 5. Fallback: create complexity-appropriate generic domains
@@ -291,13 +299,14 @@ Domains must be short noun phrases (e.g. "Core Grammar", "Cultural Fluency"). Re
             try {
               // eslint-disable-next-line no-await-in-loop
               subBranch.subBranches = await this.generateSubBranches(subBranch.title, knowledgeLevel);
-            } catch (_) {
+            } catch (error) {
+              console.warn(`Failed to generate sub-sub-branches for ${subBranch.title}:`, error.message);
               subBranch.subBranches = [];
             }
           }
         }
-      } catch (_) {
-        // Fail gracefully; leave subBranches empty
+      } catch (error) {
+        console.warn(`Failed to generate sub-branches for ${branch.title}:`, error.message);
         branch.subBranches = [];
       }
     }
@@ -389,8 +398,8 @@ Domains must be short noun phrases (e.g. "Core Grammar", "Cultural Fluency"). Re
         if (!Array.isArray(tasks) || tasks.length === 0) {
           throw new Error('Empty or invalid response');
         }
-      } catch (e) {
-        console.warn('⚠️  AI response parsing failed, using fallback tasks');
+      } catch (parseError) {
+        console.warn('⚠️  AI response parsing failed, using fallback tasks:', parseError.message);
         tasks = this.generateFallbackTasks(branch, knowledgeLevel, interests);
       }
     }
@@ -579,7 +588,9 @@ Domains must be short noun phrases (e.g. "Core Grammar", "Cultural Fluency"). Re
           }));
         }
       }
-    } catch (_) {/* ignore */}
+    } catch (error) {
+      console.warn('Failed to generate sub-branches via AI:', error.message);
+    }
 
     // === Heuristic fallback: derive 2 simple sub-domains from the domain title ===
     const words = domainTitle.split(/\s+/).filter(w => w.length>3);
@@ -617,7 +628,9 @@ Return JSON: { "complexity_score": 1-10, "estimated_time": "short|months|years" 
           context: { goal }
         });
       }
-    } catch { /* fall through to heuristic */ }
+    } catch (error) {
+      console.warn('Goal complexity analysis failed, using heuristic:', error.message);
+    }
 
     // Heuristic fallback: rough guess by goal length
     const wc = goal.split(/\s+/).length;
@@ -683,8 +696,8 @@ Return JSON: { "complexity_score": 1-10, "estimated_time": "short|months|years" 
           context: { parent: question }
         });
       }
-    } catch {
-      // ignore parsing errors; fallback below
+    } catch (error) {
+      console.warn('Question decomposition parsing failed, using fallback:', error.message);
     }
 
     // Fallback: simple heuristic questions

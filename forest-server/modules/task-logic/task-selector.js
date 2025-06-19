@@ -5,6 +5,10 @@
 
 import { TaskScorer } from './task-scorer.js';
 
+// Constants used throughout task selection logic to avoid magic numbers
+const TIME_TOLERANCE_FACTOR = 1.2; // Allow tasks up to 120% of available time
+const RANDOM_TIE_BREAK_EPSILON = 0.5; // Random threshold for tie-breaking
+
 export class TaskSelector {
   /**
    * Select the optimal task from available tasks
@@ -56,7 +60,7 @@ export class TaskSelector {
       // system from suggesting 20-minute tasks for a 10-minute slot.
       const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
       const taskMinutes = TaskScorer.parseTimeToMinutes(node.duration || '30 minutes');
-      if (taskMinutes > timeInMinutes * 1.2) {
+      if (taskMinutes > timeInMinutes * TIME_TOLERANCE_FACTOR) {
         continue; // Too long – try another task
       }
 
@@ -126,7 +130,7 @@ export class TaskSelector {
 
       // Add some randomness to break final ties
       if (momentumA === momentumB) {
-        return Math.random() - 0.5;
+        return Math.random() - RANDOM_TIE_BREAK_EPSILON;
       }
 
       return momentumB - momentumA; // Prefer momentum tasks
