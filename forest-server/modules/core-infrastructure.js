@@ -41,22 +41,22 @@ export class CoreInfrastructure {
         try {
           // Handle different types of intelligence requests
           switch (type) {
-            case 'assess_goal_complexity':
-              if (this.llmIntegration) {
-                return await this.llmIntegration.analyzeComplexityEvolution();
-              }
-              // Fallback for complexity assessment
-              return this.generateComplexityFallback(payload);
-              
-            case 'identity_transformation':
-              return this.generateIdentityFallback(payload);
-              
-            case 'reasoning_analysis':
-              return this.generateReasoningFallback(payload);
-              
-            default:
-              // Generic fallback for unknown request types
-              return this.generateGenericFallback(type, payload);
+          case 'assess_goal_complexity':
+            if (this.llmIntegration) {
+              return await this.llmIntegration.analyzeComplexityEvolution();
+            }
+            // Fallback for complexity assessment
+            return this.generateComplexityFallback(payload);
+
+          case 'identity_transformation':
+            return this.generateIdentityFallback(payload);
+
+          case 'reasoning_analysis':
+            return this.generateReasoningFallback(payload);
+
+          default:
+            // Generic fallback for unknown request types
+            return this.generateGenericFallback(type, payload);
           }
         } catch (error) {
           console.error(`Error in claudeInterface.requestIntelligence: ${error.message}`);

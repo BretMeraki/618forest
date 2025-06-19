@@ -88,53 +88,19 @@ import { LlmIntegration } from "./modules/llm-integration.js";
 import { IdentityEngine } from "./modules/identity-engine.js";
 import { IntegratedTaskPool } from "./modules/integrated-task-pool.js";
 import { IntegratedScheduleGenerator } from "./modules/integrated-schedule-generator.js";
-import { initErrorLogger } from "./modules/error-logger.js";
-import { debugLogger } from "./modules/utils/debug-logger.js";
+import { getForestLogger } from "./modules/winston-logger.js";
 import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from "./modules/constants.js";
 import { bus } from "./modules/utils/event-bus.js";
 import { StrategyEvolver } from "./modules/strategy-evolver.js";
 import { SystemClock } from "./modules/system-clock.js";
 import { ProactiveInsightsHandler } from "./modules/proactive-insights-handler.js";
 
-// STEP 4: Initialize error logger (after console redirection is in place)
-initErrorLogger();
-
-// Lightweight file/console logger that never writes to STDOUT/STDERR in MCP mode
-class SimpleLogger {
-  constructor() {
-    this.logFile = null;
-    if (isMcpMode) {
-      const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'forest-mcp.log');
-      const logDir = path.dirname(logPath);
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
-      }
-      this.logFile = fs.createWriteStream(logPath, { flags: 'a' });
-    }
-  }
-
-  log(level, message, meta = {}) {
-    const timestamp = new Date().toISOString();
-    const entry = `${timestamp} [${level}] ${message} ${JSON.stringify(meta)}\n`;
-    if (this.logFile) {
-      this.logFile.write(entry);
-    } else if (isExplicitlyInteractive) {
-      console.error(entry);
-    }
-  }
-  info(msg, meta) { this.log('INFO', msg, meta); }
-  warn(msg, meta) { this.log('WARN', msg, meta); }
-  error(msg, meta) { this.log('ERROR', msg, meta); }
-  debug(msg, meta) { this.log('DEBUG', msg, meta); }
-  // stubs for compatibility
-  startTimer() {}
-  endTimer() { return 0; }
-  getStats() { return { uptime: process.uptime() }; }
-  formatBytes(b) { return `${b} bytes`; }
-}
-
-// Initialize global logger instance
-const forestLogger = new SimpleLogger();
+// Initialize winston-based logger with MCP-safe configuration
+const forestLogger = getForestLogger({
+  enableConsole: isExplicitlyInteractive, // Only enable console in interactive mode
+  enableFileLogging: true, // Always enable file logging
+  logLevel: isMcpMode ? 'error' : 'debug' // Reduce noise in MCP mode
+});
 
 // Minimal debug integration for testing
 class MinimalDebugIntegration {
@@ -166,20 +132,19 @@ class CleanForestServer {
       console.error("🏗️ CleanForestServer constructor starting...");
     }
 
-    // Start comprehensive debugging
-    debugLogger.logEvent('CONSTRUCTOR_START');
-    debugLogger.startMonitoring();
+    // Start comprehensive logging
+    forestLogger.info('CleanForestServer constructor starting', { module: 'CleanForestServer' });
 
     try {
       // Initialize core infrastructure
-      debugLogger.logEvent('INIT_CORE_INFRASTRUCTURE');
+      forestLogger.debug('Initializing core infrastructure', { module: 'CleanForestServer' });
       this.core = new CoreInfrastructure();
-      debugLogger.logEvent('CORE_INFRASTRUCTURE_COMPLETE');
+      forestLogger.debug('Core infrastructure complete', { module: 'CleanForestServer' });
 
       // Initialize data layer
-      debugLogger.logEvent('INIT_DATA_PERSISTENCE');
+      forestLogger.debug('Initializing data persistence', { module: 'CleanForestServer' });
       this.dataPersistence = new DataPersistence(this.core.getDataDir());
-      debugLogger.logEvent('DATA_PERSISTENCE_COMPLETE');
+      forestLogger.debug('Data persistence complete', { module: 'CleanForestServer' });
 
       // Initialize memory and sync layer
       this.memorySync = new MemorySync(this.dataPersistence);
@@ -195,6 +160,7 @@ class CleanForestServer {
 
       // Initialize HTA system - USING CLEAN VERSIONS
       this.htaTreeBuilder = new HtaTreeBuilder(
+        this, // Pass the server instance itself
         this.dataPersistence,
         this.projectManagement,
         claude,
@@ -281,13 +247,13 @@ class CleanForestServer {
       this.addLLMTools();
 
       // Initialize MCP handlers and routing
-      debugLogger.logEvent('INIT_MCP_HANDLERS');
+      forestLogger.debug('Initializing MCP handlers', { module: 'CleanForestServer' });
       this.mcpHandlers = new McpHandlers(this.core.getServer());
-      debugLogger.logEvent('MCP_HANDLERS_COMPLETE');
+      forestLogger.debug('MCP handlers complete', { module: 'CleanForestServer' });
       
-      debugLogger.logEvent('INIT_TOOL_ROUTER');
+      forestLogger.debug('Initializing tool router', { module: 'CleanForestServer' });
       this.toolRouter = new ToolRouter(this.core.getServer(), this);
-      debugLogger.logEvent('TOOL_ROUTER_COMPLETE');
+      forestLogger.debug('Tool router complete', { module: 'CleanForestServer' });
 
       // Integrated scheduler
       this.integratedTaskPool = new IntegratedTaskPool(this.dataPersistence, this.projectManagement);
@@ -299,7 +265,7 @@ class CleanForestServer {
         this.scheduleGenerator,
       );
 
-      debugLogger.logEvent('CONSTRUCTOR_COMPLETE');
+      forestLogger.debug('CONSTRUCTOR_COMPLETE');
       if (isExplicitlyInteractive) {
         console.error(
           "✓ CleanForestServer constructor completed - NO HARDCODED RESPONSES",
@@ -307,7 +273,7 @@ class CleanForestServer {
       }
 
     } catch (/** @type {any} */ error) {
-      debugLogger.logCritical('CONSTRUCTOR_ERROR', {
+      forestLogger.error('CONSTRUCTOR_ERROR', {
         error: error.message,
         stack: error.stack
       });
@@ -320,27 +286,23 @@ class CleanForestServer {
   }
 
   async setupServer() {
-    const opId = debugLogger.logAsyncStart('SETUP_SERVER');
     try {
-      debugLogger.logEvent('SETUP_SERVER_START');
+      forestLogger.debug('Setup server starting', { module: 'CleanForestServer' });
       
       // Setup MCP handlers and tool routing
-      debugLogger.logEvent('SETUP_HANDLERS_START');
-      const handlerOpId = debugLogger.logAsyncStart('MCP_HANDLERS_SETUP');
+      forestLogger.debug('Setting up handlers', { module: 'CleanForestServer' });
       await this.mcpHandlers.setupHandlers();
-      debugLogger.logAsyncEnd(handlerOpId, true);
-      debugLogger.logEvent('SETUP_HANDLERS_COMPLETE');
+      forestLogger.debug('Handlers setup complete', { module: 'CleanForestServer' });
       
-      debugLogger.logEvent('SETUP_ROUTER_START');
+      forestLogger.debug('Setting up router', { module: 'CleanForestServer' });
       this.toolRouter.setupRouter();
-      debugLogger.logEvent('SETUP_ROUTER_COMPLETE');
+      forestLogger.debug('Router setup complete', { module: 'CleanForestServer' });
       
-      debugLogger.logEvent('SETUP_SERVER_COMPLETE');
-      debugLogger.logAsyncEnd(opId, true);
+      forestLogger.debug('Setup server complete', { module: 'CleanForestServer' });
       
     } catch (error) {
-      debugLogger.logAsyncError(opId, error);
-      debugLogger.logCritical('SETUP_SERVER_ERROR', {
+      forestLogger.error('Setup server failed', {
+        module: 'CleanForestServer',
         error: error.message,
         stack: error.stack
       });
@@ -1179,33 +1141,27 @@ class CleanForestServer {
   // ===== SERVER LIFECYCLE METHODS =====
 
   async run() {
-    const runOpId = debugLogger.logAsyncStart('SERVER_RUN');
     try {
       const isTerminal = isInteractive;
-      debugLogger.logEvent('RUN_START');
+      forestLogger.debug('Server run starting', { module: 'CleanForestServer' });
       
       if (isTerminal) {
         console.error("🚀 Starting Clean Forest MCP Server...");
       }
 
       // Setup the server handlers before connecting
-      debugLogger.logEvent('PRE_SETUP_SERVER');
-      const setupOpId = debugLogger.logAsyncStart('PRE_CONNECT_SETUP');
+      forestLogger.debug('Pre-setup server', { module: 'CleanForestServer' });
       await this.setupServer();
-      debugLogger.logAsyncEnd(setupOpId, true);
-      debugLogger.logEvent('POST_SETUP_SERVER');
+      forestLogger.debug('Post-setup server', { module: 'CleanForestServer' });
 
-      debugLogger.logEvent('PRE_SERVER_CONNECT');
+      forestLogger.debug('Pre-server connect', { module: 'CleanForestServer' });
       const server = this.core.getServer();
       const transport = new StdioServerTransport();
       
-      const connectOpId = debugLogger.logAsyncStart('SERVER_CONNECT');
       await server.connect(transport);
-      debugLogger.logAsyncEnd(connectOpId, true);
-      debugLogger.logEvent('POST_SERVER_CONNECT');
+      forestLogger.debug('Post-server connect', { module: 'CleanForestServer' });
 
-      debugLogger.logEvent('SERVER_STARTED_SUCCESSFULLY');
-      debugLogger.logAsyncEnd(runOpId, true);
+      forestLogger.debug('Server started successfully', { module: 'CleanForestServer' });
       
       if (isTerminal) {
         console.error("🌳 Clean Forest MCP Server v2 started successfully!");

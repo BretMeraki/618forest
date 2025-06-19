@@ -35,4 +35,4 @@ export function safeGet(obj, path, defaultValue = null) {
     }
   }
   return current;
-} 
+}

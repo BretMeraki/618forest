@@ -10,6 +10,9 @@ node_modules/
 logs/
 *.log
 
+# Forest Data
+.forest-data/
+
 # Snapshots and temporary files
 .snapshots/
 .tmp/

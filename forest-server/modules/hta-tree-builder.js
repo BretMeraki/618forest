@@ -6,7 +6,8 @@
 import { HtaNode } from '../models/index.js';
 
 export class HtaTreeBuilder {
-  constructor(dataPersistence, projectManagement, llmInterface) {
+  constructor(server, dataPersistence, projectManagement, llmInterface) {
+    this.server = server;
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
 
@@ -26,6 +27,17 @@ export class HtaTreeBuilder {
 
     // Collect Claude generation requests when an online LLM is not available.
     this.pendingClaudeRequests = [];
+  }
+
+  /**
+   * Get Claude interface from the server instance
+   * This method demonstrates the fix for the dependency injection flaw
+   */
+  getClaudeInterface() {
+    if (this.server && this.server.core && typeof this.server.core.getClaudeInterface === 'function') {
+      return this.server.core.getClaudeInterface();
+    }
+    return null;
   }
 
   async buildHTATree(pathName = null, learningStyle = 'mixed', focusAreas = []) {
@@ -812,7 +824,7 @@ Return JSON: { "complexity_score": 1-10, "estimated_time": "short|months|years" 
       }
 
       // Sleep before next poll iteration
-      await new Promise(r => setTimeout(r, POLL_INTERVAL));
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
     }
   }
 }

@@ -9,4 +9,4 @@ export function generateTasksForPrompt(prompt, options = {}) {
     mode: singleTaskMode ? 'single' : 'multiple',
     maxTasks
   };
-} 
+}

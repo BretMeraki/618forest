@@ -52,7 +52,8 @@ const isInteractive = !!process.stdin.isTTY;
 export function createWinstonLogger(options = {}) {
   // Use module location to resolve logs directory, not current working directory
   // This fixes issues when Claude Desktop runs the server from a different working directory
-  const moduleDir = path.dirname(new URL(import.meta.url).pathname);
+  const currentFile = fileURLToPath(import.meta.url);
+  const moduleDir = path.dirname(currentFile);
   const projectRoot = path.resolve(moduleDir, '../'); // modules -> project root
   const defaultLogDirectory = path.resolve(projectRoot, 'logs');
 

@@ -266,12 +266,12 @@ export class DataPersistence {
    */
   _getDefaultData(filename, projectId = '', pathName = '') {
     switch (filename) {
-      case FILE_NAMES.LEARNING_HISTORY:
-        return { completions: [], insights: [] };
-      case FILE_NAMES.HTA:
-        return { tree: null, collaborative_sessions: [] };
-      default:
-        break;
+    case FILE_NAMES.LEARNING_HISTORY:
+      return { completions: [], insights: [] };
+    case FILE_NAMES.HTA:
+      return { tree: null, collaborative_sessions: [] };
+    default:
+      break;
     }
 
     if (filename.startsWith('day_')) {

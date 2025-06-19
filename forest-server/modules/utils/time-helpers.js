@@ -45,4 +45,4 @@ export function parseTimeWithContext(timeStr = '', context = 'generic') {
 // Shortcut wrapper that mimics old signature (kept for backwards compatibility).
 export function parseTime(timeStr) {
   return parseTimeWithContext(timeStr, 'generic');
-} 
+}
