@@ -1019,4 +1019,21 @@ export class ReasoningEngine {
 
     return timeframes[riskType] || 'medium-term';
   }
+
+  /**
+   * Calculate learner acceleration metrics based on recent completions.
+   * Provides a simple heuristic the SystemClock can consume for pacing.
+   * @param {Object} context – { completions: [{ breakthrough, difficulty }] }
+   */
+  calculateSkillAcceleration(context = {}) {
+    const recent = context.completions || [];
+    const breakthroughRate = recent.filter(c => c.breakthrough).length / Math.max(recent.length, 1);
+    const avgDifficulty = recent.reduce((sum, c) => sum + (c.difficulty ?? 3), 0) / Math.max(recent.length, 1);
+
+    return {
+      accelerationFactor: 1 + breakthroughRate * 0.5,
+      recommendedDifficulty: Math.min(5, Math.max(1, avgDifficulty + (breakthroughRate > 0.5 ? 1 : 0))),
+      learningVelocity: breakthroughRate > 0.3 ? 'accelerating' : 'steady'
+    };
+  }
 }

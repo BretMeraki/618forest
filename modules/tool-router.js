@@ -275,39 +275,48 @@ export class ToolRouter {
   }
 
   setupRouter() {
-    console.error('🔧 DEBUG: ToolRouter setupRouter() called with AUTOMATIC TRUTHFUL FILTER');
+    const isTerminal = process.stdin.isTTY;
+    if (isTerminal) {
+      console.error('🔧 ToolRouter setupRouter() initializing (non-blocking truthful verification)');
+    }
 
+    // Register a handler for CallTool requests coming from the MCP transport
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name: toolName, arguments: args } = request.params;
-      console.error(`▶️ Executing tool: ${toolName}`);
 
-      try {
-        // Step 1: Execute the tool as normal.
-        const originalResult = await this.dispatchTool(toolName, args);
-
-        // Step 2: Get the truthful critique (async rich object)
-        const critique = await this.forestServer._getTruthfulCritique(originalResult);
-
-        // Step 3: Combine into final response
-        const finalResponse = {
-          tool_output: originalResult,
-          truthful_assessment: critique,
-          content: [
-            {
-              type: 'text',
-              text: `🧠 **Honest Assessment** (Confidence: ${critique.confidence_score}%):\n${critique.assessment}\n\n🔍 **Critique**:\n${critique.critique}\n\n💡 **Suggestion**:\n${critique.suggested_improvement}`
-            }
-          ]
-        };
-
-        return finalResponse;
-
-      } catch (error) {
-        console.error('Tool dispatch or filtering failed:', { toolName, error: error.message });
-        throw new Error(`Tool '${toolName}' failed: ${error.message}`, { cause: error });
+      if (isTerminal) {
+        console.error(`▶️ Executing tool: ${toolName}`);
       }
+
+      // Always execute the tool synchronously – this is what the user is waiting for
+      const originalResult = await this.dispatchTool(toolName, args);
+
+      // ----- TRUTHFUL VERIFICATION (fire-and-forget) -----
+      // We intentionally do *not* await the critique so that normal tool latency
+      // is unaffected.  Any failures are caught and logged quietly.
+      (async () => {
+        try {
+          const critique = await this.forestServer._getTruthfulCritique(originalResult);
+          // Optional integration point: emit an event or persist the critique for later retrieval
+          if (typeof this.forestServer?.analyticsTools?.recordTruthfulCritique === 'function') {
+            await this.forestServer.analyticsTools.recordTruthfulCritique(toolName, critique);
+          }
+        } catch (err) {
+          if (isTerminal) {
+            console.error(`[TRUTHFUL-VERIFY] Critique failed for ${toolName}: ${err.message}`);
+          }
+        }
+      })();
+
+      // Return the immediate tool result plus a flag so clients know verification is underway
+      return {
+        ...originalResult,
+        truthful_verification: 'pending'
+      };
     });
 
-    console.error('🔧 DEBUG: CallToolRequestSchema handler registration completed');
+    if (isTerminal) {
+      console.error('🔧 ToolRouter CallToolRequestSchema handler registered (non-blocking mode)');
+    }
   }
 }

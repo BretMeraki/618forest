@@ -85,24 +85,34 @@ export class TaskCompletion {
         schedule.blocks = [];
       }
 
+      // ---------------- Enhanced block lookup -------------------------
       let block = schedule.blocks.find(b => b.id === blockId);
+
+      // Try other matching fields for backward compatibility
+      if (!block) {
+        block = schedule.blocks.find(b =>
+          b.title === blockId ||
+          b.taskId === blockId ||
+          b.nodeId === blockId
+        );
+      }
 
       // --- FALLBACK: allow completing tasks that were never scheduled ---
       if (!block) {
         // Try to fetch the HTA node so we can pull in metadata
         const htaData = await this.loadPathHTA(projectId, config.activePath || DEFAULT_PATHS.GENERAL) || {};
-        const node = htaData.frontierNodes?.find(n => n.id === blockId);
+        const node = htaData.frontierNodes?.find(n => n.id === blockId || n.title === blockId);
 
         block = {
           id: blockId,
-          type: 'learning',
-          title: node?.title || `Ad-hoc Task ${blockId}`,
+          type: 'task',
+          title: node?.title || `${blockId}`,
           description: node?.description || '',
           startTime: new Date().toISOString(),
-          duration: node?.duration || '30 minutes',
+          duration: node?.duration || TASK_CONFIG.DEFAULT_DURATION,
           difficulty: node?.difficulty || difficultyRating,
           taskId: node?.id || blockId,
-          branch: node?.branch || DEFAULT_PATHS.GENERAL,
+          branch: node?.branch || config.activePath || DEFAULT_PATHS.GENERAL,
           completed: false,
           priority: node?.priority || 200
         };

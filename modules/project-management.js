@@ -18,12 +18,20 @@ export class ProjectManagement {
         life_structure_preferences, urgency_level = 'medium', success_metrics = []
       } = args;
 
-      if (!project_id || !goal || !life_structure_preferences) {
-        const missing = [];
-        if (!project_id) {missing.push('project_id');}
-        if (!goal) {missing.push('goal');}
-        if (!life_structure_preferences) {missing.push('life_structure_preferences');}
-        throw new Error(`Missing required fields for project creation: ${missing.join(', ')}. Please provide all required fields.`);
+      // ---- Robust validation --------------------------------------------------
+      const requiredFields = ['project_id', 'goal', 'life_structure_preferences'];
+      const missingFields = requiredFields.filter(field => !args[field]);
+
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields for project creation: ${missingFields.join(', ')}. Please provide all required fields.`);
+      }
+
+      // Validate life_structure_preferences sub-fields
+      const requiredPrefs = ['wake_time', 'sleep_time'];
+      const prefsMissing = requiredPrefs.filter(p => !life_structure_preferences[p]);
+
+      if (prefsMissing.length > 0) {
+        throw new Error(`Missing required life structure preferences: ${prefsMissing.join(', ')}`);
       }
 
       // Calculate knowledge boost from existing credentials

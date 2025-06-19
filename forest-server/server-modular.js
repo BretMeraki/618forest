@@ -884,7 +884,73 @@ class CleanForestServer {
   }
 
   async listProjects() {
-    return await this.projectManagement.listProjects();
+    try {
+      // Global config may or may not exist – load gracefully
+      const globalConfig = await this.dataPersistence.loadGlobalData('config.json') || {};
+      const projectsDirPath = path.join(this.dataPersistence.dataDir, 'projects');
+
+      // List directories inside the projects folder
+      let projectDirs = [];
+      try {
+        projectDirs = await this.dataPersistence.listFiles(projectsDirPath);
+      } catch (err) {
+        // If listing fails, fall back to empty array
+        projectDirs = [];
+      }
+
+      const projects = [];
+      for (const projectId of projectDirs) {
+        try {
+          const projectConfig = await this.dataPersistence.loadProjectData(projectId, 'config.json');
+          if (projectConfig && Object.keys(projectConfig).length > 0) {
+            projects.push({
+              id: projectId,
+              goal: projectConfig.goal || 'No goal specified',
+              created: projectConfig.created_at || 'Unknown',
+              progress: projectConfig.progress || 0
+            });
+          }
+        } catch (error) {
+          // Skip projects with missing/corrupted configs
+          console.error(`Skipping project ${projectId}: ${error.message}`);
+        }
+      }
+
+      const activeProject = globalConfig.activeProject || 'None';
+
+      let output = `📚 **Available Projects** (${projects.length} total)\n\n`;
+      output += `**Active Project**: ${activeProject}\n\n`;
+
+      if (projects.length === 0) {
+        output += 'No valid projects found. Use \`create_project\` to get started.';
+      } else {
+        projects.forEach((project, index) => {
+          output += `${index + 1}. **${project.id}**\n`;
+          output += `   Goal: ${project.goal}\n`;
+          output += `   Created: ${project.created}\n`;
+          output += `   Progress: ${project.progress}%\n\n`;
+        });
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: output
+        }],
+        projects,
+        active_project: activeProject
+      };
+    } catch (error) {
+      await this.dataPersistence.logError('listProjects', error);
+      return {
+        content: [{
+          type: 'text',
+          text: `Error listing projects: ${error.message}\n\nThe Forest data directory may not be properly initialized.`
+        }],
+        projects: [],
+        error: error.message
+      };
+    }
   }
 
   async getActiveProject() {
@@ -973,16 +1039,31 @@ class CleanForestServer {
       );
 
       if (!config) {
-        throw new Error(`Project configuration not found for project '${projectId}'. Check if config.json exists and is valid.`);
+        throw new Error(`Project configuration not found for project '${projectId}'`);
       }
 
       const today = new Date().toISOString().split("T")[0];
-      const schedule = await this.dataPersistence.loadProjectData(
-        projectId,
-        `day_${today}.json`,
-      );
+
+      // Load schedule with graceful fallback
+      let schedule;
+      try {
+        schedule = await this.dataPersistence.loadProjectData(
+          projectId,
+          `day_${today}.json`,
+        );
+      } catch (error) {
+        schedule = null; // No schedule for today yet or failed to load
+      }
+
       const activePath = config.activePath || "general";
-      const htaData = await this.loadPathHTA(projectId, activePath);
+
+      // Load HTA with graceful fallback
+      let htaData;
+      try {
+        htaData = await this.loadPathHTA(projectId, activePath);
+      } catch (error) {
+        htaData = null; // No HTA built yet or failed to load
+      }
 
       let statusText = `📊 **Current Status - ${projectId}**\n\n`;
       statusText += `**Goal**: ${config.goal}\n`;
@@ -990,10 +1071,10 @@ class CleanForestServer {
 
       // Today's progress
       if (schedule && schedule.blocks) {
-        const completedBlocks = schedule.blocks.filter((/** @type {any} */ b) => b.completed);
+        const completedBlocks = schedule.blocks.filter((b) => b.completed);
         statusText += `**Today's Progress**: ${completedBlocks.length}/${schedule.blocks.length} blocks completed\n`;
 
-        const nextBlock = schedule.blocks.find((/** @type {any} */ b) => !b.completed);
+        const nextBlock = schedule.blocks.find((b) => !b.completed);
         if (nextBlock) {
           statusText += `**Next Block**: ${nextBlock.title} at ${nextBlock.startTime}\n`;
         } else {
@@ -1008,26 +1089,21 @@ class CleanForestServer {
       let allTasks = [];
       let completedCount = 0;
 
-      // HTA status - USING CONSISTENT FIELD NAMES
+      // HTA status
       if (htaData) {
-        const frontierNodes =
-          htaData.frontier_nodes || htaData.frontierNodes || [];
+        const frontierNodes = htaData.frontier_nodes || htaData.frontierNodes || [];
         const completedNodes = htaData.completed_nodes || [];
         allTasks = [...frontierNodes, ...completedNodes];
-        completedCount =
-          completedNodes.length +
-          frontierNodes.filter((/** @type {any} */ n) => n.completed).length;
+        completedCount = completedNodes.length + frontierNodes.filter((n) => n.completed).length;
 
-        const availableNodes = frontierNodes.filter((/** @type {any} */ node) => {
-          if (node.completed) {return false;}
+        const availableNodes = frontierNodes.filter((node) => {
+          if (node.completed) return false;
           if (node.prerequisites && node.prerequisites.length > 0) {
             const completedIds = [
-              ...completedNodes.map((/** @type {any} */ n) => n.id),
-              ...frontierNodes.filter((/** @type {any} */ n) => n.completed).map((/** @type {any} */ n) => n.id),
+              ...completedNodes.map((n) => n.id),
+              ...frontierNodes.filter((n) => n.completed).map((n) => n.id),
             ];
-            return node.prerequisites.every((/** @type {any} */ prereq) =>
-              completedIds.includes(prereq),
-            );
+            return node.prerequisites.every((prereq) => completedIds.includes(prereq));
           }
           return true;
         });
@@ -1037,6 +1113,8 @@ class CleanForestServer {
 
         if (availableNodes.length > 0) {
           statusText += `💡 **Suggestion**: Use \`get_next_task\` for optimal task selection\n`;
+        } else if (allTasks.length === 0) {
+          statusText += `💡 **Suggestion**: Use \`build_hta_tree\` to create your learning path\n`;
         } else {
           statusText += `💡 **Suggestion**: Use \`evolve_strategy\` to generate new tasks\n`;
         }
@@ -1057,21 +1135,18 @@ class CleanForestServer {
           goal: config.goal,
           activePath,
           todayProgress: schedule
-            // @ts-ignore
-            ? `${schedule.blocks?.filter((/** @type {any} */ b) => b.completed).length || 0}/${schedule.blocks?.length || 0}`
+            ? `${(schedule.blocks?.filter((b) => b.completed).length) || 0}/${(schedule.blocks?.length) || 0}`
             : "No schedule",
-          htaProgress: htaData
-            ? `${completedCount}/${allTasks.length}`
-            : "No HTA",
+          htaProgress: htaData ? `${completedCount}/${allTasks.length}` : "No HTA",
         },
       };
-    } catch (/** @type {any} */ error) {
+    } catch (error) {
       await this.dataPersistence.logError("currentStatus", error);
       return {
         content: [
           {
             type: "text",
-            text: `Error getting current status: ${error.message}`,
+            text: `Error getting current status: ${error.message}\n\nThis usually means:\n• No active project selected\n• Project data files are missing\n\nTry:\n1. Use \`list_projects\` to see available projects\n2. Use \`switch_project\` to select a project\n3. Use \`build_hta_tree\` if the learning tree is missing`,
           },
         ],
       };

@@ -245,7 +245,7 @@ export class ToolRouter {
     debugLogger.logEvent('TOOL_ROUTER_SETUP_START');
 
     if (isTerminal) {
-      console.error('🔧 DEBUG: ToolRouter setupRouter() called with AUTOMATIC TRUTHFUL FILTER');
+      console.error('🔧 DEBUG: ToolRouter setupRouter() called with TRUTHFUL VERIFICATION');
     }
 
     debugLogger.logEvent('SETTING_CALL_TOOL_HANDLER');
@@ -265,23 +265,52 @@ export class ToolRouter {
         debugLogger.logAsyncEnd(dispatchOpId, true, { tool: toolName });
         debugLogger.logEvent('TOOL_DISPATCH_COMPLETE', { tool: toolName });
 
-        // Step 2: Get the truthful critique (now async and returns a rich object)
-        const critique = await this.forestServer._getTruthfulCritique(originalResult);
+        // Step 2: For data retrieval tools, return the data directly
+        // Only add truthful critique for tools that generate advice/recommendations
+        const dataRetrievalTools = [
+          'list_projects', 'get_active_project', 'get_hta_status',
+          'current_status', 'debug_task_sequence', 'get_generation_history',
+          'list_learning_paths', 'get_logging_status', 'get_archive_status'
+        ];
 
-        // Step 3: Combine the original result with the critique into a single, final response.
-        const finalResponse = {
-          tool_output: originalResult,
-          truthful_assessment: critique, // Entire critique object nested here
-          content: [
-            {
+        if (dataRetrievalTools.includes(toolName)) {
+          // Return data directly without critique
+          return originalResult;
+        }
+
+        // Step 3: For advice/generation tools, include truthful verification
+        const adviceTools = [
+          'get_next_task', 'evolve_strategy', 'analyze_reasoning',
+          'analyze_complexity_evolution', 'analyze_identity_transformation',
+          'request_claude_generation'
+        ];
+
+        if (adviceTools.includes(toolName)) {
+          // Get truthful critique but include it alongside the data
+          const critique = await this.forestServer._getTruthfulCritique(originalResult);
+
+          // Return BOTH the original result AND the critique
+          // The original result should be the primary response
+          if (originalResult.content) {
+            // Append critique to existing content
+            originalResult.content.push({
               type: 'text',
-              text: `🧠 **Honest Assessment** (Confidence: ${critique.confidence_score}%):\n${critique.assessment}\n\n🔍 **Critique**:\n${critique.critique}\n\n💡 **Suggestion**:\n${critique.suggested_improvement}`
-            }
-          ]
-        };
+              text: `\n---\n🔍 **Truthful Verification** (Confidence: ${critique.confidence_score}%)\n${critique.critique}`
+            });
+          } else {
+            // Add critique as metadata
+            originalResult.truthful_verification = {
+              confidence: critique.confidence_score,
+              assessment: critique.assessment,
+              notes: critique.critique
+            };
+          }
 
-        debugLogger.logEvent('TOOL_RESPONSE_COMPLETE', { tool: toolName });
-        return finalResponse;
+          return originalResult;
+        }
+
+        // Step 4: For all other tools, return the original result
+        return originalResult;
 
       } catch (error) {
         debugLogger.logCritical('TOOL_EXECUTION_ERROR', {
@@ -290,7 +319,7 @@ export class ToolRouter {
           stack: error.stack
         });
         if (isTerminal) {
-          console.error('Tool dispatch or filtering failed:', { toolName, error: error.message });
+          console.error('Tool execution failed:', { toolName, error: error.message });
         }
         throw new Error(`Tool '${toolName}' failed: ${error.message}`, { cause: error });
       }

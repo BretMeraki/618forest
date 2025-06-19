@@ -23,7 +23,6 @@ export class DataPersistence {
 
   async loadProjectData(projectId, filename) {
     const cacheKey = this.cacheManager.getCacheKey(projectId, filename);
-
     // Check cache first
     const cachedData = this.cacheManager.getCache(cacheKey);
     if (cachedData !== null) {
@@ -32,24 +31,25 @@ export class DataPersistence {
 
     const filePath = FileSystem.join(this.getProjectDir(projectId), filename);
 
-    // If the file doesn't exist yet (e.g. brand-new project), return null gracefully
+    // Handle brand-new projects gracefully
     const exists = await FileSystem.exists(filePath);
     if (!exists) {
-      return null;
+      const defaultData = this._getDefaultData(filename, projectId);
+      this.cacheManager.setCache(cacheKey, defaultData);
+      return defaultData;
     }
 
     try {
       const parsed = await FileSystem.readJSON(filePath);
-
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
     } catch (error) {
-      // If file genuinely doesn't exist between the exists() check and the read attempt
       if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
-        return null;
+        const defaultData = this._getDefaultData(filename, projectId);
+        this.cacheManager.setCache(cacheKey, defaultData);
+        return defaultData;
       }
-
       const { DataPersistenceError } = await import('./errors.js');
       throw new DataPersistenceError('load', filePath, error, { projectId, filename });
     }
@@ -75,7 +75,6 @@ export class DataPersistence {
 
   async loadPathData(projectId, pathName, filename) {
     const cacheKey = this.cacheManager.getCacheKey(projectId, filename, pathName);
-
     // Check cache first
     const cachedData = this.cacheManager.getCache(cacheKey);
     if (cachedData !== null) {
@@ -86,20 +85,22 @@ export class DataPersistence {
 
     const exists = await FileSystem.exists(filePath);
     if (!exists) {
-      return null;
+      const defaultData = this._getDefaultData(filename, projectId, pathName);
+      this.cacheManager.setCache(cacheKey, defaultData);
+      return defaultData;
     }
 
     try {
       const parsed = await FileSystem.readJSON(filePath);
-
       // Cache the result
       this.cacheManager.setCache(cacheKey, parsed);
       return parsed;
     } catch (error) {
       if (error.code === 'ENOENT' || error.message?.includes('ENOENT')) {
-        return null;
+        const defaultData = this._getDefaultData(filename, projectId, pathName);
+        this.cacheManager.setCache(cacheKey, defaultData);
+        return defaultData;
       }
-
       const { DataPersistenceError } = await import('./errors.js');
       throw new DataPersistenceError('load', filePath, error, { projectId, pathName, filename });
     }
@@ -256,5 +257,32 @@ export class DataPersistence {
   invalidateProjectCache(projectId, filename, pathName = null) {
     const cacheKey = this.cacheManager.getCacheKey(projectId, filename, pathName);
     this.cacheManager.invalidateCache(cacheKey);
+  }
+
+  /**
+   * Provide sensible default structures when a data file has not been created yet.
+   * This prevents ENOENT errors from cascading through the system.
+   * @private
+   */
+  _getDefaultData(filename, projectId = '', pathName = '') {
+    switch (filename) {
+      case FILE_NAMES.LEARNING_HISTORY:
+        return { completions: [], insights: [] };
+      case FILE_NAMES.HTA:
+        return { tree: null, collaborative_sessions: [] };
+      default:
+        break;
+    }
+
+    if (filename.startsWith('day_')) {
+      return { blocks: [], notes: [] };
+    }
+
+    if (filename === FILE_NAMES.CONFIG) {
+      return { projectId };
+    }
+
+    // Generic fallback
+    return {};
   }
 }

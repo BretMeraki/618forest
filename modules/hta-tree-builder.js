@@ -9,7 +9,25 @@ export class HtaTreeBuilder {
   constructor(dataPersistence, projectManagement, llmInterface) {
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
-    this.llm = llmInterface; // Store reference to Claude/LLM interface
+
+    // Safe-guard: always provide an object with requestIntelligence()
+    if (llmInterface && typeof llmInterface.requestIntelligence === 'function') {
+      this.llm = llmInterface;
+    } else {
+      // Fallback dummy interface that signals the UI to queue a manual Claude request
+      this.llm = {
+        /*
+         * When no online LLM is wired up, we return a special object that our
+         * downstream logic recognises (`request_for_claude: true`).
+         */
+        requestIntelligence: async (_purpose, { prompt }) => ({
+          request_for_claude: true,
+          prompt,
+          instructions: 'Please generate tasks based on this prompt'
+        })
+      };
+    }
+
     // Collect Claude generation requests when an online LLM is not available.
     this.pendingClaudeRequests = [];
   }
@@ -153,7 +171,14 @@ export class HtaTreeBuilder {
     );
 
     // Generate frontier nodes (kept empty for now)
-    const frontierNodes = [];
+    const frontierNodes = await this.generateSequencedFrontierNodes(
+      strategicBranches,
+      interests,
+      learningStyle,
+      knowledgeLevel,
+      existingHTA,
+      ''
+    );
 
     return {
       pathName,
@@ -209,10 +234,29 @@ export class HtaTreeBuilder {
       return customBranches;
     }
 
-    // 2. Otherwise, ask the LLM to propose 3-6 broad domains/pillars for the given goal
-    const prompt = `You are a curriculum architect. Propose 3-6 top-level learning domains that together form a comprehensive roadmap toward the goal "${goal}". Domains must be short noun phrases (e.g. \"Core Grammar\", \"Cultural Fluency\"). Return them as a JSON array of strings.`;
+    // 2. Otherwise, ask the LLM with a robust prompt for strategic pillars
+    const prompt = `
+You are a world-class curriculum architect and strategic planner. Your task is to analyze a user's high-level goal and break it down into a set of 3-5 core, high-level strategic pillars.
 
-    const aiResp = await this.llm.requestIntelligence('hta-domain-generation', { prompt });
+**RULES:**
+1.  Each pillar must be a short, actionable noun phrase (e.g., "Core Music Theory," "Brand Identity Development," "Market Analysis").
+2.  Do NOT ask clarifying questions. Use the provided goal and context to make a definitive strategic recommendation.
+3.  The output MUST be a valid JSON array of strings. Do not add any conversational text or wrappers around the JSON.
+
+**USER GOAL:** "${goal}"
+**KNOWLEDGE LEVEL:** ${knowledgeLevel}/10
+**FOCUS AREAS:** ${focusAreas.join(', ') || 'General'}
+
+**GOOD EXAMPLE OUTPUT:**
+["Foundational Music Theory", "Instrument Mastery", "Songwriting and Composition", "Performance Skills"]
+
+**BAD EXAMPLE OUTPUT:**
+"That's an interesting goal! To give you the best pillars, could you tell me more about what kind of music you want to play?"
+
+Now, generate the JSON array of strategic pillars.
+`;
+
+    const aiResp = await this.llm.requestIntelligence('hta-strategic-pillar-generation', { prompt });
     let domains = [];
     if (aiResp && !aiResp.request_for_claude) {
       try {
@@ -312,7 +356,17 @@ export class HtaTreeBuilder {
       'Return the result as a JSON array of objects, each with: title, description, difficulty (1-5), duration (in minutes), and prerequisites (array of exact task titles from this same list).\n\n' +
       'Example progression: [{"title": "Hold guitar comfortably", "description": "Practice holding the guitar in playing position for 5 minutes", "difficulty": 1, "duration": 15, "prerequisites": []}, {"title": "Find middle C and practice finger placement", "description": "Locate middle C and practice placing your index finger correctly", "difficulty": 1, "duration": 10, "prerequisites": ["Hold guitar comfortably"]}]';
 
-    // Call the LLM (Claude) via the stored interface
+    // If the LLM interface is a fallback stub, short-circuit and queue request
+    if (!this.llm || typeof this.llm.requestIntelligence !== 'function') {
+      this.pendingClaudeRequests.push({
+        claude_request: prompt,
+        type: 'tasks',
+        context: { branchId: branch.id, pathName: branch.title }
+      });
+      return [];
+    }
+
+    // Otherwise call the real interface
     const aiResponse = await this.llm.requestIntelligence('hta-task-generation', { prompt });
     let tasks = [];
 
@@ -465,7 +519,25 @@ export class HtaTreeBuilder {
    * @param {number} knowledgeLevel
    */
   async generateSubBranches(domainTitle, knowledgeLevel) {
-    const prompt = `You are a curriculum architect. Propose 2-3 logical sub-domains (1-3 word noun phrases) that sit under the broader domain "${domainTitle}" for a learner at knowledge level ${knowledgeLevel}/10. Return as a JSON array of strings.`;
+    const prompt = `
+You are a senior strategic planner. Your task is to take a high-level strategic pillar and decompose it into 2-3 logical, concrete sub-domains.
+
+**RULES:**
+1.  Each sub-domain must be a short, actionable noun phrase (e.g., "Chord Progressions," "Client Acquisition," "A/B Testing").
+2.  Do NOT ask for more context. Your response must be definitive.
+3.  The output MUST be a valid JSON array of strings.
+
+**HIGH-LEVEL PILLAR:** "${domainTitle}"
+**LEARNER KNOWLEDGE LEVEL:** ${knowledgeLevel}/10
+
+**GOOD EXAMPLE OUTPUT (for Pillar "Core Music Theory"):**
+["Scales and Modes", "Chord Theory and Harmony", "Rhythm and Meter"]
+
+**BAD EXAMPLE OUTPUT:**
+"That's a broad pillar! To break it down, what instrument does the user play?"
+
+Now, generate the JSON array of sub-domains.
+`;
 
     try {
       const resp = await this.llm.requestIntelligence('hta-subdomain-generation', { prompt });
@@ -488,7 +560,7 @@ export class HtaTreeBuilder {
       const first = words[0];
       const second = words[1];
       return [first, second].map((w,idx) => ({
-        id: `${domainTitle.toLowerCase().replace(/[^a-z0-9]+/g,'_')}_sub_${idx+1}`.replace(/_+/g,'_'),
+        id: `${domainTitle.toLowerCase().replace(/[^a-z0-9]+/,'_')}_sub_${idx+1}`.replace(/_+/g,'_'),
         title: w.charAt(0).toUpperCase()+w.slice(1),
         description: `Sub-domain of ${domainTitle}: ${w}`
       }));

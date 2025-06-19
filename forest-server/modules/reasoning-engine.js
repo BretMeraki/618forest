@@ -429,11 +429,26 @@ export class ReasoningEngine {
 
   /**
    * Perform comprehensive background analysis based on system state
-   * @param {Object} systemState - Complete system state from SystemClock
-   * @param {string} analysisType - Type of analysis to perform
+   * Supports both (systemState, analysisType) and (analysisType, systemState) signatures for backward compatibility.
+   * @param {Object|string} arg1 - systemState object or analysisType string
+   * @param {string|Object} arg2 - analysisType string or systemState object
    * @returns {Object} Analysis results
    */
-  async performBackgroundAnalysis(systemState, analysisType) {
+  async performBackgroundAnalysis(arg1, arg2) {
+    // Back-compat handling: allow either order of parameters
+    let systemState;
+    let analysisType;
+
+    if (typeof arg1 === 'string') {
+      // Signature: (analysisType, projectData)
+      analysisType = arg1;
+      systemState = arg2 || {};
+    } else {
+      // Signature: (systemState, analysisType)
+      systemState = arg1 || {};
+      analysisType = arg2 || 'strategic_overview';
+    }
+
     console.log(`🧠 ReasoningEngine: Performing ${analysisType} analysis`);
 
     try {
@@ -453,6 +468,23 @@ export class ReasoningEngine {
       await this.dataPersistence.logError(`ReasoningEngine.performBackgroundAnalysis.${analysisType}`, error);
       return { error: error.message };
     }
+  }
+
+  /**
+   * Calculate skill acceleration metrics based on recent completion history.
+   * @param {Object} context - Context object containing `completions` array with {breakthrough?, difficulty?}
+   * @returns {{accelerationFactor: number, recommendedDifficulty: number, learningVelocity: string}}
+   */
+  calculateSkillAcceleration(context = {}) {
+    const recentCompletions = context.completions || [];
+    const breakthroughRate = recentCompletions.filter(c => c.breakthrough).length / Math.max(recentCompletions.length, 1);
+    const averageDifficulty = recentCompletions.reduce((sum, c) => sum + (c.difficulty ?? 3), 0) / Math.max(recentCompletions.length, 1);
+
+    return {
+      accelerationFactor: 1 + breakthroughRate * 0.5,
+      recommendedDifficulty: Math.min(5, Math.max(1, averageDifficulty + (breakthroughRate > 0.5 ? 1 : 0))),
+      learningVelocity: breakthroughRate > 0.3 ? 'accelerating' : 'steady'
+    };
   }
 
   /**

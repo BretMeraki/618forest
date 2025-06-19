@@ -3,6 +3,8 @@
  * Handles daily schedule generation and planning
  */
 
+import { parseTimeWithContext } from './utils/time-helpers.js';
+
 export class ScheduleGenerator {
   constructor(dataPersistence, projectManagement) {
     this.dataPersistence = dataPersistence;
@@ -62,8 +64,8 @@ export class ScheduleGenerator {
     const constraints = config.constraints || {};
 
     // Parse time preferences
-    const wakeTime = this.parseTime(preferences.wake_time || '7:00 AM');
-    const sleepTime = this.parseTime(preferences.sleep_time || '10:00 PM');
+    const wakeTime = parseTimeWithContext(preferences.wake_time || '7:00 AM', 'wake');
+    const sleepTime = parseTimeWithContext(preferences.sleep_time || '10:00 PM', 'sleep');
     const mealTimes = this.parseMealTimes(preferences.meal_times || ['8:00 AM', '12:00 PM', '6:00 PM']);
 
     // Get available learning tasks
@@ -309,7 +311,7 @@ export class ScheduleGenerator {
   }
 
   parseMealTimes(mealTimes) {
-    return mealTimes.map(time => this.parseTime(time));
+    return mealTimes.map(time => parseTimeWithContext(time, 'meal'));
   }
 
   isMealTime(currentTime, mealTimes) {
