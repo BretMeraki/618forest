@@ -6,6 +6,7 @@
 import { WebContext } from './web-context.js';
 import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG, SCORING } from './constants.js';
 import { TaskScorer, TaskSelector, TaskFormatter } from './task-logic/index.js';
+import { StrategyEvolver } from './strategy-evolver.js';
 
 // @ts-nocheck
 export class TaskIntelligence {
@@ -13,6 +14,9 @@ export class TaskIntelligence {
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
     this.webContext = new WebContext(dataPersistence, llmInterface);
+
+    // Instantiate StrategyEvolver for delegating evolution logic
+    this.strategyEvolver = new StrategyEvolver(this.dataPersistence, this.projectManagement);
   }
 
   async getNextTask(contextFromMemory = '', energyLevel = 3, timeAvailable = '30 minutes') {
@@ -151,62 +155,8 @@ export class TaskIntelligence {
   }
 
   async evolveStrategy(feedback = '') {
-    try {
-      const projectId = await this.projectManagement.requireActiveProject();
-      const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
-
-      if (!config) {
-        throw new Error(`Project configuration not found for project '${projectId}' in evolveStrategy. Check if config.json exists and is valid.`);
-      }
-
-      const activePath = config.activePath || DEFAULT_PATHS.GENERAL;
-      const analysis = await this.analyzeCurrentStrategy(projectId, activePath, feedback);
-      const newTasks = await this.generateSmartNextTasks(projectId, activePath, analysis);
-
-      // Update HTA tree with new tasks
-      if (newTasks.length > 0) {
-        const htaData = await this.loadPathHTA(projectId, activePath) || {};
-
-        // Ensure proper data structure initialization
-        if (!htaData.frontierNodes) {
-          htaData.frontierNodes = [];
-        }
-
-        // Add new tasks
-        htaData.frontierNodes = htaData.frontierNodes.concat(newTasks);
-        htaData.lastUpdated = new Date().toISOString();
-
-        // CRITICAL: Ensure the HTA structure is properly initialized
-        if (!htaData.metadata) {
-          htaData.metadata = {
-            created: new Date().toISOString(),
-            version: '1.0'
-          };
-        }
-
-        await this.savePathHTA(projectId, activePath, htaData);
-      }
-
-      const responseText = TaskFormatter.formatStrategyEvolutionResponse(analysis, newTasks, feedback);
-
-      return {
-        content: [{
-          type: 'text',
-          text: responseText
-        }],
-        strategy_analysis: analysis,
-        new_tasks: newTasks,
-        feedback_processed: feedback || 'none'
-      };
-    } catch (error) {
-      await this.dataPersistence.logError('evolveStrategy', error, { feedback });
-      return {
-        content: [{
-          type: 'text',
-          text: `Error evolving strategy: ${error.message}`
-        }]
-      };
-    }
+    // Delegate the heavy lifting to StrategyEvolver
+    return await this.strategyEvolver.evolveStrategy(feedback);
   }
 
   async analyzeCurrentStrategy(projectId, pathName, feedback) {
