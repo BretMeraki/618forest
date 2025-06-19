@@ -1,0 +1,1261 @@
+2025-06-10 11:21:08 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 11:21:08 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 11:21:08 [info] Checking for updates
+2025-06-10 11:21:09 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 11:48:43 [info] Config file written
+2025-06-10 11:52:02 [info] App is quitting, cleaning up...
+2025-06-10 11:52:07 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 11:52:07 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 11:52:07 [info] Checking for updates
+2025-06-10 11:52:07 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 11:56:39 [info] App is quitting, cleaning up...
+2025-06-10 11:56:55 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 11:56:55 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 11:56:55 [info] Checking for updates
+2025-06-10 12:02:24 [info] App is quitting, cleaning up...
+2025-06-10 12:02:24 [info] App is quitting, cleaning up...
+2025-06-10 12:03:16 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 12:03:16 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 12:03:16 [info] Checking for updates
+2025-06-10 12:03:16 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 12:07:37 [info] App is quitting, cleaning up...
+2025-06-10 12:07:40 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 12:07:41 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 12:07:41 [info] Checking for updates
+2025-06-10 12:07:41 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 12:13:05 [info] Main webview is unresponsive, will kill and reload
+2025-06-10 12:13:07 [error] Failed to show toast: {
+  error: Error
+      at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/A4C45E03-40FD-4FE5-AB19-7949927CBEEB/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-10 12:13:13 [info] App is quitting, cleaning up...
+2025-06-10 12:13:13 [info] App is quitting, cleaning up...
+2025-06-10 12:13:16 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 12:13:16 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 12:13:16 [info] Checking for updates
+2025-06-10 12:13:16 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 13:42:20 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 13:42:20 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 13:42:20 [info] Checking for updates
+2025-06-10 13:47:27 [info] App is quitting, cleaning up...
+2025-06-10 13:47:27 [error] Failed to show toast: {
+  error: Error
+      at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:55614)
+      at Object.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:56300)
+      at y.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:7342)
+      at _._complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6859)
+      at _.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6519)
+      at _._complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6859)
+      at _.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6519)
+      at d (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:62690)
+      at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:63148 {
+    stack: 'Error\n' +
+      '    at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:55614)\n' +
+      '    at Object.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:56300)\n' +
+      '    at y.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:7342)\n' +
+      '    at _._complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6859)\n' +
+      '    at _.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6519)\n' +
+      '    at _._complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6859)\n' +
+      '    at _.complete (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:6519)\n' +
+      '    at d (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:62690)\n' +
+      '    at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:63148',
+    name: 'EmptyError',
+    message: 'no elements in sequence'
+  }
+}
+2025-06-10 13:47:32 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 13:47:32 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 13:47:32 [info] Checking for updates
+2025-06-10 13:47:32 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 14:08:38 [error] Failed to show toast: {
+  error: Error
+      at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-10 14:08:38 [error] Failed to show toast: {
+  error: Error
+      at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/private/var/folders/3y/24gx08lj2gn8f9ggrqpdfsx80000gp/T/AppTranslocation/F83B0021-FC63-4A16-8561-45F082067C37/d/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-10 14:17:51 [info] App is quitting, cleaning up...
+2025-06-10 14:17:51 [info] App is quitting, cleaning up...
+2025-06-10 14:17:55 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 14:17:56 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 14:17:56 [info] Checking for updates
+2025-06-10 14:17:56 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 14:20:41 [info] App is quitting, cleaning up...
+2025-06-10 14:20:41 [info] App is quitting, cleaning up...
+2025-06-10 14:20:49 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 14:20:49 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 14:20:49 [info] Checking for updates
+2025-06-10 14:20:49 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 14:22:07 [info] App is quitting, cleaning up...
+2025-06-10 14:22:11 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-10 14:22:11 [info] App is installed, enabling initial check and auto-updates
+2025-06-10 14:22:11 [info] Checking for updates
+2025-06-10 14:22:11 [error] Auto-update error: [Error: Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.] {
+  [stack]: [Getter/Setter],
+  [message]: "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+  code: 8,
+  domain: 'SQRLUpdaterErrorDomain'
+}
+2025-06-10 15:37:42 [info] App is quitting, cleaning up...
+2025-06-11 08:49:11 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 08:49:11 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 08:49:11 [info] Checking for updates
+2025-06-11 09:26:47 [info] App is quitting, cleaning up...
+2025-06-11 09:28:33 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 09:28:33 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 09:28:33 [info] Checking for updates
+2025-06-11 09:37:04 [info] App is quitting, cleaning up...
+2025-06-11 09:37:23 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 09:37:23 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 09:37:23 [info] Checking for updates
+2025-06-11 09:41:34 [info] App is quitting, cleaning up...
+2025-06-11 09:41:39 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 09:41:39 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 09:41:39 [info] Checking for updates
+2025-06-11 12:59:12 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 12:59:12 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 12:59:12 [info] Checking for updates
+2025-06-11 13:00:58 [info] App is quitting, cleaning up...
+2025-06-11 13:01:02 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 13:01:02 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 13:01:02 [info] Checking for updates
+2025-06-11 13:52:36 [info] App is quitting, cleaning up...
+2025-06-11 13:52:43 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 13:52:43 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 13:52:43 [info] Checking for updates
+2025-06-11 14:08:22 [info] App is quitting, cleaning up...
+2025-06-11 14:08:23 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-11 14:08:24 [info] App is installed, enabling initial check and auto-updates
+2025-06-11 14:08:24 [info] Checking for updates
+2025-06-11 18:10:27 [info] Checking for updates
+2025-06-11 22:13:53 [info] Checking for updates
+2025-06-12 02:13:53 [info] Checking for updates
+2025-06-12 06:34:40 [info] Checking for updates
+2025-06-12 08:18:08 [error] Failed to show toast: {
+  error: Error
+      at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-12 08:18:08 [error] Failed to show toast: {
+  error: Error
+      at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-12 08:18:08 [error] Failed to show toast: {
+  error: Error
+      at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)
+      at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)
+      at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)
+      at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921
+      at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)
+      at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)
+      at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)
+      at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)
+      at listOnTimeout (node:internal/timers:588:17)
+      at process.processTimers (node:internal/timers:523:7) {
+    stack: 'Error\n' +
+      '    at t (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:35:5924)\n' +
+      '    at new <anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57439)\n' +
+      '    at u (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:58266)\n' +
+      '    at /Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:57921\n' +
+      '    at t.<anonymous> (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:49851)\n' +
+      '    at t._execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27704)\n' +
+      '    at t.execute (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:27527)\n' +
+      '    at t.flush (/Applications/Claude.app/Contents/Resources/app.asar/.vite/build/index.js:37:31916)\n' +
+      '    at listOnTimeout (node:internal/timers:588:17)\n' +
+      '    at process.processTimers (node:internal/timers:523:7)',
+    message: 'Timeout has occurred',
+    name: 'TimeoutError',
+    info: { meta: null, lastValue: null, seen: 0 }
+  }
+}
+2025-06-12 10:01:06 [info] App is quitting, cleaning up...
+2025-06-12 10:01:08 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 10:01:08 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 10:01:08 [info] Checking for updates
+2025-06-12 12:29:38 [info] App is quitting, cleaning up...
+2025-06-12 12:29:40 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 12:29:40 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 12:29:40 [info] Checking for updates
+2025-06-12 12:33:24 [info] App is quitting, cleaning up...
+2025-06-12 12:33:26 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 12:33:26 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 12:33:26 [info] Checking for updates
+2025-06-12 12:39:30 [info] App is quitting, cleaning up...
+2025-06-12 12:39:32 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 12:39:32 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 12:39:32 [info] Checking for updates
+2025-06-12 12:55:49 [info] App is quitting, cleaning up...
+2025-06-12 12:55:51 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 12:55:51 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 12:55:51 [info] Checking for updates
+2025-06-12 13:10:19 [info] App is quitting, cleaning up...
+2025-06-12 13:10:25 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-12 13:10:25 [info] App is installed, enabling initial check and auto-updates
+2025-06-12 13:10:25 [info] Checking for updates
+2025-06-12 17:10:25 [info] Checking for updates
+2025-06-12 21:10:25 [info] Checking for updates
+2025-06-13 01:05:55 [info] App is quitting, cleaning up...
+2025-06-13 01:05:56 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-13 01:05:57 [info] App is installed, enabling initial check and auto-updates
+2025-06-13 01:05:57 [info] Checking for updates
+2025-06-13 05:11:38 [info] Checking for updates
+2025-06-13 09:17:53 [info] Checking for updates
+2025-06-13 10:24:35 [info] App is quitting, cleaning up...
+2025-06-13 10:24:37 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-13 10:24:37 [info] App is installed, enabling initial check and auto-updates
+2025-06-13 10:24:38 [info] Checking for updates
+2025-06-13 10:36:44 [info] App is quitting, cleaning up...
+2025-06-13 11:15:04 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-13 11:15:04 [info] App is installed, enabling initial check and auto-updates
+2025-06-13 11:15:04 [info] Checking for updates
+2025-06-13 11:23:10 [info] App is quitting, cleaning up...
+2025-06-14 11:51:42 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 11:51:43 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 11:51:43 [info] Checking for updates
+2025-06-14 11:54:59 [info] App is quitting, cleaning up...
+2025-06-14 11:55:11 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 11:55:12 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 11:55:12 [info] Checking for updates
+2025-06-14 11:57:53 [info] App is quitting, cleaning up...
+2025-06-14 11:57:55 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 11:57:55 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 11:57:55 [info] Checking for updates
+2025-06-14 12:01:18 [info] App is quitting, cleaning up...
+2025-06-14 12:01:27 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:01:27 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:01:27 [info] Checking for updates
+2025-06-14 12:09:06 [info] App is quitting, cleaning up...
+2025-06-14 12:09:07 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:09:07 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:09:07 [info] Checking for updates
+2025-06-14 12:15:58 [info] App is quitting, cleaning up...
+2025-06-14 12:15:59 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:15:59 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:15:59 [info] Checking for updates
+2025-06-14 12:17:36 [info] App is quitting, cleaning up...
+2025-06-14 12:17:36 [info] App is quitting, cleaning up...
+2025-06-14 12:17:45 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:17:45 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:17:45 [info] Checking for updates
+2025-06-14 12:23:43 [info] App is quitting, cleaning up...
+2025-06-14 12:23:44 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:23:44 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:23:44 [info] Checking for updates
+2025-06-14 12:25:36 [info] App is quitting, cleaning up...
+2025-06-14 12:25:37 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:25:37 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:25:37 [info] Checking for updates
+2025-06-14 12:36:34 [info] App is quitting, cleaning up...
+2025-06-14 12:36:35 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 12:36:36 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 12:36:36 [info] Checking for updates
+2025-06-14 13:18:55 [info] App is quitting, cleaning up...
+2025-06-14 13:18:57 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 13:18:58 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 13:18:58 [info] Checking for updates
+2025-06-14 13:20:56 [info] App is quitting, cleaning up...
+2025-06-14 13:20:58 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 13:20:58 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 13:20:58 [info] Checking for updates
+2025-06-14 13:24:04 [info] Config file written
+2025-06-14 13:24:13 [info] App is quitting, cleaning up...
+2025-06-14 13:24:14 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 13:24:14 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 13:24:14 [info] Checking for updates
+2025-06-14 13:25:42 [info] App is quitting, cleaning up...
+2025-06-14 13:25:44 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 13:25:44 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 13:25:44 [info] Checking for updates
+2025-06-14 13:27:34 [info] App is quitting, cleaning up...
+2025-06-14 13:27:36 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-14 13:27:36 [info] App is installed, enabling initial check and auto-updates
+2025-06-14 13:27:36 [info] Checking for updates
+2025-06-14 17:47:19 [info] Checking for updates
+2025-06-14 21:47:19 [info] Checking for updates
+2025-06-15 01:47:19 [info] Checking for updates
+2025-06-15 05:55:51 [info] Checking for updates
+2025-06-15 09:56:18 [info] Checking for updates
+2025-06-15 11:39:01 [info] App is quitting, cleaning up...
+2025-06-15 11:41:15 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 11:41:15 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 11:41:15 [info] Checking for updates
+2025-06-15 11:59:01 [info] App is quitting, cleaning up...
+2025-06-15 11:59:03 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 11:59:03 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 11:59:03 [info] Checking for updates
+2025-06-15 12:00:58 [info] App is quitting, cleaning up...
+2025-06-15 12:01:01 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:01:02 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:01:02 [info] Checking for updates
+2025-06-15 12:04:34 [info] App is quitting, cleaning up...
+2025-06-15 12:04:36 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:04:36 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:04:36 [info] Checking for updates
+2025-06-15 12:06:46 [info] App is quitting, cleaning up...
+2025-06-15 12:06:48 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:06:48 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:06:48 [info] Checking for updates
+2025-06-15 12:08:44 [info] App is quitting, cleaning up...
+2025-06-15 12:22:11 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:22:11 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:22:12 [info] Checking for updates
+2025-06-15 12:26:00 [info] App is quitting, cleaning up...
+2025-06-15 12:26:03 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:26:03 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:26:03 [info] Checking for updates
+2025-06-15 12:28:52 [info] App is quitting, cleaning up...
+2025-06-15 12:28:54 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:28:54 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:28:54 [info] Checking for updates
+2025-06-15 12:42:34 [info] App is quitting, cleaning up...
+2025-06-15 12:42:36 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:42:36 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:42:36 [info] Checking for updates
+2025-06-15 12:45:01 [info] App is quitting, cleaning up...
+2025-06-15 12:45:03 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:45:04 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:45:04 [info] Checking for updates
+2025-06-15 12:45:45 [info] App is quitting, cleaning up...
+2025-06-15 12:45:48 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 12:45:48 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 12:45:48 [info] Checking for updates
+2025-06-15 15:24:05 [info] App is quitting, cleaning up...
+2025-06-15 15:24:11 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 15:24:11 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 15:24:11 [info] Checking for updates
+2025-06-15 15:36:08 [info] App is quitting, cleaning up...
+2025-06-15 15:36:28 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 15:36:28 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 15:36:28 [info] Checking for updates
+2025-06-15 15:42:43 [info] App is quitting, cleaning up...
+2025-06-15 15:42:45 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 15:42:45 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 15:42:45 [info] Checking for updates
+2025-06-15 15:44:12 [info] App is quitting, cleaning up...
+2025-06-15 15:44:13 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 15:44:13 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 15:44:13 [info] Checking for updates
+2025-06-15 16:21:08 [info] App is quitting, cleaning up...
+2025-06-15 16:21:13 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 16:21:14 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 16:21:14 [info] Checking for updates
+2025-06-15 16:39:34 [info] App is quitting, cleaning up...
+2025-06-15 16:40:49 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-15 16:40:50 [info] App is installed, enabling initial check and auto-updates
+2025-06-15 16:40:50 [info] Checking for updates
+2025-06-16 09:15:00 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 09:15:01 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 09:15:01 [info] Checking for updates
+2025-06-16 09:57:33 [info] App is quitting, cleaning up...
+2025-06-16 09:57:37 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 09:57:37 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 09:57:37 [info] Checking for updates
+2025-06-16 10:09:45 [info] App is quitting, cleaning up...
+2025-06-16 10:09:47 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 10:09:47 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 10:09:47 [info] Checking for updates
+2025-06-16 10:13:06 [info] App is quitting, cleaning up...
+2025-06-16 10:13:08 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 10:13:09 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 10:13:09 [info] Checking for updates
+2025-06-16 10:27:03 [info] App is quitting, cleaning up...
+2025-06-16 10:27:05 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 10:27:05 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 10:27:05 [info] Checking for updates
+2025-06-16 10:38:24 [info] App is quitting, cleaning up...
+2025-06-16 10:38:26 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 10:38:26 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 10:38:26 [info] Checking for updates
+2025-06-16 11:21:15 [info] App is quitting, cleaning up...
+2025-06-16 11:21:17 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 11:21:17 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 11:21:17 [info] Checking for updates
+2025-06-16 11:34:29 [info] App is quitting, cleaning up...
+2025-06-16 11:34:31 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 11:34:31 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 11:34:31 [info] Checking for updates
+2025-06-16 11:43:54 [info] App is quitting, cleaning up...
+2025-06-16 11:43:55 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 11:43:55 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 11:43:55 [info] Checking for updates
+2025-06-16 12:20:10 [info] App is quitting, cleaning up...
+2025-06-16 12:20:12 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 12:20:12 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 12:20:12 [info] Checking for updates
+2025-06-16 12:26:07 [info] App is quitting, cleaning up...
+2025-06-16 12:26:08 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 12:26:09 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 12:26:09 [info] Checking for updates
+2025-06-16 14:29:22 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 14:29:27 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 14:29:27 [info] Checking for updates
+2025-06-16 14:29:27 [error] Auto-update error: [Error: The Internet connection appears to be offline.] {
+  [stack]: [Getter/Setter],
+  [message]: 'The Internet connection appears to be offline.',
+  code: -1009,
+  domain: 'NSURLErrorDomain'
+}
+2025-06-16 14:29:28 [info] Failed to load URL: https://claude.ai/
+2025-06-16 14:29:28 [info] Error page detected: { href: 'chrome-error://chromewebdata/' }
+2025-06-16 15:14:46 [info] Error page detected: { href: 'chrome-error://chromewebdata/' }
+2025-06-16 15:14:47 [info] Redirecting to claude.ai
+2025-06-16 15:26:33 [info] App is quitting, cleaning up...
+2025-06-16 15:26:35 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 15:26:35 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 15:26:35 [info] Checking for updates
+2025-06-16 15:32:04 [info] App is quitting, cleaning up...
+2025-06-16 15:32:06 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 15:32:06 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 15:32:06 [info] Checking for updates
+2025-06-16 16:18:33 [info] App is quitting, cleaning up...
+2025-06-16 16:18:35 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 16:18:35 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 16:18:35 [info] Checking for updates
+2025-06-16 16:46:21 [info] App is quitting, cleaning up...
+2025-06-16 16:46:24 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 16:46:24 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 16:46:24 [info] Checking for updates
+2025-06-16 16:48:01 [info] App is quitting, cleaning up...
+2025-06-16 16:48:03 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 16:48:03 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 16:48:03 [info] Checking for updates
+2025-06-16 16:51:10 [info] App is quitting, cleaning up...
+2025-06-16 16:51:12 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 16:51:13 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 16:51:13 [info] Checking for updates
+2025-06-16 16:52:18 [info] App is quitting, cleaning up...
+2025-06-16 16:52:19 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 16:52:20 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 16:52:20 [info] Checking for updates
+2025-06-16 20:52:28 [info] Checking for updates
+2025-06-16 21:07:12 [info] App is quitting, cleaning up...
+2025-06-16 21:07:16 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 21:07:16 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 21:07:16 [info] Checking for updates
+2025-06-16 21:16:49 [info] App is quitting, cleaning up...
+2025-06-16 21:16:51 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 21:16:51 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 21:16:51 [info] Checking for updates
+2025-06-16 21:27:00 [info] App is quitting, cleaning up...
+2025-06-16 21:27:22 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 21:27:22 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 21:27:22 [info] Checking for updates
+2025-06-16 21:27:22 [info] Found an update, downloading
+2025-06-16 21:27:27 [info] Update downloaded and ready to install { releaseName: 'Claude 0.10.38' }
+2025-06-16 21:51:13 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-16 21:51:14 [info] App is installed, enabling initial check and auto-updates
+2025-06-16 21:51:14 [info] Checking for updates
+2025-06-16 21:51:14 [info] Found an update, downloading
+2025-06-16 21:51:22 [info] Update downloaded and ready to install { releaseName: 'Claude 0.10.38' }
+2025-06-17 08:11:17 [info] Starting app {
+  appVersion: '0.10.14',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 08:11:17 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 08:11:17 [info] Checking for updates
+2025-06-17 08:11:17 [info] Found an update, downloading
+2025-06-17 08:11:24 [info] Update downloaded and ready to install { releaseName: 'Claude 0.10.38' }
+2025-06-17 08:26:00 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 08:26:00 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 08:26:00 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 08:26:00 [info] Registered cdx-registry:// protocol handler
+2025-06-17 08:26:00 [info] Checking for updates
+2025-06-17 08:32:10 [info] App is quitting, cleaning up...
+2025-06-17 08:32:10 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 08:32:12 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 08:32:12 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 08:32:12 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 08:32:12 [info] Registered cdx-registry:// protocol handler
+2025-06-17 08:32:12 [info] Checking for updates
+2025-06-17 08:50:18 [info] App is quitting, cleaning up...
+2025-06-17 08:50:18 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 08:50:55 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 08:50:55 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 08:50:55 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 08:50:55 [info] Registered cdx-registry:// protocol handler
+2025-06-17 08:50:55 [info] Checking for updates
+2025-06-17 09:11:01 [info] App is quitting, cleaning up...
+2025-06-17 09:11:01 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 09:11:03 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 09:11:03 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 09:11:03 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 09:11:03 [info] Registered cdx-registry:// protocol handler
+2025-06-17 09:11:03 [info] Checking for updates
+2025-06-17 09:21:30 [info] App is quitting, cleaning up...
+2025-06-17 09:21:30 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 09:21:32 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 09:21:32 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 09:21:32 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 09:21:32 [info] Registered cdx-registry:// protocol handler
+2025-06-17 09:21:32 [info] Checking for updates
+2025-06-17 09:29:30 [info] App is quitting, cleaning up...
+2025-06-17 09:29:30 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 09:29:32 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 09:29:33 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 09:29:33 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 09:29:33 [info] Registered cdx-registry:// protocol handler
+2025-06-17 09:29:33 [info] Checking for updates
+2025-06-17 09:40:12 [info] App is quitting, cleaning up...
+2025-06-17 09:40:12 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 09:40:14 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 09:40:14 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 09:40:14 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 09:40:14 [info] Registered cdx-registry:// protocol handler
+2025-06-17 09:40:14 [info] Checking for updates
+2025-06-17 13:11:31 [info] App is quitting, cleaning up...
+2025-06-17 13:11:31 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 13:11:33 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 13:11:33 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 13:11:33 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 13:11:33 [info] Registered cdx-registry:// protocol handler
+2025-06-17 13:11:33 [info] Checking for updates
+2025-06-17 13:14:27 [info] App is quitting, cleaning up...
+2025-06-17 13:14:27 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 13:14:28 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 13:14:28 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 13:14:28 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 13:14:28 [info] Registered cdx-registry:// protocol handler
+2025-06-17 13:14:28 [info] Checking for updates
+2025-06-17 13:15:43 [info] App is quitting, cleaning up...
+2025-06-17 13:15:43 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 13:15:44 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 13:15:44 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 13:15:44 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 13:15:44 [info] Registered cdx-registry:// protocol handler
+2025-06-17 13:15:44 [info] Checking for updates
+2025-06-17 14:08:54 [info] App is quitting, cleaning up...
+2025-06-17 14:08:54 [info] Claude Studio: Feature disabled, skipping cleanup
+2025-06-17 14:09:00 [info] Starting app {
+  appVersion: '0.10.38',
+  isPackaged: true,
+  platform: 'darwin',
+  arch: 'arm64',
+  nodeVersion: '22.15.1'
+}
+2025-06-17 14:09:00 [info] Claude Studio: Feature disabled, skipping initialization
+2025-06-17 14:09:00 [info] App is installed, enabling initial check and auto-updates
+2025-06-17 14:09:00 [info] Registered cdx-registry:// protocol handler
+2025-06-17 14:09:00 [info] Checking for updates

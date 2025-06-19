@@ -1,0 +1,148 @@
+import promisePlugin from 'eslint-plugin-promise';
+
+export default [
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: 'module',
+      globals: {
+        // Node.js globals
+        global: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly'
+      }
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: true
+    },
+    plugins: {
+      promise: promisePlugin
+    },
+    rules: {
+      'no-unused-vars': ['warn', { 'args': 'none', 'ignoreRestSiblings': true }],
+      'no-console': 'off',
+      'prefer-const': 'warn',
+      'eqeqeq': ['error', 'always'],
+      'curly': ['warn', 'all'],
+      'semi': ['error', 'always'],
+
+      'no-multiple-empty-lines': ['error', { 'max': 1 }],
+      'no-trailing-spaces': 'error',
+      'indent': ['error', 2],
+      'quotes': ['error', 'single', { 'avoidEscape': true }],
+      'comma-dangle': ['error', 'never'],
+      'object-curly-spacing': ['error', 'always'],
+      'array-bracket-spacing': ['error', 'never'],
+      'space-before-function-paren': ['error', {
+        'anonymous': 'always',
+        'named': 'never',
+        'asyncArrow': 'always'
+      }],
+
+      'no-async-promise-executor': 'error',
+      'promise/catch-or-return': 'error',
+      'promise/no-nesting': 'warn',
+      'promise/no-return-wrap': 'error',
+      'promise/param-names': 'error',
+      'promise/always-return': 'off',
+      'promise/no-callback-in-promise': 'warn',
+      'promise/prefer-await-to-callbacks': 'warn',
+      'promise/prefer-await-to-then': 'warn',
+      'no-await-in-loop': 'warn',
+      'require-atomic-updates': 'error',
+      'no-return-await': 'error',
+
+      'no-unreachable': 'error',
+      'no-unreachable-loop': 'error',
+      'no-constant-condition': 'error',
+      'no-duplicate-imports': 'error',
+      'no-self-assign': 'error',
+      'no-self-compare': 'error',
+      'no-template-curly-in-string': 'warn',
+      'no-unmodified-loop-condition': 'error',
+      'no-use-before-define': ['error', { 'functions': false, 'classes': true, 'variables': true }],
+
+      'default-case': 'warn',
+      'dot-notation': 'error',
+      'guard-for-in': 'warn',
+      'no-alert': 'error',
+      'no-caller': 'error',
+      'no-eval': 'error',
+      'no-extend-native': 'error',
+      'no-extra-bind': 'error',
+      'no-floating-decimal': 'error',
+      'no-implied-eval': 'error',
+      'no-lone-blocks': 'error',
+      'no-magic-numbers': ['warn', {
+        'ignore': [-1, 0, 1, 2, 3, 4, 5, 10, 100, 1000],
+        'ignoreArrayIndexes': true,
+        'enforceConst': true,
+        'detectObjects': false
+      }],
+      'no-multi-spaces': 'error',
+      'no-new': 'warn',
+      'no-new-func': 'error',
+      'no-new-wrappers': 'error',
+      'no-octal-escape': 'error',
+      'no-param-reassign': 'warn',
+      'no-proto': 'error',
+      'no-return-assign': 'error',
+      'no-script-url': 'error',
+      'no-sequences': 'error',
+      'no-throw-literal': 'error',
+      'no-unneeded-ternary': 'error',
+      'no-unused-expressions': 'error',
+      'no-useless-call': 'error',
+      'no-useless-concat': 'error',
+      'no-useless-return': 'error',
+      'no-void': 'error',
+      'no-with': 'error',
+      'prefer-promise-reject-errors': 'error',
+      'radix': 'error',
+      'yoda': 'error',
+
+      'no-catch-shadow': 'off',
+      'no-delete-var': 'error',
+      'no-label-var': 'error',
+      'no-shadow': 'warn',
+      'no-shadow-restricted-names': 'error',
+      'no-undef': 'error',
+      'no-undef-init': 'error',
+      'no-undefined': 'off',
+
+      'arrow-spacing': 'error',
+      'constructor-super': 'error',
+      'no-class-assign': 'error',
+      'no-const-assign': 'error',
+      'no-dupe-class-members': 'error',
+      'no-new-symbol': 'error',
+      'no-this-before-super': 'error',
+      'no-useless-computed-key': 'error',
+      'no-useless-constructor': 'error',
+      'no-useless-rename': 'error',
+      'no-var': 'error',
+      'object-shorthand': 'warn',
+      'prefer-arrow-callback': 'warn',
+      'prefer-rest-params': 'warn',
+      'prefer-spread': 'warn',
+      'prefer-template': 'warn',
+      'rest-spread-spacing': 'error',
+      'template-curly-spacing': 'error'
+    }
+  },
+  {
+    files: ['**/*.test.js', '**/test-*.js'],
+    rules: {
+      'no-magic-numbers': 'off',
+      'no-unused-expressions': 'off'
+    }
+  }
+];
