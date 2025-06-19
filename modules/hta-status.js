@@ -3,6 +3,8 @@
  * Handles HTA tree status reporting and metadata
  */
 
+import { getAvailableNodes } from './utils/hta-logic.js';
+
 export class HtaStatus {
   constructor(dataPersistence, projectManagement) {
     this.dataPersistence = dataPersistence;
@@ -130,21 +132,8 @@ export class HtaStatus {
   }
 
   getReadyNodes(nodes) {
-    const completedNodeIds = nodes.filter(n => n.completed).map(n => n.id);
-
-    return nodes.filter(node => {
-      if (node.completed) {return false;}
-
-      // Check if all prerequisites are met
-      if (node.prerequisites && node.prerequisites.length > 0) {
-        return node.prerequisites.every(prereq =>
-          completedNodeIds.includes(prereq) ||
-          nodes.some(n => n.title === prereq && n.completed)
-        );
-      }
-
-      return true; // No prerequisites, so it's ready
-    });
+    const completed = nodes.filter(n => n.completed);
+    return getAvailableNodes(nodes, completed);
   }
 
   getBranchProgress(branchId, nodes) {

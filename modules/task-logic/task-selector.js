@@ -4,6 +4,7 @@
  */
 
 import { TaskScorer } from './task-scorer.js';
+import { getAvailableNodes } from '../utils/hta-logic.js';
 
 export class TaskSelector {
   /**
@@ -29,35 +30,15 @@ export class TaskSelector {
       }
     }
 
-    // Filter available tasks (not completed, prerequisites met)
+    // Use centralised HTA util to get tasks with prerequisites satisfied
+    const availableBase = getAvailableNodes(nodes, nodes.filter(n => n.completed));
+
+    // Apply time filter
     const availableTasks = [];
-    for (const node of nodes) {
-      if (node.completed) {
-        continue;
-      }
-
-      // Check prerequisites efficiently
-      if (node.prerequisites && node.prerequisites.length > 0) {
-        let prerequisitesMet = true;
-        for (const prereq of node.prerequisites) {
-          if (!completedNodeIds.has(prereq) && !nodesByTitle.has(prereq)) {
-            prerequisitesMet = false;
-            break;
-          }
-        }
-        if (!prerequisitesMet) {
-          continue;
-        }
-      }
-
-      // Filter by time availability (more than 120% of available time).  This prevents the
-      // system from suggesting 20-minute tasks for a 10-minute slot.
-      const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
+    const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
+    for (const node of availableBase) {
       const taskMinutes = TaskScorer.parseTimeToMinutes(node.duration || '30 minutes');
-      if (taskMinutes > timeInMinutes * 1.2) {
-        continue; // Too long – try another task
-      }
-
+      if (taskMinutes > timeInMinutes * 1.2) continue;
       availableTasks.push(node);
     }
 

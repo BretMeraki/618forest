@@ -5,6 +5,7 @@
 
 import { WebContext } from './web-context.js';
 import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG, SCORING } from './constants.js';
+import { getAvailableNodes } from './utils/hta-logic.js';
 import { TaskScorer, TaskSelector, TaskFormatter } from './task-logic/index.js';
 import { StrategyEvolver } from './strategy-evolver.js';
 
@@ -180,20 +181,8 @@ export class TaskIntelligence {
 
   getAvailableTasksCount(htaData) {
     const nodes = htaData.frontierNodes || [];
-    const completedNodeIds = nodes.filter(n => n.completed).map(n => n.id);
-
-    return nodes.filter(node => {
-      if (node.completed) {return false;}
-
-      if (node.prerequisites && node.prerequisites.length > 0) {
-        return node.prerequisites.every(prereq =>
-          completedNodeIds.includes(prereq) ||
-          nodes.some(n => n.title === prereq && n.completed)
-        );
-      }
-
-      return true;
-    }).length;
+    const completed = nodes.filter(n => n.completed);
+    return getAvailableNodes(nodes, completed).length;
   }
 
   detectStuckIndicators(htaData, learningHistory) {
