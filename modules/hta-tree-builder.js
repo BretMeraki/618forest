@@ -50,14 +50,11 @@ export class HtaTreeBuilder {
       config.activePath = targetPath;
       await this.dataPersistence.saveProjectData(projectId, 'config.json', config);
 
-      // If no frontier nodes were generated, return the pending Claude request directly so MCP can prompt the user
+      // Wait (up to 60 s) for LLM to respond before falling back heuristically.
       if ((htaData.frontierNodes?.length || 0) === 0 && this.pendingClaudeRequests.length > 0) {
-        // Return the FIRST pending request (one branch at a time is fine – Claude can iterate)
-        const pending = this.pendingClaudeRequests[0];
-        return {
-          content: [{ type: 'text', text: pending.claude_request || 'LLM generation required' }],
-          pending_claude: pending
-        };
+        await this._waitForClaudeResponses(60000);
+        // After waiting, if we still have pending requests, we simply attach them so the UI can show a notice
+        // but we do NOT block the full HTA result from being returned.
       }
 
       // Format question tree for display
@@ -621,5 +618,37 @@ Return JSON: { "complexity_score": 1-10, "estimated_time": "short|months|years" 
       depth_level: level,
       parent_path: parentPath
     };
+  }
+
+  /**
+   * Wait for Claude/LLM to respond to pending requests, polling periodically.
+   * Falls back after the timeout so the builder never hangs indefinitely.
+   * @param {number} timeoutMs Maximum time to wait in milliseconds (default 60 000).
+   */
+  async _waitForClaudeResponses(timeoutMs = 60000) {
+    const start = Date.now();
+    const POLL_INTERVAL = 3000;
+
+    while (this.pendingClaudeRequests.length > 0 && Date.now() - start < timeoutMs) {
+      // Attempt to resolve each pending request again
+      for (const req of [...this.pendingClaudeRequests]) {
+        try {
+          const resp = await this.llm.requestIntelligence(req.type || 'followup', { prompt: req.claude_request });
+          if (resp && !resp.request_for_claude) {
+            // Mark as resolved by removing from pending list
+            this.pendingClaudeRequests = this.pendingClaudeRequests.filter(r => r !== req);
+          }
+        } catch (err) {
+          // Ignore errors during polling – we'll fall back if unresolved
+        }
+      }
+
+      if (this.pendingClaudeRequests.length === 0) {
+        break;
+      }
+
+      // Sleep before next poll iteration
+      await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    }
   }
 }
