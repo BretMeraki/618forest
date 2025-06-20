@@ -114,7 +114,7 @@ export class McpHandlers {
         error: error.message,
         stack: error.stack,
       });
-      console.error('Error setting up legacy handler schemas:', error);
+      logger.error('Error setting up legacy handler schemas', { message: error.message, stack: error.stack });
       throw error;
     }
 

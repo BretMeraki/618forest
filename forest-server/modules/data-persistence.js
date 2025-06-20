@@ -6,6 +6,10 @@
 import { FileSystem } from './utils/file-system.js';
 import { CacheManager } from './utils/cache-manager.js';
 import { DIRECTORIES, FILE_NAMES } from './constants.js';
+import { getForestLogger } from './winston-logger.js';
+
+// Module-level logger
+const logger = getForestLogger({ module: 'DataPersistence' });
 
 export class DataPersistence {
   constructor(dataDir) {
@@ -176,8 +180,11 @@ export class DataPersistence {
       const logPath = FileSystem.join(this.dataDir, FILE_NAMES.ERROR_LOG);
       await FileSystem.appendFile(logPath, `${JSON.stringify(logEntry)}\n`);
     } catch (logError) {
-      // If we can't log the error, just console.error it
-      console.error('Failed to log error:', logEntry, 'Log error:', logError.message);
+      // If we can't log the error, fallback to module logger
+      logger.error('Failed to log error', {
+        originalLogEntry: logEntry,
+        message: logError.message,
+      });
     }
   }
 

@@ -117,7 +117,7 @@ export class CacheManager {
           this.metrics.cacheWarming++;
         }
       } catch (error) {
-        console.warn(`Cache warming failed for key ${key}:`, error.message);
+        logger.warn(`Cache warming failed for key ${key}`, { message: error.message });
       }
     }
   }

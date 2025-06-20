@@ -4,6 +4,10 @@
 // ============================================
 
 import { DEFAULT_PATHS, FILE_NAMES } from './constants.js';
+import { getForestLogger } from './winston-logger.js';
+
+// Module-level logger
+const logger = getForestLogger({ module: 'HtaTreeBuilderDeep' });
 
 export class HtaTreeBuilder {
   constructor(dataPersistence, projectManagement, claudeInterface) {
@@ -99,7 +103,7 @@ Your goal deserves the depth and detail this system will provide!`
         requires_branch_generation: true
       };
     } catch (error) {
-      console.error('Error building HTA tree:', error);
+      logger.error('Error building HTA tree', { message: error.message, stack: error.stack });
       return {
         content: [{
           type: 'text',

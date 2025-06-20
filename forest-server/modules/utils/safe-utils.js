@@ -2,6 +2,11 @@
  * Safe utility helpers shared across Forest server modules.
  */
 
+import { getForestLogger } from '../winston-logger.js';
+
+// Module-level logger
+const logger = getForestLogger({ module: 'SafeUtils' });
+
 /**
  * Safely JSON.parse a string.  Returns `defaultValue` on failure.
  * @param {string} str
@@ -14,7 +19,7 @@ export function safeJsonParse(str, defaultValue = {}) {
     }
     return JSON.parse(str);
   } catch (err) {
-    console.error('safeJsonParse: invalid JSON – returning default.', err?.message);
+    logger.error('safeJsonParse: invalid JSON – returning default.', { message: err?.message });
     return defaultValue;
   }
 }

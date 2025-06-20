@@ -66,10 +66,12 @@ class EventBus {
           // Pass both the data and metadata to listeners
           callback({ ...data, _eventMetadata: eventMetadata });
         } catch (error) {
-          console.error(
-            `❌ Error in event listener "${listenerName}" for event "${event}":`,
-            error.message
-          );
+          logger.error(`❌ Error in event listener "${listenerName}" for event "${event}"`, {
+            listener: listenerName,
+            event,
+            message: error.message,
+            stack: error.stack,
+          });
           // Continue processing other listeners even if one fails
         }
       });
