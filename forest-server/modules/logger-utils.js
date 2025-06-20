@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { URL } from 'url';
+import { URL, fileURLToPath } from 'url';
 
 // Ensure log directory exists
 export function ensureLogDir() {
   // Use module location to resolve logs directory, not current working directory
   // This fixes issues when Claude Desktop runs the server from a different working directory
-  const moduleDir = path.dirname(new URL(import.meta.url).pathname);
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const projectRoot = path.resolve(moduleDir, '../'); // modules -> project root
   const logDir = path.resolve(projectRoot, 'logs');
 

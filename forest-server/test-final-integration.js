@@ -21,14 +21,14 @@ const logger = getForestLogger({
   logLevel: 'debug',
   enableConsole: true,
   enableFileLogging: true,
-  enableRealTimeLogging: true
+  enableRealTimeLogging: true,
 });
 
 async function runFinalIntegrationTest() {
   try {
     logger.info('Starting final integration test', {
       component: 'IntegrationTest',
-      testType: 'comprehensive'
+      testType: 'comprehensive',
     });
 
     console.log('📝 Step 1: Testing Winston Logging System');
@@ -52,7 +52,7 @@ async function runFinalIntegrationTest() {
 
     logger.info('Forest.os server instance created', {
       component: 'IntegrationTest',
-      serverType: 'CleanForestServer'
+      serverType: 'CleanForestServer',
     });
 
     console.log('✅ Server components initialized\n');
@@ -63,17 +63,17 @@ async function runFinalIntegrationTest() {
     const testLogger = logger.child({
       component: 'TestComponent',
       projectId: 'integration-test',
-      userId: 'test-user'
+      userId: 'test-user',
     });
 
     testLogger.event('Integration test event', {
       eventType: 'test_execution',
-      phase: 'component_testing'
+      phase: 'component_testing',
     });
 
     testLogger.perf('Component test completed', {
       duration: '50ms',
-      result: 'success'
+      result: 'success',
     });
 
     console.log('✅ Component logging operational\n');
@@ -86,13 +86,13 @@ async function runFinalIntegrationTest() {
     const duration = logger.endTimer('integration_test', {
       testType: 'final_integration',
       componentsCount: 3,
-      success: true
+      success: true,
     });
 
     logger.perf('Integration test completed', {
       totalDuration: `${duration.toFixed(2)}ms`,
       testsPassed: 4,
-      loggingSystem: 'operational'
+      loggingSystem: 'operational',
     });
 
     console.log('✅ Performance monitoring operational\n');
@@ -103,7 +103,7 @@ async function runFinalIntegrationTest() {
     logger.memory('System stats captured', {
       uptime: Math.floor(stats.uptime),
       memoryUsage: stats.memoryUsage.heapUsed,
-      systemLoad: stats.systemLoad[0]
+      systemLoad: stats.systemLoad[0],
     });
 
     console.log('✅ System monitoring operational\n');
@@ -114,7 +114,7 @@ async function runFinalIntegrationTest() {
     logger.logUserAction('run_integration_test', 'integration-test', 'test-user', {
       testDuration: `${duration.toFixed(2)}ms`,
       components: ['logging', 'server', 'monitoring'],
-      result: 'success'
+      result: 'success',
     });
 
     console.log('✅ Forest.os integration operational\n');
@@ -125,7 +125,7 @@ async function runFinalIntegrationTest() {
       result: 'SUCCESS',
       testsRun: 6,
       allPassed: true,
-      systemHealth: 'excellent'
+      systemHealth: 'excellent',
     });
 
     console.log('🎉 Final Integration Test Results:');
@@ -161,20 +161,19 @@ async function runFinalIntegrationTest() {
       testsRun: 6,
       testsPassed: 6,
       systemHealth: 'excellent',
-      duration
+      duration,
     };
-
   } catch (error) {
     logger.error('Integration test failed', {
       component: 'IntegrationTest',
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
 
     console.log('❌ Integration test failed:', error.message);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -183,7 +182,7 @@ async function runFinalIntegrationTest() {
 process.on('SIGINT', () => {
   logger.info('Integration test interrupted by user', {
     component: 'IntegrationTest',
-    reason: 'SIGINT'
+    reason: 'SIGINT',
   });
 
   logger.shutdown();
@@ -193,11 +192,11 @@ process.on('SIGINT', () => {
 
 // Run the test
 runFinalIntegrationTest()
-  .then((result) => {
+  .then(result => {
     if (result.success) {
       logger.info('Integration test suite completed successfully', {
         component: 'IntegrationTest',
-        result
+        result,
       });
 
       setTimeout(() => {
@@ -210,10 +209,10 @@ runFinalIntegrationTest()
       process.exit(1);
     }
   })
-  .catch((error) => {
+  .catch(error => {
     logger.error('Unexpected error in integration test', {
       component: 'IntegrationTest',
-      error: error.message
+      error: error.message,
     });
 
     console.log('💥 Unexpected error:', error.message);

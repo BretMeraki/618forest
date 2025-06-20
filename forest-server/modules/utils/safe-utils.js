@@ -9,7 +9,9 @@
  */
 export function safeJsonParse(str, defaultValue = {}) {
   try {
-    if (typeof str !== 'string') {return defaultValue;}
+    if (typeof str !== 'string') {
+      return defaultValue;
+    }
     return JSON.parse(str);
   } catch (err) {
     console.error('safeJsonParse: invalid JSON – returning default.', err?.message);
@@ -24,7 +26,9 @@ export function safeJsonParse(str, defaultValue = {}) {
  * @param {any} [defaultValue=null]
  */
 export function safeGet(obj, path, defaultValue = null) {
-  if (!obj || typeof obj !== 'object') {return defaultValue;}
+  if (!obj || typeof obj !== 'object') {
+    return defaultValue;
+  }
   const keys = path.split('.');
   let current = obj;
   for (const key of keys) {

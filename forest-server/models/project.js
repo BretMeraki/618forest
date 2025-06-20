@@ -21,7 +21,7 @@ export class Project {
     successMetrics = [],
     specificInterests = [],
     createdAt = null,
-    updatedAt = null
+    updatedAt = null,
   }) {
     // Validation
     if (!id) {
@@ -78,7 +78,7 @@ export class Project {
     return paths.map(path => ({
       path_name: path.path_name || '',
       priority: ['high', 'medium', 'low'].includes(path.priority) ? path.priority : 'medium',
-      interests: Array.isArray(path.interests) ? path.interests : []
+      interests: Array.isArray(path.interests) ? path.interests : [],
     }));
   }
 
@@ -89,16 +89,19 @@ export class Project {
       mealTimes: ['7:00 AM', '12:00 PM', '6:00 PM'],
       focusDuration: '30 minutes',
       breakPreferences: 'Short breaks every hour',
-      transitionTime: '5 minutes'
+      transitionTime: '5 minutes',
     };
 
     return {
       wakeTime: preferences.wake_time || preferences.wakeTime || defaults.wakeTime,
       sleepTime: preferences.sleep_time || preferences.sleepTime || defaults.sleepTime,
       mealTimes: preferences.meal_times || preferences.mealTimes || defaults.mealTimes,
-      focusDuration: preferences.focus_duration || preferences.focusDuration || defaults.focusDuration,
-      breakPreferences: preferences.break_preferences || preferences.breakPreferences || defaults.breakPreferences,
-      transitionTime: preferences.transition_time || preferences.transitionTime || defaults.transitionTime
+      focusDuration:
+        preferences.focus_duration || preferences.focusDuration || defaults.focusDuration,
+      breakPreferences:
+        preferences.break_preferences || preferences.breakPreferences || defaults.breakPreferences,
+      transitionTime:
+        preferences.transition_time || preferences.transitionTime || defaults.transitionTime,
     };
   }
 
@@ -106,20 +109,25 @@ export class Project {
     return {
       timeConstraints: constraints.time_constraints || constraints.timeConstraints || '',
       energyPatterns: constraints.energy_patterns || constraints.energyPatterns || '',
-      locationConstraints: constraints.location_constraints || constraints.locationConstraints || '',
-      financialConstraints: constraints.financial_constraints || constraints.financialConstraints || '',
-      focusVariability: constraints.focus_variability || constraints.focusVariability || ''
+      locationConstraints:
+        constraints.location_constraints || constraints.locationConstraints || '',
+      financialConstraints:
+        constraints.financial_constraints || constraints.financialConstraints || '',
+      focusVariability: constraints.focus_variability || constraints.focusVariability || '',
     };
   }
 
   validateHabits(habits) {
     return {
-      goodHabits: Array.isArray(habits.good_habits || habits.goodHabits) ?
-        (habits.good_habits || habits.goodHabits) : [],
-      badHabits: Array.isArray(habits.bad_habits || habits.badHabits) ?
-        (habits.bad_habits || habits.badHabits) : [],
-      habitGoals: Array.isArray(habits.habit_goals || habits.habitGoals) ?
-        (habits.habit_goals || habits.habitGoals) : []
+      goodHabits: Array.isArray(habits.good_habits || habits.goodHabits)
+        ? habits.good_habits || habits.goodHabits
+        : [],
+      badHabits: Array.isArray(habits.bad_habits || habits.badHabits)
+        ? habits.bad_habits || habits.badHabits
+        : [],
+      habitGoals: Array.isArray(habits.habit_goals || habits.habitGoals)
+        ? habits.habit_goals || habits.habitGoals
+        : [],
     };
   }
 
@@ -133,7 +141,7 @@ export class Project {
       this.learningPaths.push({
         path_name: pathName,
         priority,
-        interests: Array.isArray(interests) ? interests : []
+        interests: Array.isArray(interests) ? interests : [],
       });
       this.updatedAt = new Date().toISOString();
     }
@@ -175,7 +183,7 @@ export class Project {
         subject_area: credential.subject_area || credential.subjectArea || '',
         credential_type: credential.credential_type || credential.credentialType || '',
         level: credential.level || 'beginner',
-        relevance_to_goal: credential.relevance_to_goal || credential.relevanceToGoal || ''
+        relevance_to_goal: credential.relevance_to_goal || credential.relevanceToGoal || '',
       });
       this.updatedAt = new Date().toISOString();
     }
@@ -209,7 +217,7 @@ export class Project {
   updateLifeStructure(newPreferences) {
     this.lifeStructurePreferences = {
       ...this.lifeStructurePreferences,
-      ...this.validateLifeStructure(newPreferences)
+      ...this.validateLifeStructure(newPreferences),
     };
     this.updatedAt = new Date().toISOString();
     return this;
@@ -221,8 +229,7 @@ export class Project {
   }
 
   getTotalInterests() {
-    const pathInterests = this.learningPaths.reduce((acc, path) =>
-      acc.concat(path.interests), []);
+    const pathInterests = this.learningPaths.reduce((acc, path) => acc.concat(path.interests), []);
     return [...new Set([...this.specificInterests, ...pathInterests])];
   }
 
@@ -230,9 +237,10 @@ export class Project {
     if (!pathName) {
       return this.existingCredentials;
     }
-    return this.existingCredentials.filter(cred =>
-      cred.relevance_to_goal.toLowerCase().includes(pathName.toLowerCase()) ||
-      cred.subject_area.toLowerCase().includes(pathName.toLowerCase())
+    return this.existingCredentials.filter(
+      cred =>
+        cred.relevance_to_goal.toLowerCase().includes(pathName.toLowerCase()) ||
+        cred.subject_area.toLowerCase().includes(pathName.toLowerCase())
     );
   }
 
@@ -242,8 +250,10 @@ export class Project {
   }
 
   isIntermediateLevel() {
-    return this.knowledgeLevel >= MODEL_DEFAULTS.PROJECT_INTERMEDIATE_THRESHOLD &&
-           this.knowledgeLevel < MODEL_DEFAULTS.PROJECT_ADVANCED_THRESHOLD;
+    return (
+      this.knowledgeLevel >= MODEL_DEFAULTS.PROJECT_INTERMEDIATE_THRESHOLD &&
+      this.knowledgeLevel < MODEL_DEFAULTS.PROJECT_ADVANCED_THRESHOLD
+    );
   }
 
   isAdvancedLevel() {
@@ -271,7 +281,7 @@ export class Project {
       existingCredentials: this.existingCredentials,
       successMetrics: this.successMetrics,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
@@ -282,7 +292,12 @@ export class Project {
 
   // Create with auto-generated ID
   static create({ goal, ...options }) {
-    const id = `project_${Date.now()}_${Math.random().toString(MODEL_DEFAULTS.RADIX_BASE_36).slice(MODEL_DEFAULTS.ID_RANDOM_STRING_START, MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH)}`;
+    const id = `project_${Date.now()}_${Math.random()
+      .toString(MODEL_DEFAULTS.RADIX_BASE_36)
+      .slice(
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START,
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH
+      )}`;
     return new Project({ id, goal, ...options });
   }
 }

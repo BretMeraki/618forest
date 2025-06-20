@@ -26,7 +26,7 @@ async function testProactiveReasoning() {
       const initialStatus = await server.getProactiveStatus();
       console.log('✅ Initial status retrieved:', {
         isRunning: initialStatus.system_status?.isRunning,
-        alerts: initialStatus.recent_alerts?.length || 0
+        alerts: initialStatus.recent_alerts?.length || 0,
       });
     } catch (error) {
       console.log('⚠️ Initial status check failed (expected if no active project):', error.message);
@@ -39,7 +39,7 @@ async function testProactiveReasoning() {
       projectName: 'Proactive Reasoning Test',
       goal: 'Test strategic insights and proactive recommendations',
       context: 'Learning to validate the proactive reasoning system works correctly',
-      urgency: 3
+      urgency: 3,
     });
 
     console.log('✅ Test project created:', createResult.project_id);
@@ -51,7 +51,7 @@ async function testProactiveReasoning() {
       strategicAnalysisHours: 0.01, // 36 seconds for testing
       riskDetectionHours: 0.02, // 72 seconds for testing
       opportunityScansHours: 0.01, // 36 seconds for testing
-      identityReflectionDays: 0.001 // ~1.4 minutes for testing
+      identityReflectionDays: 0.001, // ~1.4 minutes for testing
     });
 
     console.log('✅ Proactive reasoning started');
@@ -64,7 +64,7 @@ async function testProactiveReasoning() {
     console.log('✅ System status:', {
       isRunning: statusResult.system_status?.isRunning,
       activeIntervals: statusResult.system_status?.activeIntervals,
-      lastAnalyses: statusResult.system_status?.lastAnalyses
+      lastAnalyses: statusResult.system_status?.lastAnalyses,
     });
 
     // ===== Test 5: Trigger Immediate Strategic Analysis =====
@@ -106,7 +106,7 @@ async function testProactiveReasoning() {
       highPriority: insightsResult.insights_summary?.high_priority,
       strategicAnalyses: insightsResult.insights_summary?.strategic_analyses,
       riskAssessments: insightsResult.insights_summary?.risk_assessments,
-      opportunityScans: insightsResult.insights_summary?.opportunity_scans
+      opportunityScans: insightsResult.insights_summary?.opportunity_scans,
     });
 
     // ===== Test 11: Get Strategic Recommendations =====
@@ -116,20 +116,24 @@ async function testProactiveReasoning() {
     console.log('✅ Recommendations retrieved:', {
       totalCount: recommendationsResult.recommendations_summary?.total_count,
       highPriority: recommendationsResult.recommendations_summary?.high_priority,
-      mediumPriority: recommendationsResult.recommendations_summary?.medium_priority
+      mediumPriority: recommendationsResult.recommendations_summary?.medium_priority,
     });
 
     // ===== Test 12: Test Event Bus Integration =====
     console.log('\n🔄 Test 12: Testing event bus integration...');
 
     let eventReceived = false;
-    server.eventBus.on('system:strategic_insights', (data) => {
-      console.log('✅ Strategic insights event received:', {
-        projectId: data.projectId,
-        insightCount: data.insights?.insights?.length || 0
-      });
-      eventReceived = true;
-    }, 'TestScript');
+    server.eventBus.on(
+      'system:strategic_insights',
+      data => {
+        console.log('✅ Strategic insights event received:', {
+          projectId: data.projectId,
+          insightCount: data.insights?.insights?.length || 0,
+        });
+        eventReceived = true;
+      },
+      'TestScript'
+    );
 
     // Trigger another analysis to test event emission
     await server.triggerImmediateAnalysis('strategic');
@@ -151,7 +155,7 @@ async function testProactiveReasoning() {
     console.log('✅ System clock status:', {
       isRunning: clockStatus.isRunning,
       activeIntervals: clockStatus.activeIntervals?.length || 0,
-      lastAnalyses: Object.keys(clockStatus.lastAnalyses || {}).length
+      lastAnalyses: Object.keys(clockStatus.lastAnalyses || {}).length,
     });
 
     // ===== Test 14: Create Some Learning Activity =====
@@ -185,7 +189,10 @@ async function testProactiveReasoning() {
         console.log('✅ Simulated learning activity completed');
       }
     } catch (error) {
-      console.log('⚠️ Learning activity simulation failed (expected in test environment):', error.message);
+      console.log(
+        '⚠️ Learning activity simulation failed (expected in test environment):',
+        error.message
+      );
     }
 
     // ===== Test 15: Final Analysis Trigger =====
@@ -199,7 +206,7 @@ async function testProactiveReasoning() {
 
     console.log('✅ Final analysis complete:', {
       insights: finalInsights.insights_summary?.total_alerts || 0,
-      recommendations: finalRecommendations.recommendations_summary?.total_count || 0
+      recommendations: finalRecommendations.recommendations_summary?.total_count || 0,
     });
 
     // ===== Test 16: Stop Proactive Reasoning =====
@@ -214,7 +221,7 @@ async function testProactiveReasoning() {
     const finalStatus = await server.getProactiveStatus();
     console.log('✅ Final status:', {
       isRunning: finalStatus.system_status?.isRunning,
-      alerts: finalStatus.recent_alerts?.length || 0
+      alerts: finalStatus.recent_alerts?.length || 0,
     });
 
     // ===== Test Summary =====
@@ -239,7 +246,6 @@ async function testProactiveReasoning() {
     console.log('   • Identity development insights');
     console.log('   • Strategic recommendations');
     console.log('   • Event-driven architecture');
-
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     console.error('Stack:', error.stack);
@@ -256,7 +262,7 @@ testProactiveReasoning()
     console.log('🧠 Proactive reasoning layer is operational.');
     process.exit(0);
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Tests failed:', error);
     process.exit(1);
   });

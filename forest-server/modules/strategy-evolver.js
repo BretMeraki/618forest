@@ -5,13 +5,21 @@
  */
 
 import { bus } from './utils/event-bus.js';
-import { FILE_NAMES, DEFAULT_PATHS, TASK_CONFIG, THRESHOLDS, EVOLUTION_STRATEGIES } from './constants.js';
+import { getForestLogger } from './winston-logger.js';
+import {
+  FILE_NAMES,
+  DEFAULT_PATHS,
+  TASK_CONFIG,
+  THRESHOLDS,
+  EVOLUTION_STRATEGIES,
+} from './constants.js';
 
 export class StrategyEvolver {
   constructor(dataPersistence, projectManagement, eventBus = null) {
     this.dataPersistence = dataPersistence;
     this.projectManagement = projectManagement;
     this.eventBus = eventBus || bus; // Use provided eventBus or default to global bus
+    this.logger = getForestLogger({ module: 'StrategyEvolver' });
 
     // Register event listeners
     this.setupEventListeners();
@@ -22,17 +30,29 @@ export class StrategyEvolver {
     this.eventBus.on('block:completed', this.handleBlockCompletion.bind(this), 'StrategyEvolver');
 
     // Listen for learning milestone events
-    this.eventBus.on('learning:breakthrough', this.handleBreakthrough.bind(this), 'StrategyEvolver');
+    this.eventBus.on(
+      'learning:breakthrough',
+      this.handleBreakthrough.bind(this),
+      'StrategyEvolver'
+    );
 
     // Listen for opportunity detection events
-    this.eventBus.on('opportunity:detected', this.handleOpportunityDetection.bind(this), 'StrategyEvolver');
+    this.eventBus.on(
+      'opportunity:detected',
+      this.handleOpportunityDetection.bind(this),
+      'StrategyEvolver'
+    );
 
     // Listen for strategy evolution requests
-    this.eventBus.on('strategy:evolve_requested', this.handleEvolutionRequest.bind(this), 'StrategyEvolver' );
+    this.eventBus.on(
+      'strategy:evolve_requested',
+      this.handleEvolutionRequest.bind(this),
+      'StrategyEvolver'
+    );
 
     // Only show initialization message in terminal mode (not MCP)
     if (process.stdin.isTTY) {
-      console.log('🧠 StrategyEvolver event listeners registered');
+      this.logger.info('🧠 StrategyEvolver event listeners registered');
     }
   }
 
@@ -42,11 +62,11 @@ export class StrategyEvolver {
    */
   async handleBlockCompletion({ projectId, pathName, block, _eventMetadata }) {
     try {
-      console.log(`🔄 StrategyEvolver processing block completion: ${block.title}`);
+      this.logger.debug(`🔄 StrategyEvolver processing block completion: ${block.title}`);
 
       // Only evolve if there's actual learning to process
       if (!block.learned && !block.nextQuestions && !block.breakthrough) {
-        console.log('📝 No learning content to process, skipping HTA evolution');
+        this.logger.debug('📝 No learning content to process, skipping HTA evolution');
         return;
       }
 
@@ -54,27 +74,36 @@ export class StrategyEvolver {
 
       // Emit follow-up events based on the learning content
       if (block.breakthrough) {
-        this.eventBus.emit('learning:breakthrough', {
-          projectId,
-          pathName,
-          block,
-          breakthroughContent: block.learned
-        }, 'StrategyEvolver');
+        this.eventBus.emit(
+          'learning:breakthrough',
+          {
+            projectId,
+            pathName,
+            block,
+            breakthroughContent: block.learned,
+          },
+          'StrategyEvolver'
+        );
       }
 
       if (block.opportunityContext) {
-        this.eventBus.emit('opportunity:detected', {
-          projectId,
-          pathName,
-          block,
-          opportunities: block.opportunityContext
-        }, 'StrategyEvolver');
+        this.eventBus.emit(
+          'opportunity:detected',
+          {
+            projectId,
+            pathName,
+            block,
+            opportunities: block.opportunityContext,
+          },
+          'StrategyEvolver'
+        );
       }
-
     } catch (error) {
-      console.error('❌ StrategyEvolver failed to handle block completion:', error.message);
+      this.logger.error('❌ StrategyEvolver failed to handle block completion', { error: error.message });
       await this.dataPersistence.logError('StrategyEvolver.handleBlockCompletion', error, {
-        projectId, pathName, blockTitle: block.title
+        projectId,
+        pathName,
+        blockTitle: block.title,
       });
     }
   }
@@ -85,11 +114,13 @@ export class StrategyEvolver {
    */
   async handleBreakthrough({ projectId, pathName, block, breakthroughContent, _eventMetadata }) {
     try {
-      console.log(`🎉 StrategyEvolver processing breakthrough: ${block.title}`);
+      this.logger.debug(`🎉 StrategyEvolver processing breakthrough: ${block.title}`);
 
       // Generate breakthrough-specific follow-up tasks
       const htaData = await this.loadPathHTA(projectId, pathName);
-      if (!htaData) {return;}
+      if (!htaData) {
+        return;
+      }
 
       const breakthroughTasks = this.generateBreakthroughTasks(block, htaData, breakthroughContent);
       if (breakthroughTasks.length > 0) {
@@ -97,11 +128,10 @@ export class StrategyEvolver {
         htaData.lastUpdated = new Date().toISOString();
         await this.savePathHTA(projectId, pathName, htaData);
 
-        console.log(`✨ Generated ${breakthroughTasks.length} breakthrough tasks`);
+        this.logger.info(`✨ Generated ${breakthroughTasks.length} breakthrough tasks`);
       }
-
     } catch (error) {
-      console.error('❌ StrategyEvolver failed to handle breakthrough:', error.message);
+      this.logger.error('❌ StrategyEvolver failed to handle breakthrough', { error: error.message });
     }
   }
 
@@ -111,10 +141,12 @@ export class StrategyEvolver {
    */
   async handleOpportunityDetection({ projectId, pathName, block, opportunities, _eventMetadata }) {
     try {
-      console.log(`🎯 StrategyEvolver processing opportunity detection: ${block.title}`);
+      this.logger.debug(`🎯 StrategyEvolver processing opportunity detection: ${block.title}`);
 
       const htaData = await this.loadPathHTA(projectId, pathName);
-      if (!htaData) {return;}
+      if (!htaData) {
+        return;
+      }
 
       const opportunityTasks = this.generateOpportunityTasks(block, htaData);
       if (opportunityTasks.length > 0) {
@@ -122,11 +154,10 @@ export class StrategyEvolver {
         htaData.lastUpdated = new Date().toISOString();
         await this.savePathHTA(projectId, pathName, htaData);
 
-        console.log(`🚀 Generated ${opportunityTasks.length} opportunity tasks`);
+        this.logger.info(`🚀 Generated ${opportunityTasks.length} opportunity tasks`);
       }
-
     } catch (error) {
-      console.error('❌ StrategyEvolver failed to handle opportunity detection:', error.message);
+      this.logger.error('❌ StrategyEvolver failed to handle opportunity detection', { error: error.message });
     }
   }
 
@@ -136,20 +167,23 @@ export class StrategyEvolver {
    */
   async handleEvolutionRequest({ projectId, pathName, feedback, analysis, _eventMetadata }) {
     try {
-      console.log(`🔄 StrategyEvolver processing evolution request for project: ${projectId}`);
+      this.logger.debug(`🔄 StrategyEvolver processing evolution request for project: ${projectId}`);
 
       // This would integrate with the existing evolve strategy logic
       // For now, emit a completion event
-      this.eventBus.emit('strategy:evolution_completed', {
-        projectId,
-        pathName,
-        feedback,
-        analysis,
-        evolvedAt: new Date().toISOString()
-      }, 'StrategyEvolver');
-
+      this.eventBus.emit(
+        'strategy:evolution_completed',
+        {
+          projectId,
+          pathName,
+          feedback,
+          analysis,
+          evolvedAt: new Date().toISOString(),
+        },
+        'StrategyEvolver'
+      );
     } catch (error) {
-      console.error('❌ StrategyEvolver failed to handle evolution request:', error.message);
+      this.logger.error('❌ StrategyEvolver failed to handle evolution request', { error: error.message });
     }
   }
 
@@ -161,7 +195,9 @@ export class StrategyEvolver {
    */
   async evolveHTABasedOnLearning(projectId, pathName, block) {
     const htaData = await this.loadPathHTA(projectId, pathName);
-    if (!htaData) {return;}
+    if (!htaData) {
+      return;
+    }
 
     // Mark corresponding HTA node as completed
     if (block.taskId) {
@@ -194,13 +230,17 @@ export class StrategyEvolver {
     await this.savePathHTA(projectId, pathName, htaData);
 
     // Emit event for successful HTA evolution
-    this.eventBus.emit('hta:evolved', {
-      projectId,
-      pathName,
-      block,
-      tasksAdded: (block.nextQuestions ? 1 : 0) + (block.opportunityContext ? 1 : 0),
-      evolvedAt: new Date().toISOString()
-    }, 'StrategyEvolver');
+    this.eventBus.emit(
+      'hta:evolved',
+      {
+        projectId,
+        pathName,
+        block,
+        tasksAdded: (block.nextQuestions ? 1 : 0) + (block.opportunityContext ? 1 : 0),
+        evolvedAt: new Date().toISOString(),
+      },
+      'StrategyEvolver'
+    );
   }
 
   /**
@@ -235,7 +275,7 @@ export class StrategyEvolver {
           priority: block.breakthrough ? 250 : 200,
           generated: true,
           sourceBlock: block.id,
-          generatedBy: 'StrategyEvolver'
+          generatedBy: 'StrategyEvolver',
         });
       }
     }
@@ -260,28 +300,30 @@ export class StrategyEvolver {
         pattern: /professor|teacher|instructor|academic/i,
         task: {
           title: 'Follow up with professor contact',
-          description: 'Reach out to the professor who showed interest and explore collaboration opportunities',
+          description:
+            'Reach out to the professor who showed interest and explore collaboration opportunities',
           branch: 'academic_networking',
           difficulty: 2,
           duration: '25 minutes',
           priority: 400,
           learningOutcome: 'Professional academic connection and mentorship',
-          momentumBuilding: true
-        }
+          momentumBuilding: true,
+        },
       },
       {
         pattern: /viral|shares|social media|linkedin|twitter/i,
         task: {
           title: 'Capitalize on viral momentum',
-          description: 'Engage with the viral response and create follow-up content to maintain visibility',
+          description:
+            'Engage with the viral response and create follow-up content to maintain visibility',
           branch: 'content_amplification',
           difficulty: 2,
           duration: '30 minutes',
           priority: 380,
           learningOutcome: 'Sustained social media engagement and reach',
-          momentumBuilding: true
-        }
-      }
+          momentumBuilding: true,
+        },
+      },
     ];
 
     for (const pattern of outcomePatterns) {
@@ -292,7 +334,7 @@ export class StrategyEvolver {
           prerequisites: [block.taskId].filter(Boolean),
           generated: true,
           sourceBlock: block.id,
-          generatedBy: 'StrategyEvolver'
+          generatedBy: 'StrategyEvolver',
         });
       }
     }
@@ -325,7 +367,7 @@ export class StrategyEvolver {
       generated: true,
       sourceBlock: block.id,
       breakthrough: true,
-      generatedBy: 'StrategyEvolver'
+      generatedBy: 'StrategyEvolver',
     });
 
     return breakthroughTasks;
@@ -355,7 +397,7 @@ export class StrategyEvolver {
         generated: true,
         sourceBlock: block.id,
         opportunityType: 'viral_amplification',
-        generatedBy: 'StrategyEvolver'
+        generatedBy: 'StrategyEvolver',
       });
     }
 

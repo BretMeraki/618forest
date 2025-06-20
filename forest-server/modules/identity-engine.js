@@ -3,6 +3,11 @@
  * Handles identity transformation and pathway analysis
  */
 
+import { getForestLogger } from './winston-logger.js';
+
+// Structured logger for this module
+const logger = getForestLogger({ module: 'IdentityEngine' });
+
 export class IdentityEngine {
   constructor(dataPersistence, projectManagement) {
     this.dataPersistence = dataPersistence;
@@ -22,26 +27,30 @@ export class IdentityEngine {
       const reportText = this.formatIdentityReport(analysis);
 
       return {
-        content: [{
-          type: 'text',
-          text: reportText
-        }],
-        identity_analysis: analysis
+        content: [
+          {
+            type: 'text',
+            text: reportText,
+          },
+        ],
+        identity_analysis: analysis,
       };
     } catch (error) {
       await this.dataPersistence.logError('analyzeIdentityTransformation', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error analyzing identity transformation: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error analyzing identity transformation: ${error.message}`,
+          },
+        ],
       };
     }
   }
 
   async performIdentityAnalysis(projectId, config) {
     const activePath = config.activePath || 'general';
-    const learningHistory = await this.loadLearningHistory(projectId, activePath) || {};
+    const learningHistory = (await this.loadLearningHistory(projectId, activePath)) || {};
     const completedTopics = learningHistory.completedTopics || [];
 
     // Analyze current identity
@@ -51,10 +60,18 @@ export class IdentityEngine {
     const targetIdentity = this.determineTargetIdentity(config.goal, config.success_metrics);
 
     // Calculate transformation progress
-    const transformationProgress = this.calculateTransformationProgress(currentIdentity, targetIdentity, completedTopics);
+    const transformationProgress = this.calculateTransformationProgress(
+      currentIdentity,
+      targetIdentity,
+      completedTopics
+    );
 
     // Generate micro-shifts
-    const microShifts = this.generateMicroShifts(currentIdentity, targetIdentity, transformationProgress);
+    const microShifts = this.generateMicroShifts(
+      currentIdentity,
+      targetIdentity,
+      transformationProgress
+    );
 
     // Analyze identity barriers
     const barriers = this.analyzeIdentityBarriers(currentIdentity, targetIdentity, completedTopics);
@@ -65,7 +82,7 @@ export class IdentityEngine {
       transformationProgress,
       microShifts,
       barriers,
-      nextIdentityMilestone: this.calculateNextMilestone(currentIdentity, targetIdentity)
+      nextIdentityMilestone: this.calculateNextMilestone(currentIdentity, targetIdentity),
     };
   }
 
@@ -78,7 +95,7 @@ export class IdentityEngine {
       networkPosition: this.analyzeNetworkPosition(completedTopics),
       resourceAccess: this.analyzeResourceAccess(config, completedTopics),
       confidenceLevel: this.calculateConfidenceLevel(completedTopics),
-      timeHorizonThinking: this.analyzeTimeHorizonThinking(completedTopics)
+      timeHorizonThinking: this.analyzeTimeHorizonThinking(completedTopics),
     };
 
     return identity;
@@ -106,7 +123,9 @@ export class IdentityEngine {
     }
 
     // Extract from task completion patterns
-    const avgEnergy = completedTopics.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / Math.max(completedTopics.length, 1);
+    const avgEnergy =
+      completedTopics.reduce((sum, t) => sum + (t.energyAfter || 3), 0) /
+      Math.max(completedTopics.length, 1);
     if (avgEnergy >= 4) {
       beliefs.push('Learning energizes me');
     } else if (avgEnergy <= 2) {
@@ -135,7 +154,11 @@ export class IdentityEngine {
       if (text.includes('design') || text.includes('creative') || text.includes('art')) {
         skillAreas.creative = (skillAreas.creative || 0) + 1;
       }
-      if (text.includes('communication') || text.includes('writing') || text.includes('presentation')) {
+      if (
+        text.includes('communication') ||
+        text.includes('writing') ||
+        text.includes('presentation')
+      ) {
         skillAreas.communication = (skillAreas.communication || 0) + 1;
       }
     }
@@ -143,10 +166,15 @@ export class IdentityEngine {
     // Convert to proficiency levels
     const proficiencies = {};
     for (const [area, count] of Object.entries(skillAreas)) {
-      if (count >= 10) {proficiencies[area] = 'advanced';}
-      else if (count >= 5) {proficiencies[area] = 'intermediate';}
-      else if (count >= 2) {proficiencies[area] = 'beginner';}
-      else {proficiencies[area] = 'novice';}
+      if (count >= 10) {
+        proficiencies[area] = 'advanced';
+      } else if (count >= 5) {
+        proficiencies[area] = 'intermediate';
+      } else if (count >= 2) {
+        proficiencies[area] = 'beginner';
+      } else {
+        proficiencies[area] = 'novice';
+      }
     }
 
     return proficiencies;
@@ -154,8 +182,10 @@ export class IdentityEngine {
 
   calculateExperienceLevel(completedTopics) {
     const totalTasks = completedTopics.length;
-    const avgDifficulty = completedTopics.reduce((sum, t) => sum + (t.difficulty || 3), 0) / Math.max(totalTasks, 1);
-    const breakthroughRate = completedTopics.filter(t => t.breakthrough).length / Math.max(totalTasks, 1);
+    const avgDifficulty =
+      completedTopics.reduce((sum, t) => sum + (t.difficulty || 3), 0) / Math.max(totalTasks, 1);
+    const breakthroughRate =
+      completedTopics.filter(t => t.breakthrough).length / Math.max(totalTasks, 1);
 
     let level = 'novice';
 
@@ -171,7 +201,7 @@ export class IdentityEngine {
       level,
       tasksCompleted: totalTasks,
       averageDifficulty: avgDifficulty.toFixed(1),
-      breakthroughRate: `${(breakthroughRate * 100).toFixed(0)}%`
+      breakthroughRate: `${(breakthroughRate * 100).toFixed(0)}%`,
     };
   }
 
@@ -180,11 +210,23 @@ export class IdentityEngine {
     const taskPatterns = completedTopics.map(t => t.topic.toLowerCase()).join(' ');
 
     // Pattern matching for professional roles
-    if (goal.includes('entrepreneur') || taskPatterns.includes('business') || taskPatterns.includes('startup')) {
+    if (
+      goal.includes('entrepreneur') ||
+      taskPatterns.includes('business') ||
+      taskPatterns.includes('startup')
+    ) {
       return 'entrepreneur';
-    } else if (goal.includes('developer') || taskPatterns.includes('programming') || taskPatterns.includes('web')) {
+    } else if (
+      goal.includes('developer') ||
+      taskPatterns.includes('programming') ||
+      taskPatterns.includes('web')
+    ) {
       return 'developer';
-    } else if (goal.includes('musician') || taskPatterns.includes('music') || taskPatterns.includes('piano')) {
+    } else if (
+      goal.includes('musician') ||
+      taskPatterns.includes('music') ||
+      taskPatterns.includes('piano')
+    ) {
       return 'musician';
     } else if (goal.includes('designer') || taskPatterns.includes('design')) {
       return 'designer';
@@ -200,26 +242,36 @@ export class IdentityEngine {
     let collaborationCount = 0;
 
     for (const topic of completedTopics) {
-      const text = (`${topic.topic} ${topic.outcome}`).toLowerCase();
+      const text = `${topic.topic} ${topic.outcome}`.toLowerCase();
 
-      if (text.includes('network') || text.includes('connect')) {networkScore += 2;}
+      if (text.includes('network') || text.includes('connect')) {
+        networkScore += 2;
+      }
       if (text.includes('collaborate') || text.includes('partner')) {
         networkScore += 2;
         collaborationCount += 1;
       }
-      if (text.includes('community') || text.includes('group')) {networkScore += 1;}
-      if (text.includes('mentor') || text.includes('teach')) {networkScore += 2;}
+      if (text.includes('community') || text.includes('group')) {
+        networkScore += 1;
+      }
+      if (text.includes('mentor') || text.includes('teach')) {
+        networkScore += 2;
+      }
     }
 
     let position = 'isolated';
-    if (networkScore >= 8) {position = 'central';}
-    else if (networkScore >= 4) {position = 'connected';}
-    else if (networkScore >= 2) {position = 'emerging';}
+    if (networkScore >= 8) {
+      position = 'central';
+    } else if (networkScore >= 4) {
+      position = 'connected';
+    } else if (networkScore >= 2) {
+      position = 'emerging';
+    }
 
     return {
       position,
       score: networkScore,
-      collaborationCount
+      collaborationCount,
     };
   }
 
@@ -244,13 +296,17 @@ export class IdentityEngine {
     return {
       financial: resourceLevel,
       time: hasTimeFlexibility ? 'flexible' : 'constrained',
-      overall: this.calculateOverallResourceAccess(resourceLevel, hasTimeFlexibility)
+      overall: this.calculateOverallResourceAccess(resourceLevel, hasTimeFlexibility),
     };
   }
 
   calculateOverallResourceAccess(financial, hasTimeFlexibility) {
-    if (financial === 'abundant' && hasTimeFlexibility) {return 'high';}
-    if (financial === 'moderate' || hasTimeFlexibility) {return 'medium';}
+    if (financial === 'abundant' && hasTimeFlexibility) {
+      return 'high';
+    }
+    if (financial === 'moderate' || hasTimeFlexibility) {
+      return 'medium';
+    }
     return 'low';
   }
 
@@ -260,10 +316,14 @@ export class IdentityEngine {
 
     for (const task of recentTasks) {
       // High energy after task = confidence boost
-      if ((task.energyAfter || 3) >= 4) {confidenceScore += 2;}
+      if ((task.energyAfter || 3) >= 4) {
+        confidenceScore += 2;
+      }
 
       // Breakthrough = major confidence boost
-      if (task.breakthrough) {confidenceScore += 3;}
+      if (task.breakthrough) {
+        confidenceScore += 3;
+      }
 
       // Completing difficult tasks = confidence boost
       if ((task.difficulty || 3) >= 4 && (task.difficultyRating || 3) <= 3) {
@@ -271,19 +331,24 @@ export class IdentityEngine {
       }
 
       // Task felt too easy = confidence in ability
-      if ((task.difficultyRating || 3) <= 2) {confidenceScore += 1;}
+      if ((task.difficultyRating || 3) <= 2) {
+        confidenceScore += 1;
+      }
     }
 
     const avgConfidence = confidenceScore / Math.max(recentTasks.length, 1);
 
     let level = 'low';
-    if (avgConfidence >= 2.5) {level = 'high';}
-    else if (avgConfidence >= 1.5) {level = 'moderate';}
+    if (avgConfidence >= 2.5) {
+      level = 'high';
+    } else if (avgConfidence >= 1.5) {
+      level = 'moderate';
+    }
 
     return {
       level,
       score: confidenceScore,
-      recentBreakthroughs: recentTasks.filter(t => t.breakthrough).length
+      recentBreakthroughs: recentTasks.filter(t => t.breakthrough).length,
     };
   }
 
@@ -291,12 +356,14 @@ export class IdentityEngine {
     let longestHorizon = 'immediate';
 
     for (const topic of completedTopics) {
-      const text = (`${topic.topic} ${topic.learned}`).toLowerCase();
+      const text = `${topic.topic} ${topic.learned}`.toLowerCase();
 
       if (text.includes('strategy') || text.includes('long-term') || text.includes('vision')) {
         longestHorizon = 'strategic';
       } else if (text.includes('plan') || text.includes('goal') || text.includes('future')) {
-        if (longestHorizon === 'immediate') {longestHorizon = 'planning';}
+        if (longestHorizon === 'immediate') {
+          longestHorizon = 'planning';
+        }
       }
     }
 
@@ -315,19 +382,31 @@ export class IdentityEngine {
       confidenceLevel: 'high', // Assumption: success requires high confidence
       timeHorizon: this.extractTargetTimeHorizon(goalLower, metrics),
       keyBeliefs: this.extractTargetBeliefs(goalLower),
-      professionalReputation: this.extractTargetReputation(goalLower, metrics)
+      professionalReputation: this.extractTargetReputation(goalLower, metrics),
     };
 
     return targetIdentity;
   }
 
   extractTargetRole(goal) {
-    if (goal.includes('entrepreneur') || goal.includes('founder')) {return 'entrepreneur';}
-    if (goal.includes('developer') || goal.includes('programmer')) {return 'developer';}
-    if (goal.includes('musician') || goal.includes('artist')) {return 'musician';}
-    if (goal.includes('designer')) {return 'designer';}
-    if (goal.includes('consultant') || goal.includes('expert')) {return 'consultant';}
-    if (goal.includes('leader') || goal.includes('manager')) {return 'leader';}
+    if (goal.includes('entrepreneur') || goal.includes('founder')) {
+      return 'entrepreneur';
+    }
+    if (goal.includes('developer') || goal.includes('programmer')) {
+      return 'developer';
+    }
+    if (goal.includes('musician') || goal.includes('artist')) {
+      return 'musician';
+    }
+    if (goal.includes('designer')) {
+      return 'designer';
+    }
+    if (goal.includes('consultant') || goal.includes('expert')) {
+      return 'consultant';
+    }
+    if (goal.includes('leader') || goal.includes('manager')) {
+      return 'leader';
+    }
     return 'professional'; // Default
   }
 
@@ -335,28 +414,41 @@ export class IdentityEngine {
     if (goal.includes('expert') || goal.includes('master') || goal.includes('advanced')) {
       return 'expert';
     }
-    if (goal.includes('professional') || metrics.some(m => m.includes('income') || m.includes('client'))) {
+    if (
+      goal.includes('professional') ||
+      metrics.some(m => m.includes('income') || m.includes('client'))
+    ) {
       return 'professional';
     }
     return 'competent';
   }
 
   extractTargetNetworkPosition(goal, metrics) {
-    if (goal.includes('industry leader') || goal.includes('thought leader')) {return 'central';}
-    if (goal.includes('recognized') || goal.includes('known')) {return 'influential';}
-    if (metrics.some(m => m.includes('network') || m.includes('connections'))) {return 'connected';}
+    if (goal.includes('industry leader') || goal.includes('thought leader')) {
+      return 'central';
+    }
+    if (goal.includes('recognized') || goal.includes('known')) {
+      return 'influential';
+    }
+    if (metrics.some(m => m.includes('network') || m.includes('connections'))) {
+      return 'connected';
+    }
     return 'connected'; // Default assumption
   }
 
   extractTargetResourceLevel(metrics) {
-    const hasFinancialMetrics = metrics.some(m =>
-      m.includes('income') || m.includes('revenue') || m.includes('$') || m.includes('salary')
+    const hasFinancialMetrics = metrics.some(
+      m => m.includes('income') || m.includes('revenue') || m.includes('$') || m.includes('salary')
     );
 
     if (hasFinancialMetrics) {
       // Analyze the scale of financial goals
       const financialText = metrics.join(' ').toLowerCase();
-      if (financialText.includes('six figure') || financialText.includes('100k') || financialText.includes('$100')) {
+      if (
+        financialText.includes('six figure') ||
+        financialText.includes('100k') ||
+        financialText.includes('$100')
+      ) {
         return 'abundant';
       } else if (financialText.includes('sustainable') || financialText.includes('living')) {
         return 'moderate';
@@ -370,7 +462,10 @@ export class IdentityEngine {
     if (goal.includes('long-term') || goal.includes('career') || goal.includes('mastery')) {
       return 'strategic';
     }
-    if (goal.includes('professional') || metrics.some(m => m.includes('career') || m.includes('industry'))) {
+    if (
+      goal.includes('professional') ||
+      metrics.some(m => m.includes('career') || m.includes('industry'))
+    ) {
       return 'planning';
     }
     return 'planning'; // Default
@@ -403,7 +498,10 @@ export class IdentityEngine {
     if (goal.includes('recognized') || goal.includes('known') || goal.includes('expert')) {
       return 'industry_expert';
     }
-    if (goal.includes('professional') || metrics.some(m => m.includes('portfolio') || m.includes('clients'))) {
+    if (
+      goal.includes('professional') ||
+      metrics.some(m => m.includes('portfolio') || m.includes('clients'))
+    ) {
       return 'competent_professional';
     }
     return 'emerging_professional';
@@ -411,8 +509,12 @@ export class IdentityEngine {
 
   calculateTransformationProgress(currentIdentity, targetIdentity, completedTopics) {
     const dimensions = [
-      'role', 'skillLevel', 'networkPosition', 'resourceLevel',
-      'confidenceLevel', 'timeHorizon'
+      'role',
+      'skillLevel',
+      'networkPosition',
+      'resourceLevel',
+      'confidenceLevel',
+      'timeHorizon',
     ];
 
     let totalProgress = 0;
@@ -433,7 +535,7 @@ export class IdentityEngine {
       overall: (totalProgress / dimensions.length).toFixed(1),
       dimensions: dimensionProgress,
       keyAdvancement: this.identifyKeyAdvancement(dimensionProgress),
-      nextPriorityDimension: this.identifyNextPriorityDimension(dimensionProgress)
+      nextPriorityDimension: this.identifyNextPriorityDimension(dimensionProgress),
     };
   }
 
@@ -442,7 +544,7 @@ export class IdentityEngine {
 
     if (dimension === 'confidenceLevel') {
       const currentLevel = typeof current === 'object' ? current.level : current;
-      const progressMap = { 'low': 0, 'moderate': 50, 'high': 100 };
+      const progressMap = { low: 0, moderate: 50, high: 100 };
       const currentScore = progressMap[currentLevel] || 0;
       const targetScore = progressMap[target] || 100;
       return Math.min(100, (currentScore / targetScore) * 100);
@@ -450,7 +552,14 @@ export class IdentityEngine {
 
     if (dimension === 'skillLevel') {
       const currentLevel = typeof current === 'object' ? current.level : current;
-      const progressMap = { 'novice': 0, 'beginner': 25, 'intermediate': 50, 'competent': 75, 'professional': 90, 'expert': 100 };
+      const progressMap = {
+        novice: 0,
+        beginner: 25,
+        intermediate: 50,
+        competent: 75,
+        professional: 90,
+        expert: 100,
+      };
       const currentScore = progressMap[currentLevel] || 0;
       const targetScore = progressMap[target] || 100;
       return Math.min(100, (currentScore / targetScore) * 100);
@@ -458,14 +567,22 @@ export class IdentityEngine {
 
     if (dimension === 'networkPosition') {
       const currentPos = typeof current === 'object' ? current.position : current;
-      const progressMap = { 'isolated': 0, 'emerging': 25, 'connected': 50, 'influential': 75, 'central': 100 };
+      const progressMap = {
+        isolated: 0,
+        emerging: 25,
+        connected: 50,
+        influential: 75,
+        central: 100,
+      };
       const currentScore = progressMap[currentPos] || 0;
       const targetScore = progressMap[target] || 100;
       return Math.min(100, (currentScore / targetScore) * 100);
     }
 
     // For other dimensions, use a basic comparison
-    if (current === target) {return 100;}
+    if (current === target) {
+      return 100;
+    }
     if (typeof current === 'string' && typeof target === 'string') {
       return current.includes(target) || target.includes(current) ? 70 : 30;
     }
@@ -486,7 +603,7 @@ export class IdentityEngine {
 
     return {
       dimension: keyDimension.replace(/([A-Z])/g, ' $1').toLowerCase(),
-      progress: maxProgress
+      progress: maxProgress,
     };
   }
 
@@ -503,7 +620,7 @@ export class IdentityEngine {
 
     return {
       dimension: priorityDimension.replace(/([A-Z])/g, ' $1').toLowerCase(),
-      progress: minProgress
+      progress: minProgress,
     };
   }
 
@@ -517,7 +634,7 @@ export class IdentityEngine {
         type: 'belief_shift',
         current: 'I might be able to do this',
         target: 'I am becoming capable in this area',
-        action: 'Complete a task that feels slightly challenging but achievable'
+        action: 'Complete a task that feels slightly challenging but achievable',
       });
     }
 
@@ -526,7 +643,7 @@ export class IdentityEngine {
         type: 'behavior_shift',
         current: 'I work alone',
         target: 'I connect with others in my field',
-        action: 'Reach out to one person in your target field this week'
+        action: 'Reach out to one person in your target field this week',
       });
     }
 
@@ -535,7 +652,7 @@ export class IdentityEngine {
         type: 'identity_shift',
         current: 'I am learning about X',
         target: 'I am developing expertise in X',
-        action: 'Focus on progressively more advanced topics in your core skill area'
+        action: 'Focus on progressively more advanced topics in your core skill area',
       });
     }
 
@@ -544,7 +661,7 @@ export class IdentityEngine {
         type: 'mindset_shift',
         current: 'I need resources to progress',
         target: 'I can create value with current resources',
-        action: 'Find ways to create value or impact with what you currently have'
+        action: 'Find ways to create value or impact with what you currently have',
       });
     }
 
@@ -553,7 +670,7 @@ export class IdentityEngine {
       type: 'foundational_shift',
       current: 'I am trying to become X',
       target: 'I am already becoming X through my actions',
-      action: 'Act as if you already are becoming your target identity'
+      action: 'Act as if you already are becoming your target identity',
     });
 
     return microShifts.slice(0, 3); // Return top 3 micro-shifts
@@ -567,7 +684,7 @@ export class IdentityEngine {
       barriers.push({
         type: 'confidence_barrier',
         description: 'Low confidence may be limiting progress',
-        solution: 'Focus on easier wins to build confidence momentum'
+        solution: 'Focus on easier wins to build confidence momentum',
       });
     }
 
@@ -576,7 +693,7 @@ export class IdentityEngine {
       barriers.push({
         type: 'resource_barrier',
         description: 'Limited resources may be constraining growth',
-        solution: 'Focus on high-impact, low-cost learning strategies'
+        solution: 'Focus on high-impact, low-cost learning strategies',
       });
     }
 
@@ -585,16 +702,19 @@ export class IdentityEngine {
       barriers.push({
         type: 'network_barrier',
         description: 'Limited professional network',
-        solution: 'Actively engage with communities in your target field'
+        solution: 'Actively engage with communities in your target field',
       });
     }
 
     // Time horizon barriers
-    if (currentIdentity.timeHorizonThinking === 'immediate' && targetIdentity.timeHorizon === 'strategic') {
+    if (
+      currentIdentity.timeHorizonThinking === 'immediate' &&
+      targetIdentity.timeHorizon === 'strategic'
+    ) {
       barriers.push({
         type: 'planning_barrier',
         description: 'Short-term thinking may limit strategic progress',
-        solution: 'Practice longer-term planning and strategic thinking'
+        solution: 'Practice longer-term planning and strategic thinking',
       });
     }
 
@@ -604,14 +724,24 @@ export class IdentityEngine {
   calculateNextMilestone(currentIdentity, targetIdentity) {
     // Determine the most achievable next milestone
     const skillGap = this.calculateSkillGap(currentIdentity.skillAreas, targetIdentity.skillLevel);
-    const networkGap = this.calculateNetworkGap(currentIdentity.networkPosition, targetIdentity.networkPosition);
-    const confidenceGap = this.calculateConfidenceGap(currentIdentity.confidenceLevel, targetIdentity.confidenceLevel);
+    const networkGap = this.calculateNetworkGap(
+      currentIdentity.networkPosition,
+      targetIdentity.networkPosition
+    );
+    const confidenceGap = this.calculateConfidenceGap(
+      currentIdentity.confidenceLevel,
+      targetIdentity.confidenceLevel
+    );
 
     // Choose the milestone with the smallest gap (most achievable)
     const gaps = [
       { type: 'skill', gap: skillGap, milestone: 'Reach intermediate level in core skill' },
       { type: 'network', gap: networkGap, milestone: 'Make first professional connections' },
-      { type: 'confidence', gap: confidenceGap, milestone: 'Build confidence through consistent wins' }
+      {
+        type: 'confidence',
+        gap: confidenceGap,
+        milestone: 'Build confidence through consistent wins',
+      },
     ];
 
     gaps.sort((a, b) => a.gap - b.gap);
@@ -620,21 +750,30 @@ export class IdentityEngine {
       type: gaps[0].type,
       description: gaps[0].milestone,
       estimatedTimeframe: this.estimateTimeframe(gaps[0].gap),
-      keyActions: this.generateMilestoneActions(gaps[0].type)
+      keyActions: this.generateMilestoneActions(gaps[0].type),
     };
   }
 
   calculateSkillGap(currentSkills, targetLevel) {
-    const skillLevels = { 'novice': 1, 'beginner': 2, 'intermediate': 3, 'competent': 4, 'professional': 5, 'expert': 6 };
+    const skillLevels = {
+      novice: 1,
+      beginner: 2,
+      intermediate: 3,
+      competent: 4,
+      professional: 5,
+      expert: 6,
+    };
     const targetScore = skillLevels[targetLevel] || 4;
 
-    const currentMaxSkill = Math.max(...Object.values(currentSkills).map(level => skillLevels[level] || 1));
+    const currentMaxSkill = Math.max(
+      ...Object.values(currentSkills).map(level => skillLevels[level] || 1)
+    );
 
     return Math.max(0, targetScore - currentMaxSkill);
   }
 
   calculateNetworkGap(current, target) {
-    const networkLevels = { 'isolated': 1, 'emerging': 2, 'connected': 3, 'influential': 4, 'central': 5 };
+    const networkLevels = { isolated: 1, emerging: 2, connected: 3, influential: 4, central: 5 };
     const currentScore = networkLevels[current.position] || 1;
     const targetScore = networkLevels[target] || 3;
 
@@ -642,7 +781,7 @@ export class IdentityEngine {
   }
 
   calculateConfidenceGap(current, target) {
-    const confidenceLevels = { 'low': 1, 'moderate': 2, 'high': 3 };
+    const confidenceLevels = { low: 1, moderate: 2, high: 3 };
     const currentScore = confidenceLevels[current.level] || 1;
     const targetScore = confidenceLevels[target] || 3;
 
@@ -650,29 +789,35 @@ export class IdentityEngine {
   }
 
   estimateTimeframe(gap) {
-    if (gap <= 1) {return '2-4 weeks';}
-    if (gap <= 2) {return '1-3 months';}
-    if (gap <= 3) {return '3-6 months';}
+    if (gap <= 1) {
+      return '2-4 weeks';
+    }
+    if (gap <= 2) {
+      return '1-3 months';
+    }
+    if (gap <= 3) {
+      return '3-6 months';
+    }
     return '6+ months';
   }
 
   generateMilestoneActions(milestoneType) {
     const actions = {
-      'skill': [
+      skill: [
         'Focus on progressive skill development tasks',
         'Seek feedback on your work',
-        'Practice consistently in your core area'
+        'Practice consistently in your core area',
       ],
-      'network': [
+      network: [
         'Join professional communities or forums',
         'Reach out to one person in your field per week',
-        'Share your learning journey publicly'
+        'Share your learning journey publicly',
       ],
-      'confidence': [
+      confidence: [
         'Set and achieve small, clear goals',
         'Celebrate your learning victories',
-        'Focus on tasks slightly above your comfort zone'
-      ]
+        'Focus on tasks slightly above your comfort zone',
+      ],
     };
 
     return actions[milestoneType] || ['Continue current learning path'];
@@ -750,7 +895,7 @@ export class IdentityEngine {
    * @returns {Object} Identity reflection analysis
    */
   async performBackgroundReflection(systemState) {
-    console.log('🧘 IdentityEngine: Performing background identity reflection...');
+    logger.info('🧘 IdentityEngine: Performing background identity reflection...');
 
     try {
       const { projectId, config, learningHistory, htaData, metrics } = systemState;
@@ -758,7 +903,7 @@ export class IdentityEngine {
       if (!config || !learningHistory) {
         return {
           error: 'Insufficient data for identity reflection',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -775,7 +920,11 @@ export class IdentityEngine {
 
       // Identify identity risks and opportunities
       const identityRisks = this.identifyIdentityRisks(identityAnalysis, learningHistory, metrics);
-      const identityOpportunities = this.identifyIdentityOpportunities(identityAnalysis, learningHistory, htaData);
+      const identityOpportunities = this.identifyIdentityOpportunities(
+        identityAnalysis,
+        learningHistory,
+        htaData
+      );
 
       // Generate proactive identity strategies
       const proactiveStrategies = this.generateProactiveIdentityStrategies(
@@ -792,15 +941,14 @@ export class IdentityEngine {
         identityOpportunities,
         proactiveStrategies,
         reflectionSummary: this.generateReflectionSummary(identityAnalysis, strategicInsights),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('❌ Background identity reflection failed:', error);
+      logger.error('❌ Background identity reflection failed', { error });
       await this.dataPersistence.logError('IdentityEngine.performBackgroundReflection', error);
       return {
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -819,29 +967,43 @@ export class IdentityEngine {
 
     // Insight 1: Identity Momentum Analysis
     const momentumInsight = this.analyzeIdentityMomentum(transformationProgress, metrics);
-    if (momentumInsight) {insights.push(momentumInsight);}
+    if (momentumInsight) {
+      insights.push(momentumInsight);
+    }
 
     // Insight 2: Identity Coherence Assessment
     const coherenceInsight = this.analyzeIdentityCoherence(currentIdentity, learningHistory);
-    if (coherenceInsight) {insights.push(coherenceInsight);}
+    if (coherenceInsight) {
+      insights.push(coherenceInsight);
+    }
 
     // Insight 3: Strategic Positioning Analysis
-    const positioningInsight = this.analyzeStrategicPositioning(currentIdentity, targetIdentity, htaData);
-    if (positioningInsight) {insights.push(positioningInsight);}
+    const positioningInsight = this.analyzeStrategicPositioning(
+      currentIdentity,
+      targetIdentity,
+      htaData
+    );
+    if (positioningInsight) {
+      insights.push(positioningInsight);
+    }
 
     // Insight 4: Identity Authenticity Check
     const authenticityInsight = this.analyzeIdentityAuthenticity(currentIdentity, learningHistory);
-    if (authenticityInsight) {insights.push(authenticityInsight);}
+    if (authenticityInsight) {
+      insights.push(authenticityInsight);
+    }
 
     // Insight 5: Future Self Readiness
     const readinessInsight = this.analyzeFutureSelfReadiness(identityAnalysis, metrics);
-    if (readinessInsight) {insights.push(readinessInsight);}
+    if (readinessInsight) {
+      insights.push(readinessInsight);
+    }
 
     return {
       insights,
       overallAssessment: this.calculateOverallIdentityAssessment(insights),
       keyDevelopmentAreas: this.identifyKeyDevelopmentAreas(insights),
-      strengthAreas: this.identifyStrengthAreas(insights)
+      strengthAreas: this.identifyStrengthAreas(insights),
     };
   }
 
@@ -858,23 +1020,33 @@ export class IdentityEngine {
 
     // Risk 1: Identity Fragmentation
     const fragmentationRisk = this.detectIdentityFragmentation(currentIdentity, learningHistory);
-    if (fragmentationRisk) {risks.push(fragmentationRisk);}
+    if (fragmentationRisk) {
+      risks.push(fragmentationRisk);
+    }
 
     // Risk 2: Imposter Syndrome
     const imposterRisk = this.detectImposterSyndrome(currentIdentity, transformationProgress);
-    if (imposterRisk) {risks.push(imposterRisk);}
+    if (imposterRisk) {
+      risks.push(imposterRisk);
+    }
 
     // Risk 3: Identity Stagnation
     const stagnationRisk = this.detectIdentityStagnation(transformationProgress, metrics);
-    if (stagnationRisk) {risks.push(stagnationRisk);}
+    if (stagnationRisk) {
+      risks.push(stagnationRisk);
+    }
 
     // Risk 4: Goal-Identity Misalignment
     const misalignmentRisk = this.detectGoalIdentityMisalignment(currentIdentity, targetIdentity);
-    if (misalignmentRisk) {risks.push(misalignmentRisk);}
+    if (misalignmentRisk) {
+      risks.push(misalignmentRisk);
+    }
 
     // Risk 5: Confidence Erosion
     const confidenceRisk = this.detectConfidenceErosion(currentIdentity, learningHistory);
-    if (confidenceRisk) {risks.push(confidenceRisk);}
+    if (confidenceRisk) {
+      risks.push(confidenceRisk);
+    }
 
     return risks;
   }
@@ -891,24 +1063,43 @@ export class IdentityEngine {
     const { currentIdentity, targetIdentity, transformationProgress } = identityAnalysis;
 
     // Opportunity 1: Identity Integration
-    const integrationOpp = this.detectIdentityIntegrationOpportunity(currentIdentity, learningHistory);
-    if (integrationOpp) {opportunities.push(integrationOpp);}
+    const integrationOpp = this.detectIdentityIntegrationOpportunity(
+      currentIdentity,
+      learningHistory
+    );
+    if (integrationOpp) {
+      opportunities.push(integrationOpp);
+    }
 
     // Opportunity 2: Expertise Emergence
-    const expertiseOpp = this.detectExpertiseEmergenceOpportunity(currentIdentity, transformationProgress);
-    if (expertiseOpp) {opportunities.push(expertiseOpp);}
+    const expertiseOpp = this.detectExpertiseEmergenceOpportunity(
+      currentIdentity,
+      transformationProgress
+    );
+    if (expertiseOpp) {
+      opportunities.push(expertiseOpp);
+    }
 
     // Opportunity 3: Network Leverage
     const networkOpp = this.detectNetworkLeverageOpportunity(currentIdentity, targetIdentity);
-    if (networkOpp) {opportunities.push(networkOpp);}
+    if (networkOpp) {
+      opportunities.push(networkOpp);
+    }
 
     // Opportunity 4: Identity Breakthrough
-    const breakthroughOpp = this.detectIdentityBreakthroughOpportunity(transformationProgress, learningHistory);
-    if (breakthroughOpp) {opportunities.push(breakthroughOpp);}
+    const breakthroughOpp = this.detectIdentityBreakthroughOpportunity(
+      transformationProgress,
+      learningHistory
+    );
+    if (breakthroughOpp) {
+      opportunities.push(breakthroughOpp);
+    }
 
     // Opportunity 5: Strategic Positioning
     const positioningOpp = this.detectStrategicPositioningOpportunity(currentIdentity, htaData);
-    if (positioningOpp) {opportunities.push(positioningOpp);}
+    if (positioningOpp) {
+      opportunities.push(positioningOpp);
+    }
 
     return opportunities;
   }
@@ -916,7 +1107,12 @@ export class IdentityEngine {
   /**
    * Generate proactive identity development strategies
    */
-  generateProactiveIdentityStrategies(identityAnalysis, strategicInsights, identityRisks, identityOpportunities) {
+  generateProactiveIdentityStrategies(
+    identityAnalysis,
+    strategicInsights,
+    identityRisks,
+    identityOpportunities
+  ) {
     const strategies = [];
 
     // Strategy 1: Identity Reinforcement
@@ -927,7 +1123,7 @@ export class IdentityEngine {
         description: `Focus on reinforcing ${strategicInsights.strengthAreas[0]} to build confidence and momentum.`,
         priority: 'medium',
         timeframe: '2-3 weeks',
-        actions: this.generateIdentityReinforcementActions(strategicInsights.strengthAreas)
+        actions: this.generateIdentityReinforcementActions(strategicInsights.strengthAreas),
       });
     }
 
@@ -940,7 +1136,7 @@ export class IdentityEngine {
         description: `Proactively address ${highPriorityRisks[0].type} to prevent identity development setbacks.`,
         priority: 'high',
         timeframe: 'immediate',
-        actions: this.generateRiskMitigationActions(highPriorityRisks)
+        actions: this.generateRiskMitigationActions(highPriorityRisks),
       });
     }
 
@@ -953,19 +1149,23 @@ export class IdentityEngine {
         description: `Leverage ${highValueOpps[0].type} for accelerated identity development.`,
         priority: 'high',
         timeframe: 'next 1-2 weeks',
-        actions: this.generateOpportunityActions(highValueOpps)
+        actions: this.generateOpportunityActions(highValueOpps),
       });
     }
 
     // Strategy 4: Identity Integration
-    if (identityAnalysis.currentIdentity.skillAreas && Object.keys(identityAnalysis.currentIdentity.skillAreas).length >= 3) {
+    if (
+      identityAnalysis.currentIdentity.skillAreas &&
+      Object.keys(identityAnalysis.currentIdentity.skillAreas).length >= 3
+    ) {
       strategies.push({
         type: 'identity_integration',
         title: 'Integrate Diverse Skills',
-        description: 'Create synergies between different skill areas to develop unique identity positioning.',
+        description:
+          'Create synergies between different skill areas to develop unique identity positioning.',
         priority: 'medium',
         timeframe: '1 month',
-        actions: this.generateIntegrationActions(identityAnalysis.currentIdentity.skillAreas)
+        actions: this.generateIntegrationActions(identityAnalysis.currentIdentity.skillAreas),
       });
     }
 
@@ -984,7 +1184,8 @@ export class IdentityEngine {
         title: 'Strong Identity Development Momentum',
         insight: `${(progressScore * 100).toFixed(0)}% transformation progress with ${momentum} recent completions. Identity development is accelerating.`,
         confidence: 0.9,
-        strategicImplication: 'This is an optimal time for ambitious identity challenges and public positioning.'
+        strategicImplication:
+          'This is an optimal time for ambitious identity challenges and public positioning.',
       };
     } else if (progressScore <= 0.3 && momentum <= 1) {
       return {
@@ -992,7 +1193,8 @@ export class IdentityEngine {
         title: 'Identity Development Needs Activation',
         insight: `Low transformation progress (${(progressScore * 100).toFixed(0)}%) with minimal recent activity. Identity development is stalled.`,
         confidence: 0.8,
-        strategicImplication: 'Focus on small, consistent actions to rebuild identity development momentum.'
+        strategicImplication:
+          'Focus on small, consistent actions to rebuild identity development momentum.',
       };
     }
 
@@ -1000,7 +1202,9 @@ export class IdentityEngine {
   }
 
   analyzeIdentityCoherence(currentIdentity, learningHistory) {
-    if (!learningHistory.completedTopics || learningHistory.completedTopics.length < 5) {return null;}
+    if (!learningHistory.completedTopics || learningHistory.completedTopics.length < 5) {
+      return null;
+    }
 
     const skillAreas = Object.keys(currentIdentity.skillAreas || {});
     const recentTopics = learningHistory.completedTopics.slice(-10);
@@ -1012,7 +1216,8 @@ export class IdentityEngine {
         title: 'Multi-Dimensional Identity Emerging',
         insight: `Developing coherent multi-skill identity across ${skillAreas.length} areas. Recent learning spans ${topicBranches.size} branches.`,
         confidence: 0.8,
-        strategicImplication: 'Strong foundation for unique value proposition and differentiated positioning.'
+        strategicImplication:
+          'Strong foundation for unique value proposition and differentiated positioning.',
       };
     } else if (skillAreas.length === 1 && topicBranches.size === 1) {
       return {
@@ -1020,7 +1225,8 @@ export class IdentityEngine {
         title: 'Highly Focused Identity Development',
         insight: `Deep specialization in ${skillAreas[0]} with concentrated learning focus. Building expert-level identity.`,
         confidence: 0.9,
-        strategicImplication: 'Well-positioned for deep expertise but may benefit from strategic diversification.'
+        strategicImplication:
+          'Well-positioned for deep expertise but may benefit from strategic diversification.',
       };
     }
 
@@ -1028,7 +1234,9 @@ export class IdentityEngine {
   }
 
   analyzeStrategicPositioning(currentIdentity, targetIdentity, htaData) {
-    if (!htaData || !htaData.primaryGoal) {return null;}
+    if (!htaData || !htaData.primaryGoal) {
+      return null;
+    }
 
     const currentRole = currentIdentity.professionalRole;
     const targetRole = targetIdentity.professionalRole;
@@ -1040,7 +1248,8 @@ export class IdentityEngine {
         title: 'Strategic Identity Transition in Progress',
         insight: `Transitioning from ${currentRole} to ${targetRole} with high confidence (${confidenceLevel}/5). Strong foundation for role evolution.`,
         confidence: 0.8,
-        strategicImplication: 'Ready for increased visibility and leadership opportunities in target domain.'
+        strategicImplication:
+          'Ready for increased visibility and leadership opportunities in target domain.',
       };
     } else if (currentRole === targetRole && confidenceLevel >= 4) {
       return {
@@ -1048,7 +1257,7 @@ export class IdentityEngine {
         title: 'Established Professional Identity',
         insight: `Strong ${currentRole} identity with high confidence. Identity alignment achieved.`,
         confidence: 0.9,
-        strategicImplication: 'Focus on influence expansion and thought leadership opportunities.'
+        strategicImplication: 'Focus on influence expansion and thought leadership opportunities.',
       };
     }
 
@@ -1056,20 +1265,28 @@ export class IdentityEngine {
   }
 
   analyzeIdentityAuthenticity(currentIdentity, learningHistory) {
-    if (!learningHistory.completedTopics) {return null;}
+    if (!learningHistory.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-8);
-    const avgEnergy = recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length;
+    const avgEnergy =
+      recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length;
     const breakthroughRate = recentTasks.filter(t => t.breakthrough).length / recentTasks.length;
     const coreBeliefs = currentIdentity.coreBeliefs || [];
 
-    if (avgEnergy >= 4 && breakthroughRate >= 0.25 && coreBeliefs.includes('Learning energizes me')) {
+    if (
+      avgEnergy >= 4 &&
+      breakthroughRate >= 0.25 &&
+      coreBeliefs.includes('Learning energizes me')
+    ) {
       return {
         type: 'identity_authenticity_aligned',
         title: 'Authentic Identity Expression',
         insight: `High energy (${avgEnergy.toFixed(1)}/5) and breakthrough rate (${(breakthroughRate * 100).toFixed(0)}%) indicate authentic identity alignment.`,
         confidence: 0.9,
-        strategicImplication: 'Current path strongly aligned with authentic self. Continue with confidence.'
+        strategicImplication:
+          'Current path strongly aligned with authentic self. Continue with confidence.',
       };
     } else if (avgEnergy <= 2.5) {
       return {
@@ -1077,7 +1294,8 @@ export class IdentityEngine {
         title: 'Potential Identity-Activity Misalignment',
         insight: `Lower energy levels (${avgEnergy.toFixed(1)}/5) may indicate disconnect between activities and authentic identity.`,
         confidence: 0.7,
-        strategicImplication: 'Consider adjusting approach to better align with natural strengths and interests.'
+        strategicImplication:
+          'Consider adjusting approach to better align with natural strengths and interests.',
       };
     }
 
@@ -1095,7 +1313,8 @@ export class IdentityEngine {
         title: 'Approaching Identity Milestone',
         insight: `${(progressScore * 100).toFixed(0)}% progress toward target identity with strong momentum. Next milestone: ${nextMilestone.type}.`,
         confidence: 0.9,
-        strategicImplication: 'Prepare for identity milestone achievement and subsequent strategic positioning.'
+        strategicImplication:
+          'Prepare for identity milestone achievement and subsequent strategic positioning.',
       };
     }
 
@@ -1109,13 +1328,18 @@ export class IdentityEngine {
     const recentTopics = learningHistory.completedTopics?.slice(-15) || [];
     const branches = new Set(recentTopics.map(t => t.branch || 'general'));
 
-    if (skillAreas.length >= 4 && branches.size >= 5 && recentTopics.filter(t => t.breakthrough).length === 0) {
+    if (
+      skillAreas.length >= 4 &&
+      branches.size >= 5 &&
+      recentTopics.filter(t => t.breakthrough).length === 0
+    ) {
       return {
         type: 'identity_fragmentation',
         title: 'Identity Fragmentation Risk',
         message: `Learning across ${branches.size} areas without clear integration or breakthroughs. Risk of scattered identity development.`,
         priority: 'medium',
-        recommendation: 'Focus on creating connections between learning areas to develop coherent identity narrative.'
+        recommendation:
+          'Focus on creating connections between learning areas to develop coherent identity narrative.',
       };
     }
 
@@ -1133,7 +1357,8 @@ export class IdentityEngine {
         title: 'Potential Imposter Syndrome',
         message: `Good progress (${(progressScore * 100).toFixed(0)}%) but low confidence (${confidenceLevel}/5). May be undervaluing achievements.`,
         priority: 'high',
-        recommendation: 'Document and celebrate achievements to build confidence. Seek external validation and feedback.'
+        recommendation:
+          'Document and celebrate achievements to build confidence. Seek external validation and feedback.',
       };
     }
 
@@ -1151,7 +1376,8 @@ export class IdentityEngine {
         title: 'Identity Development Stagnation',
         message: `Low progress (${(progressScore * 100).toFixed(0)}%) and minimal recent activity (${lastActivityDays} days since last task).`,
         priority: 'high',
-        recommendation: 'Re-engage with identity development through small, achievable tasks. Review and refresh goals.'
+        recommendation:
+          'Re-engage with identity development through small, achievable tasks. Review and refresh goals.',
       };
     }
 
@@ -1174,7 +1400,8 @@ export class IdentityEngine {
         title: 'Goal-Identity Misalignment',
         message: `Current identity (${currentRole}) and target identity (${targetRole}) show limited belief alignment (${beliefAlignment}/${targetBeliefs.length}).`,
         priority: 'medium',
-        recommendation: 'Clarify how current identity strengths can bridge to target identity. Adjust goals or strengthen alignment.'
+        recommendation:
+          'Clarify how current identity strengths can bridge to target identity. Adjust goals or strengthen alignment.',
       };
     }
 
@@ -1182,11 +1409,14 @@ export class IdentityEngine {
   }
 
   detectConfidenceErosion(currentIdentity, learningHistory) {
-    if (!learningHistory.completedTopics || learningHistory.completedTopics.length < 5) {return null;}
+    if (!learningHistory.completedTopics || learningHistory.completedTopics.length < 5) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-6);
     const confidenceLevel = currentIdentity.confidenceLevel?.level || 0;
-    const avgDifficultyRating = recentTasks.reduce((sum, t) => sum + (t.difficultyRating || 3), 0) / recentTasks.length;
+    const avgDifficultyRating =
+      recentTasks.reduce((sum, t) => sum + (t.difficultyRating || 3), 0) / recentTasks.length;
 
     if (confidenceLevel <= 2.5 && avgDifficultyRating >= 4) {
       return {
@@ -1194,7 +1424,8 @@ export class IdentityEngine {
         title: 'Confidence Under Pressure',
         message: `Low confidence (${confidenceLevel}/5) despite tackling challenging tasks (avg difficulty rating: ${avgDifficultyRating.toFixed(1)}).`,
         priority: 'high',
-        recommendation: 'Balance challenging tasks with confidence-building activities. Acknowledge difficulty achievements.'
+        recommendation:
+          'Balance challenging tasks with confidence-building activities. Acknowledge difficulty achievements.',
       };
     }
 
@@ -1214,7 +1445,8 @@ export class IdentityEngine {
         description: `Multiple skill areas (${skillAreas.join(', ')}) with recent breakthroughs create integration potential.`,
         value: 'high',
         actionable: true,
-        recommendation: 'Create projects that combine skills to develop unique identity positioning.'
+        recommendation:
+          'Create projects that combine skills to develop unique identity positioning.',
       };
     }
 
@@ -1233,7 +1465,8 @@ export class IdentityEngine {
         description: `Advanced level in ${advancedSkills[0][0]} with strong overall progress. Ready for expert positioning.`,
         value: 'high',
         actionable: true,
-        recommendation: 'Increase visibility through thought leadership, teaching, or public demonstration of expertise.'
+        recommendation:
+          'Increase visibility through thought leadership, teaching, or public demonstration of expertise.',
       };
     }
 
@@ -1252,7 +1485,8 @@ export class IdentityEngine {
         description: `High confidence (${confidenceLevel}/5) creates foundation for strategic network expansion.`,
         value: 'medium',
         actionable: true,
-        recommendation: 'Leverage current confidence to engage with higher-level networks and communities.'
+        recommendation:
+          'Leverage current confidence to engage with higher-level networks and communities.',
       };
     }
 
@@ -1261,7 +1495,8 @@ export class IdentityEngine {
 
   detectIdentityBreakthroughOpportunity(transformationProgress, learningHistory) {
     const progressScore = transformationProgress.overallProgress || 0;
-    const recentBreakthroughs = learningHistory.completedTopics?.slice(-5).filter(t => t.breakthrough) || [];
+    const recentBreakthroughs =
+      learningHistory.completedTopics?.slice(-5).filter(t => t.breakthrough) || [];
 
     if (progressScore >= 0.4 && progressScore <= 0.7 && recentBreakthroughs.length >= 2) {
       return {
@@ -1270,7 +1505,8 @@ export class IdentityEngine {
         description: `Mid-stage progress (${(progressScore * 100).toFixed(0)}%) with recent breakthrough momentum creates transformation potential.`,
         value: 'high',
         actionable: true,
-        recommendation: 'Pursue stretch challenges that could catalyze significant identity advancement.'
+        recommendation:
+          'Pursue stretch challenges that could catalyze significant identity advancement.',
       };
     }
 
@@ -1282,14 +1518,19 @@ export class IdentityEngine {
     const confidenceLevel = currentIdentity.confidenceLevel?.level || 0;
     const professionalRole = currentIdentity.professionalRole;
 
-    if (Object.keys(skillAreas).length >= 2 && confidenceLevel >= 3.5 && professionalRole !== 'learner') {
+    if (
+      Object.keys(skillAreas).length >= 2 &&
+      confidenceLevel >= 3.5 &&
+      professionalRole !== 'learner'
+    ) {
       return {
         type: 'strategic_positioning',
         title: 'Strategic Positioning Opportunity',
         description: `Multi-skill development with solid confidence enables unique market positioning as ${professionalRole}.`,
         value: 'medium',
         actionable: true,
-        recommendation: 'Develop and communicate unique value proposition based on skill combination.'
+        recommendation:
+          'Develop and communicate unique value proposition based on skill combination.',
       };
     }
 
@@ -1299,15 +1540,23 @@ export class IdentityEngine {
   // Utility Methods
 
   calculateOverallIdentityAssessment(insights) {
-    if (insights.length === 0) {return 'developing';}
+    if (insights.length === 0) {
+      return 'developing';
+    }
 
-    const positiveInsights = insights.filter(i =>
-      i.type.includes('high') || i.type.includes('strong') || i.type.includes('aligned')
+    const positiveInsights = insights.filter(
+      i => i.type.includes('high') || i.type.includes('strong') || i.type.includes('aligned')
     ).length;
 
-    if (positiveInsights >= 3) {return 'thriving';}
-    if (positiveInsights >= 2) {return 'progressing';}
-    if (positiveInsights >= 1) {return 'developing';}
+    if (positiveInsights >= 3) {
+      return 'thriving';
+    }
+    if (positiveInsights >= 2) {
+      return 'progressing';
+    }
+    if (positiveInsights >= 1) {
+      return 'developing';
+    }
     return 'foundational';
   }
 
@@ -1335,7 +1584,7 @@ export class IdentityEngine {
       insightCount,
       overallAssessment: strategicInsights.overallAssessment,
       keyFocus: strategicInsights.keyDevelopmentAreas[0] || 'Continue current development',
-      confidence: transformationProgress.overallProgress >= 0.5 ? 'building' : 'emerging'
+      confidence: transformationProgress.overallProgress >= 0.5 ? 'building' : 'emerging',
     };
   }
 
@@ -1344,7 +1593,7 @@ export class IdentityEngine {
   generateIdentityReinforcementActions(strengthAreas) {
     return strengthAreas.slice(0, 2).map(area => ({
       action: `Leverage ${area.toLowerCase()} in upcoming challenges`,
-      timeframe: '1 week'
+      timeframe: '1 week',
     }));
   }
 
@@ -1352,7 +1601,7 @@ export class IdentityEngine {
     return risks.slice(0, 2).map(risk => ({
       action: risk.recommendation,
       priority: risk.priority,
-      timeframe: 'immediate'
+      timeframe: 'immediate',
     }));
   }
 
@@ -1360,7 +1609,7 @@ export class IdentityEngine {
     return opportunities.slice(0, 2).map(opp => ({
       action: opp.recommendation,
       value: opp.value,
-      timeframe: '1-2 weeks'
+      timeframe: '1-2 weeks',
     }));
   }
 
@@ -1369,12 +1618,12 @@ export class IdentityEngine {
     return [
       {
         action: `Create project combining ${skills[0]} and ${skills[1]}`,
-        timeframe: '2 weeks'
+        timeframe: '2 weeks',
       },
       {
         action: 'Develop unique approach leveraging all skill areas',
-        timeframe: '1 month'
-      }
+        timeframe: '1 month',
+      },
     ];
   }
 }

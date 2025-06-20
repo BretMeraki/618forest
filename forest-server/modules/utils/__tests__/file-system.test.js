@@ -9,8 +9,8 @@ jest.unstable_mockModule('fs/promises', () => ({
   default: {
     readFile: mockReadFile,
     writeFile: mockWriteFile,
-    access: mockAccess
-  }
+    access: mockAccess,
+  },
 }));
 
 // Mock the path module
@@ -20,8 +20,8 @@ const mockJoin = jest.fn();
 jest.unstable_mockModule('path', () => ({
   default: {
     dirname: mockDirname,
-    join: mockJoin
-  }
+    join: mockJoin,
+  },
 }));
 
 // Now import our utility
@@ -58,8 +58,9 @@ describe('FileSystem Utility', () => {
       const mockError = new Error('File not found');
       mockReadFile.mockRejectedValue(mockError);
 
-      await expect(FileSystem.readFile('nonexistent.txt'))
-        .rejects.toThrow('Failed to read file nonexistent.txt: File not found');
+      await expect(FileSystem.readFile('nonexistent.txt')).rejects.toThrow(
+        'Failed to read file nonexistent.txt: File not found'
+      );
 
       expect(mockReadFile).toHaveBeenCalledWith('nonexistent.txt', 'utf8');
     });
@@ -78,8 +79,9 @@ describe('FileSystem Utility', () => {
       const mockError = new Error('Permission denied');
       mockWriteFile.mockRejectedValue(mockError);
 
-      await expect(FileSystem.writeFile('readonly.txt', 'content'))
-        .rejects.toThrow('Failed to write file readonly.txt: Permission denied');
+      await expect(FileSystem.writeFile('readonly.txt', 'content')).rejects.toThrow(
+        'Failed to write file readonly.txt: Permission denied'
+      );
     });
   });
 
@@ -118,8 +120,9 @@ describe('FileSystem Utility', () => {
       const circularObj = {};
       circularObj.self = circularObj; // Create circular reference
 
-      await expect(FileSystem.writeJSON('circular.json', circularObj))
-        .rejects.toThrow('Failed to serialize JSON for circular.json:');
+      await expect(FileSystem.writeJSON('circular.json', circularObj)).rejects.toThrow(
+        'Failed to serialize JSON for circular.json:'
+      );
     });
   });
 

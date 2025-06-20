@@ -5,6 +5,10 @@
  */
 
 import { bus } from './utils/event-bus.js';
+import { getForestLogger } from './winston-logger.js';
+
+// Structured logger for this module
+const logger = getForestLogger({ module: 'DataArchiver' });
 
 export class DataArchiver {
   constructor(dataPersistence, eventBus = null) {
@@ -16,20 +20,24 @@ export class DataArchiver {
       learningHistoryMonths: 18, // Archive completed topics older than 18 months
       htaBranchYears: 1, // Archive completed branches older than 1 year
       maxWorkingMemorySize: 10000, // Max items in working memory
-      wisdomExtractThreshold: 5 // Min items needed to extract wisdom
+      wisdomExtractThreshold: 5, // Min items needed to extract wisdom
     };
 
     this.setupEventListeners();
 
     // Only show initialization message in terminal mode (not MCP)
     if (process.stdin.isTTY) {
-      console.log('📦 DataArchiver initialized - Ready for intelligent archiving');
+      logger.info('📦 DataArchiver initialized - Ready for intelligent archiving');
     }
   }
 
   setupEventListeners() {
     // Listen for system clock ticks to perform archiving
-    this.eventBus.on('system:strategic_insights', this.onStrategicAnalysis.bind(this), 'DataArchiver');
+    this.eventBus.on(
+      'system:strategic_insights',
+      this.onStrategicAnalysis.bind(this),
+      'DataArchiver'
+    );
     this.eventBus.on('data:archive_requested', this.performArchiving.bind(this), 'DataArchiver');
   }
 
@@ -42,11 +50,11 @@ export class DataArchiver {
       const archiveNeeded = await this.assessArchiveNeeds(projectId);
 
       if (archiveNeeded) {
-        console.log('📦 DataArchiver: Archive threshold reached - beginning intelligent archiving');
+        logger.info('📦 DataArchiver: Archive threshold reached - beginning intelligent archiving');
         await this.performArchiving({ projectId });
       }
     } catch (error) {
-      console.error('❌ DataArchiver analysis failed:', error.message);
+      logger.error('❌ DataArchiver analysis failed', { error, projectId });
       await this.dataPersistence.logError('DataArchiver.onStrategicAnalysis', error);
     }
   }
@@ -59,7 +67,10 @@ export class DataArchiver {
   async assessArchiveNeeds(projectId) {
     try {
       // Check learning history size
-      const learningHistory = await this.dataPersistence.loadProjectData(projectId, 'learning_history.json');
+      const learningHistory = await this.dataPersistence.loadProjectData(
+        projectId,
+        'learning_history.json'
+      );
       const htaData = await this.dataPersistence.loadProjectData(projectId, 'hta.json');
 
       // Calculate archiving needs
@@ -74,9 +85,8 @@ export class DataArchiver {
       const hasOldHtaData = this.hasOldHtaData(htaData);
 
       return exceedsSize || hasOldLearningData || hasOldHtaData;
-
     } catch (error) {
-      console.error('⚠️ Error assessing archive needs:', error.message);
+      logger.warn('⚠️ Error assessing archive needs', { error, projectId });
       return false;
     }
   }
@@ -87,10 +97,14 @@ export class DataArchiver {
    * @returns {boolean} Whether old data exists
    */
   hasOldLearningData(learningHistory) {
-    if (!learningHistory?.completedTopics) {return false;}
+    if (!learningHistory?.completedTopics) {
+      return false;
+    }
 
     const archiveThreshold = new Date();
-    archiveThreshold.setMonth(archiveThreshold.getMonth() - this.archiveThresholds.learningHistoryMonths);
+    archiveThreshold.setMonth(
+      archiveThreshold.getMonth() - this.archiveThresholds.learningHistoryMonths
+    );
 
     return learningHistory.completedTopics.some(topic => {
       const completedDate = new Date(topic.completedAt);
@@ -104,13 +118,19 @@ export class DataArchiver {
    * @returns {boolean} Whether old branches exist
    */
   hasOldHtaData(htaData) {
-    if (!htaData?.strategicBranches) {return false;}
+    if (!htaData?.strategicBranches) {
+      return false;
+    }
 
     const archiveThreshold = new Date();
-    archiveThreshold.setFullYear(archiveThreshold.getFullYear() - this.archiveThresholds.htaBranchYears);
+    archiveThreshold.setFullYear(
+      archiveThreshold.getFullYear() - this.archiveThresholds.htaBranchYears
+    );
 
     return htaData.strategicBranches.some(branch => {
-      if (branch.status !== 'completed') {return false;}
+      if (branch.status !== 'completed') {
+        return false;
+      }
       const completedDate = new Date(branch.completedAt || branch.lastUpdated);
       return completedDate < archiveThreshold;
     });
@@ -123,14 +143,14 @@ export class DataArchiver {
    */
   async performArchiving({ projectId }) {
     try {
-      console.log(`📦 Beginning archiving process for project: ${projectId}`);
+      logger.info(`📦 Beginning archiving process for project: ${projectId}`);
 
       const archiveResults = {
         projectId,
         archivedAt: new Date().toISOString(),
         learningHistory: {},
         htaData: {},
-        wisdomGenerated: []
+        wisdomGenerated: [],
       };
 
       // Archive learning history
@@ -140,7 +160,10 @@ export class DataArchiver {
       archiveResults.htaData = await this.archiveHtaData(projectId);
 
       // Generate and store distilled wisdom
-      archiveResults.wisdomGenerated = await this.generateDistilledWisdom(projectId, archiveResults);
+      archiveResults.wisdomGenerated = await this.generateDistilledWisdom(
+        projectId,
+        archiveResults
+      );
 
       // Log archiving completion
       await this.dataPersistence.saveProjectData(
@@ -152,16 +175,15 @@ export class DataArchiver {
       // Emit archiving completed event
       this.eventBus.emit('data:archiving_completed', archiveResults, 'DataArchiver');
 
-      console.log('✅ Archiving completed:', {
+      logger.info('✅ Archiving completed', {
         learningItemsArchived: archiveResults.learningHistory.itemsArchived || 0,
         htaBranchesArchived: archiveResults.htaData.branchesArchived || 0,
-        wisdomPiecesGenerated: archiveResults.wisdomGenerated.length
+        wisdomPiecesGenerated: archiveResults.wisdomGenerated.length,
       });
 
       return archiveResults;
-
     } catch (error) {
-      console.error('❌ Archiving process failed:', error.message);
+      logger.error('❌ Archiving process failed', { error, projectId });
       await this.dataPersistence.logError('DataArchiver.performArchiving', error);
       throw error;
     }
@@ -174,14 +196,19 @@ export class DataArchiver {
    */
   async archiveLearningHistory(projectId) {
     try {
-      const learningHistory = await this.dataPersistence.loadProjectData(projectId, 'learning_history.json');
+      const learningHistory = await this.dataPersistence.loadProjectData(
+        projectId,
+        'learning_history.json'
+      );
 
       if (!learningHistory?.completedTopics) {
         return { itemsArchived: 0, message: 'No learning history to archive' };
       }
 
       const archiveThreshold = new Date();
-      archiveThreshold.setMonth(archiveThreshold.getMonth() - this.archiveThresholds.learningHistoryMonths);
+      archiveThreshold.setMonth(
+        archiveThreshold.getMonth() - this.archiveThresholds.learningHistoryMonths
+      );
 
       // Separate old and current data
       const itemsToArchive = [];
@@ -203,7 +230,10 @@ export class DataArchiver {
       // Load existing archive or create new one
       let archive;
       try {
-        archive = await this.dataPersistence.loadProjectData(projectId, 'learning_history_archive.json');
+        archive = await this.dataPersistence.loadProjectData(
+          projectId,
+          'learning_history_archive.json'
+        );
         // Ensure archive has the required structure
         if (!archive.archivedTopics) {
           archive.archivedTopics = [];
@@ -212,7 +242,7 @@ export class DataArchiver {
           archive.archiveMetadata = {
             totalArchivedSessions: 0,
             oldestEntry: null,
-            newestEntry: null
+            newestEntry: null,
           };
         }
       } catch (error) {
@@ -222,8 +252,8 @@ export class DataArchiver {
           archiveMetadata: {
             totalArchivedSessions: 0,
             oldestEntry: null,
-            newestEntry: null
-          }
+            newestEntry: null,
+          },
         };
       }
 
@@ -231,7 +261,7 @@ export class DataArchiver {
       const archivedItems = itemsToArchive.map(item => ({
         ...item,
         archivedAt: new Date().toISOString(),
-        archiveReason: 'age_threshold_exceeded'
+        archiveReason: 'age_threshold_exceeded',
       }));
 
       archive.archivedTopics.push(...archivedItems);
@@ -246,17 +276,25 @@ export class DataArchiver {
       }
 
       // Save updated archive
-      await this.dataPersistence.saveProjectData(projectId, 'learning_history_archive.json', archive);
+      await this.dataPersistence.saveProjectData(
+        projectId,
+        'learning_history_archive.json',
+        archive
+      );
 
       // Update current learning history with remaining items
       const updatedLearningHistory = {
         ...learningHistory,
         completedTopics: currentItems,
         lastArchived: new Date().toISOString(),
-        totalItemsArchived: (learningHistory.totalItemsArchived || 0) + itemsToArchive.length
+        totalItemsArchived: (learningHistory.totalItemsArchived || 0) + itemsToArchive.length,
       };
 
-      await this.dataPersistence.saveProjectData(projectId, 'learning_history.json', updatedLearningHistory);
+      await this.dataPersistence.saveProjectData(
+        projectId,
+        'learning_history.json',
+        updatedLearningHistory
+      );
 
       return {
         itemsArchived: itemsToArchive.length,
@@ -265,12 +303,11 @@ export class DataArchiver {
         archivedItems: archivedItems.map(item => ({
           title: item.title,
           completedAt: item.completedAt,
-          difficulty: item.difficulty
-        }))
+          difficulty: item.difficulty,
+        })),
       };
-
     } catch (error) {
-      console.error('❌ Learning history archiving failed:', error.message);
+      logger.error('❌ Learning history archiving failed', { error, projectId });
       throw error;
     }
   }
@@ -289,7 +326,9 @@ export class DataArchiver {
       }
 
       const archiveThreshold = new Date();
-      archiveThreshold.setFullYear(archiveThreshold.getFullYear() - this.archiveThresholds.htaBranchYears);
+      archiveThreshold.setFullYear(
+        archiveThreshold.getFullYear() - this.archiveThresholds.htaBranchYears
+      );
 
       // Separate branches to archive and keep
       const branchesToArchive = [];
@@ -325,7 +364,7 @@ export class DataArchiver {
             totalArchivedBranches: 0,
             totalArchivedTasks: 0,
             oldestEntry: null,
-            newestEntry: null
+            newestEntry: null,
           };
         }
       } catch (error) {
@@ -336,8 +375,8 @@ export class DataArchiver {
             totalArchivedBranches: 0,
             totalArchivedTasks: 0,
             oldestEntry: null,
-            newestEntry: null
-          }
+            newestEntry: null,
+          },
         };
       }
 
@@ -350,7 +389,7 @@ export class DataArchiver {
       const archivedBranches = branchesToArchive.map(branch => ({
         ...branch,
         archivedAt: new Date().toISOString(),
-        archiveReason: 'completion_age_threshold'
+        archiveReason: 'completion_age_threshold',
       }));
 
       htaArchive.archivedBranches.push(...archivedBranches);
@@ -360,7 +399,9 @@ export class DataArchiver {
 
       // Update oldest and newest entry dates if we have archived branches
       if (htaArchive.archivedBranches.length > 0) {
-        const allDates = htaArchive.archivedBranches.map(b => new Date(b.completedAt || b.lastUpdated));
+        const allDates = htaArchive.archivedBranches.map(
+          b => new Date(b.completedAt || b.lastUpdated)
+        );
         htaArchive.archiveMetadata.oldestEntry = new Date(Math.min(...allDates)).toISOString();
         htaArchive.archiveMetadata.newestEntry = new Date(Math.max(...allDates)).toISOString();
       }
@@ -373,7 +414,7 @@ export class DataArchiver {
         ...htaData,
         strategicBranches: currentBranches,
         lastArchived: new Date().toISOString(),
-        totalBranchesArchived: (htaData.totalBranchesArchived || 0) + branchesToArchive.length
+        totalBranchesArchived: (htaData.totalBranchesArchived || 0) + branchesToArchive.length,
       };
 
       await this.dataPersistence.saveProjectData(projectId, 'hta.json', updatedHtaData);
@@ -387,12 +428,11 @@ export class DataArchiver {
           title: branch.title,
           status: branch.status,
           completedAt: branch.completedAt,
-          taskCount: branch.tasks?.length || 0
-        }))
+          taskCount: branch.tasks?.length || 0,
+        })),
       };
-
     } catch (error) {
-      console.error('❌ HTA archiving failed:', error.message);
+      logger.error('❌ HTA archiving failed', { error, projectId });
       throw error;
     }
   }
@@ -409,7 +449,10 @@ export class DataArchiver {
 
       // Generate wisdom from learning history
       if (archiveResults.learningHistory.itemsArchived > 0) {
-        const learningWisdom = await this.extractLearningWisdom(projectId, archiveResults.learningHistory);
+        const learningWisdom = await this.extractLearningWisdom(
+          projectId,
+          archiveResults.learningHistory
+        );
         wisdomEntries.push(...learningWisdom);
       }
 
@@ -426,9 +469,8 @@ export class DataArchiver {
       }
 
       return wisdomEntries;
-
     } catch (error) {
-      console.error('❌ Wisdom generation failed:', error.message);
+      logger.error('❌ Wisdom generation failed', { error, projectId });
       throw error;
     }
   }
@@ -442,9 +484,12 @@ export class DataArchiver {
   async extractLearningWisdom(projectId, learningArchiveResults) {
     try {
       // Load the archived items to analyze
-      const archive = await this.dataPersistence.loadProjectData(projectId, 'learning_history_archive.json');
-      const recentlyArchived = archive.archivedTopics.filter(topic =>
-        topic.archivedAt === learningArchiveResults.archivedItems[0]?.archivedAt
+      const archive = await this.dataPersistence.loadProjectData(
+        projectId,
+        'learning_history_archive.json'
+      );
+      const recentlyArchived = archive.archivedTopics.filter(
+        topic => topic.archivedAt === learningArchiveResults.archivedItems[0]?.archivedAt
       );
 
       if (recentlyArchived.length < this.archiveThresholds.wisdomExtractThreshold) {
@@ -453,7 +498,8 @@ export class DataArchiver {
 
       // Analyze patterns in the archived data
       const totalBreakthroughs = recentlyArchived.filter(t => t.breakthrough).length;
-      const averageDifficulty = recentlyArchived.reduce((sum, t) => sum + (t.difficulty || 3), 0) / recentlyArchived.length;
+      const averageDifficulty =
+        recentlyArchived.reduce((sum, t) => sum + (t.difficulty || 3), 0) / recentlyArchived.length;
       const uniqueBranches = new Set(recentlyArchived.map(t => t.branch || 'general')).size;
 
       // Extract key learnings
@@ -476,24 +522,27 @@ export class DataArchiver {
         timespan: {
           oldestEntry: Math.min(...recentlyArchived.map(t => new Date(t.completedAt))),
           newestEntry: Math.max(...recentlyArchived.map(t => new Date(t.completedAt))),
-          itemCount: recentlyArchived.length
+          itemCount: recentlyArchived.length,
         },
         insights: {
           totalTopicsCompleted: recentlyArchived.length,
-          breakthroughRate: `${(totalBreakthroughs / recentlyArchived.length * 100).toFixed(1)}%`,
+          breakthroughRate: `${((totalBreakthroughs / recentlyArchived.length) * 100).toFixed(1)}%`,
           averageDifficulty: averageDifficulty.toFixed(1),
           branchDiversity: uniqueBranches,
           keyLearnings,
-          challengingTopics
+          challengingTopics,
         },
-        summaryLearning: this.generateLearningSummary(recentlyArchived, totalBreakthroughs, keyLearnings),
-        applicableContexts: this.identifyApplicableContexts(recentlyArchived)
+        summaryLearning: this.generateLearningSummary(
+          recentlyArchived,
+          totalBreakthroughs,
+          keyLearnings
+        ),
+        applicableContexts: this.identifyApplicableContexts(recentlyArchived),
       };
 
       return [wisdomEntry];
-
     } catch (error) {
-      console.error('❌ Learning wisdom extraction failed:', error.message);
+      logger.error('❌ Learning wisdom extraction failed', { error, projectId });
       return [];
     }
   }
@@ -508,8 +557,8 @@ export class DataArchiver {
     try {
       // Load the archived branches to analyze
       const archive = await this.dataPersistence.loadProjectData(projectId, 'hta_archive.json');
-      const recentlyArchived = archive.archivedBranches.filter(branch =>
-        branch.archivedAt === htaArchiveResults.archivedBranches[0]?.archivedAt
+      const recentlyArchived = archive.archivedBranches.filter(
+        branch => branch.archivedAt === htaArchiveResults.archivedBranches[0]?.archivedAt
       );
 
       const wisdomEntries = [];
@@ -529,9 +578,8 @@ export class DataArchiver {
       }
 
       return wisdomEntries;
-
     } catch (error) {
-      console.error('❌ Branch wisdom extraction failed:', error.message);
+      logger.error('❌ Branch wisdom extraction failed', { error, projectId });
       return [];
     }
   }
@@ -556,25 +604,27 @@ export class DataArchiver {
       branchMetadata: {
         originalCreatedAt: branch.createdAt,
         completedAt: branch.completedAt,
-        duration: this.calculateDuration(branch.createdAt, branch.completedAt)
+        duration: this.calculateDuration(branch.createdAt, branch.completedAt),
       },
       achievements: {
         totalTasks: completedTasks.length,
         breakthroughs: totalBreakthroughs,
-        breakthroughRate: `${(totalBreakthroughs / completedTasks.length * 100).toFixed(1)}%`,
-        averageTaskDifficulty: this.calculateAverageTaskDifficulty(completedTasks)
+        breakthroughRate: `${((totalBreakthroughs / completedTasks.length) * 100).toFixed(1)}%`,
+        averageTaskDifficulty: this.calculateAverageTaskDifficulty(completedTasks),
       },
       keyInsights: {
         summaryLearnings: `Key lessons included: ${keyLearnings.join(', ')}. This branch was crucial for developing foundational skills.`,
-        criticalBreakthroughs: completedTasks.filter(t => t.breakthrough).map(t => ({
-          title: t.title,
-          insight: t.learned,
-          difficulty: t.difficulty
-        })),
-        strategicValue: this.assessStrategicValue(branch, completedTasks)
+        criticalBreakthroughs: completedTasks
+          .filter(t => t.breakthrough)
+          .map(t => ({
+            title: t.title,
+            insight: t.learned,
+            difficulty: t.difficulty,
+          })),
+        strategicValue: this.assessStrategicValue(branch, completedTasks),
       },
       applicablePrinciples: this.extractApplicablePrinciples(completedTasks),
-      futureRelevance: this.assessFutureRelevance(branch, completedTasks)
+      futureRelevance: this.assessFutureRelevance(branch, completedTasks),
     };
 
     return distilledWisdom;
@@ -600,16 +650,16 @@ export class DataArchiver {
         totalBreakthroughs,
         timespan: {
           earliest: Math.min(...branches.map(b => new Date(b.createdAt))),
-          latest: Math.max(...branches.map(b => new Date(b.completedAt || b.lastUpdated)))
-        }
+          latest: Math.max(...branches.map(b => new Date(b.completedAt || b.lastUpdated))),
+        },
       },
       strategicPatterns: {
         mostSuccessfulApproaches: this.identifySuccessfulApproaches(branches),
         emergingThemes: this.identifyEmergingThemes(branches),
-        evolutionPattern: this.analyzeEvolutionPattern(branches)
+        evolutionPattern: this.analyzeEvolutionPattern(branches),
       },
       distilledPrinciples: this.extractDistilledPrinciples(branches),
-      recommendationsForFuture: this.generateFutureRecommendations(branches)
+      recommendationsForFuture: this.generateFutureRecommendations(branches),
     };
   }
 
@@ -632,8 +682,8 @@ export class DataArchiver {
           metadata: {
             totalEntries: 0,
             lastUpdated: null,
-            categories: {}
-          }
+            categories: {},
+          },
         };
       }
 
@@ -645,13 +695,13 @@ export class DataArchiver {
       // Update category counts
       newWisdomEntries.forEach(entry => {
         const category = entry.type;
-        wisdomStore.metadata.categories[category] = (wisdomStore.metadata.categories[category] || 0) + 1;
+        wisdomStore.metadata.categories[category] =
+          (wisdomStore.metadata.categories[category] || 0) + 1;
       });
 
       return wisdomStore;
-
     } catch (error) {
-      console.error('❌ Wisdom store update failed:', error.message);
+      logger.error('❌ Wisdom store update failed', { error, projectId });
       throw error;
     }
   }
@@ -675,7 +725,7 @@ export class DataArchiver {
           archiveLog.metadata = {
             totalSessions: 0,
             totalItemsArchived: 0,
-            totalWisdomGenerated: 0
+            totalWisdomGenerated: 0,
           };
         }
       } catch (error) {
@@ -685,27 +735,28 @@ export class DataArchiver {
           metadata: {
             totalSessions: 0,
             totalItemsArchived: 0,
-            totalWisdomGenerated: 0
-          }
+            totalWisdomGenerated: 0,
+          },
         };
       }
 
       // Add new archive session
       archiveLog.archiveSessions.push({
         sessionId: `archive_${Date.now()}`,
-        ...archiveResults
+        ...archiveResults,
       });
 
       // Update metadata
       archiveLog.metadata.totalSessions = archiveLog.archiveSessions.length;
-      archiveLog.metadata.totalItemsArchived += (archiveResults.learningHistory.itemsArchived || 0) + (archiveResults.htaData.branchesArchived || 0);
+      archiveLog.metadata.totalItemsArchived +=
+        (archiveResults.learningHistory.itemsArchived || 0) +
+        (archiveResults.htaData.branchesArchived || 0);
       archiveLog.metadata.totalWisdomGenerated += archiveResults.wisdomGenerated.length;
       archiveLog.metadata.lastArchived = archiveResults.archivedAt;
 
       return archiveLog;
-
     } catch (error) {
-      console.error('❌ Archive log update failed:', error.message);
+      logger.error('❌ Archive log update failed', { error, projectId });
       throw error;
     }
   }
@@ -714,11 +765,13 @@ export class DataArchiver {
 
   generateLearningSummary(topics, breakthroughs, keyLearnings) {
     const topicCount = topics.length;
-    const breakthroughRate = (breakthroughs / topicCount * 100).toFixed(0);
+    const breakthroughRate = ((breakthroughs / topicCount) * 100).toFixed(0);
 
-    return `Over ${topicCount} completed learning topics, achieved ${breakthroughs} breakthroughs (${breakthroughRate}% breakthrough rate). ` +
-           `Key insights developed: ${keyLearnings.slice(0, 2).join('; ')}. ` +
-           'This period demonstrated strong learning momentum with consistent skill development.';
+    return (
+      `Over ${topicCount} completed learning topics, achieved ${breakthroughs} breakthroughs (${breakthroughRate}% breakthrough rate). ` +
+      `Key insights developed: ${keyLearnings.slice(0, 2).join('; ')}. ` +
+      'This period demonstrated strong learning momentum with consistent skill development.'
+    );
   }
 
   identifyApplicableContexts(topics) {
@@ -733,8 +786,8 @@ export class DataArchiver {
       applicableWhen: [
         'Starting new strategic branches',
         'Facing similar difficulty challenges',
-        'Building foundational knowledge'
-      ]
+        'Building foundational knowledge',
+      ],
     };
   }
 
@@ -744,13 +797,19 @@ export class DataArchiver {
     const diffMs = end - start;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 30) {return `${diffDays} days`;}
-    if (diffDays < 365) {return `${Math.floor(diffDays / 30)} months`;}
+    if (diffDays < 30) {
+      return `${diffDays} days`;
+    }
+    if (diffDays < 365) {
+      return `${Math.floor(diffDays / 30)} months`;
+    }
     return `${Math.floor(diffDays / 365)} years`;
   }
 
   calculateAverageTaskDifficulty(tasks) {
-    if (tasks.length === 0) {return 0;}
+    if (tasks.length === 0) {
+      return 0;
+    }
     const difficulties = tasks.map(t => t.difficulty || 3);
     return (difficulties.reduce((a, b) => a + b, 0) / difficulties.length).toFixed(1);
   }
@@ -759,8 +818,12 @@ export class DataArchiver {
     const breakthroughCount = tasks.filter(t => t.breakthrough).length;
     const avgDifficulty = this.calculateAverageTaskDifficulty(tasks);
 
-    if (breakthroughCount >= 3 && avgDifficulty >= 4) {return 'High - Multiple breakthroughs with challenging complexity';}
-    if (breakthroughCount >= 2 || avgDifficulty >= 4) {return 'Medium - Significant learning or high complexity';}
+    if (breakthroughCount >= 3 && avgDifficulty >= 4) {
+      return 'High - Multiple breakthroughs with challenging complexity';
+    }
+    if (breakthroughCount >= 2 || avgDifficulty >= 4) {
+      return 'Medium - Significant learning or high complexity';
+    }
     return 'Low - Foundational development';
   }
 
@@ -770,7 +833,9 @@ export class DataArchiver {
     // Extract patterns from breakthrough tasks
     const breakthroughs = tasks.filter(t => t.breakthrough);
     if (breakthroughs.length > 0) {
-      principles.push(`Breakthrough pattern: ${breakthroughs.length} major insights achieved through persistent effort`);
+      principles.push(
+        `Breakthrough pattern: ${breakthroughs.length} major insights achieved through persistent effort`
+      );
     }
 
     // Extract difficulty progression patterns
@@ -807,7 +872,7 @@ export class DataArchiver {
     return successfulBranches.map(b => ({
       title: b.title,
       successFactor: 'High breakthrough rate',
-      keyApproach: this.extractKeyApproach(b)
+      keyApproach: this.extractKeyApproach(b),
     }));
   }
 
@@ -819,7 +884,8 @@ export class DataArchiver {
     branches.forEach(branch => {
       const words = branch.title.toLowerCase().split(' ');
       words.forEach(word => {
-        if (word.length > 4) { // Focus on meaningful words
+        if (word.length > 4) {
+          // Focus on meaningful words
           themes[word] = (themes[word] || 0) + 1;
         }
       });
@@ -849,22 +915,24 @@ export class DataArchiver {
       'Strategic branches benefit from breakthrough-focused task design',
       'Difficulty progression should align with learning capacity',
       'Consistent effort over time yields exponential returns',
-      'Cross-branch learning accelerates overall development'
+      'Cross-branch learning accelerates overall development',
     ];
   }
 
   generateFutureRecommendations(branches) {
-    const avgTaskCount = branches.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) / branches.length;
-    const avgBreakthroughRate = branches.reduce((sum, b) => {
-      const tasks = b.tasks || [];
-      return sum + (tasks.filter(t => t.breakthrough).length / Math.max(tasks.length, 1));
-    }, 0) / branches.length;
+    const avgTaskCount =
+      branches.reduce((sum, b) => sum + (b.tasks?.length || 0), 0) / branches.length;
+    const avgBreakthroughRate =
+      branches.reduce((sum, b) => {
+        const tasks = b.tasks || [];
+        return sum + tasks.filter(t => t.breakthrough).length / Math.max(tasks.length, 1);
+      }, 0) / branches.length;
 
     return [
       `Optimal branch size: ${Math.round(avgTaskCount)} tasks for completion`,
       `Target breakthrough rate: ${(avgBreakthroughRate * 100).toFixed(0)}% for strategic value`,
       'Archive completed branches annually to maintain focus',
-      'Leverage archived wisdom when planning similar strategic work'
+      'Leverage archived wisdom when planning similar strategic work',
     ];
   }
 
@@ -882,14 +950,20 @@ export class DataArchiver {
   }
 
   analyzeDifficultyTrend(difficulties) {
-    if (difficulties.length < 2) {return 'stable';}
+    if (difficulties.length < 2) {
+      return 'stable';
+    }
 
     const first = difficulties[0];
     const last = difficulties[difficulties.length - 1];
     const change = last - first;
 
-    if (change > 0.5) {return 'increasing';}
-    if (change < -0.5) {return 'decreasing';}
+    if (change > 0.5) {
+      return 'increasing';
+    }
+    if (change < -0.5) {
+      return 'decreasing';
+    }
     return 'stable';
   }
 
@@ -900,8 +974,8 @@ export class DataArchiver {
   getStatus() {
     return {
       archiveThresholds: this.archiveThresholds,
-      isActive: true,
-      lastArchiveCheck: this.lastAnalysis?.get('archive_check') || 'Never'
+      isRunning: false, // Archiver is event-driven
+      lastAnalysis: this.lastAnalysis?.get('archive_check') || 'Never',
     };
   }
 
@@ -911,8 +985,13 @@ export class DataArchiver {
    * @returns {Object} Archive results
    */
   async triggerManualArchiving(projectId) {
-    console.log('📦 Manual archiving triggered');
-    return await this.performArchiving({ projectId });
+    if (!projectId) {
+      logger.error('Project ID is required for manual archiving');
+      return { success: false, message: 'Project ID is required' };
+    }
+    logger.info(`⚙️ Manually triggering archiving for project: ${projectId}`);
+    const results = await this.performArchiving({ projectId });
+    return { success: true, results };
   }
 
   /**
@@ -921,6 +1000,8 @@ export class DataArchiver {
    */
   configureThresholds(newThresholds) {
     this.archiveThresholds = { ...this.archiveThresholds, ...newThresholds };
-    console.log('📦 Archive thresholds updated:', this.archiveThresholds);
+    logger.info('🔧 DataArchiver thresholds updated', { newThresholds: this.archiveThresholds });
   }
 }
+
+logger.debug('DataArchiver module loaded');

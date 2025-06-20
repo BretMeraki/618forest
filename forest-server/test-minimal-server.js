@@ -16,12 +16,12 @@ try {
   const server = new Server(
     {
       name: 'minimal-test',
-      version: '1.0.0'
+      version: '1.0.0',
     },
     {
       capabilities: {
-        tools: {}
-      }
+        tools: {},
+      },
     }
   );
 
@@ -44,7 +44,6 @@ try {
 
   // Log when we receive any requests
   console.error('📡 Server ready and listening...');
-
 } catch (error) {
   console.error('❌ Error in minimal server:', error.message);
   console.error('Stack:', error.stack);

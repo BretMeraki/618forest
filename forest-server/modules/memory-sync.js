@@ -10,12 +10,16 @@ export class MemorySync {
 
   async syncActiveProjectToMemory(projectId) {
     try {
-      const config = await this.dataPersistence.loadProjectData(projectId, 'config.json') || {};
-      const htaData = await this.dataPersistence.loadProjectData(projectId, 'hta.json') || {};
-      const learningHistory = await this.dataPersistence.loadProjectData(projectId, 'learning_history.json') || { completedTopics: [], insights: [] };
+      const config = (await this.dataPersistence.loadProjectData(projectId, 'config.json')) || {};
+      const htaData = (await this.dataPersistence.loadProjectData(projectId, 'hta.json')) || {};
+      const learningHistory = (await this.dataPersistence.loadProjectData(
+        projectId,
+        'learning_history.json'
+      )) || { completedTopics: [], insights: [] };
 
       const today = new Date().toISOString().split('T')[0];
-      const todaySchedule = await this.dataPersistence.loadProjectData(projectId, `day_${today}.json`) || {};
+      const todaySchedule =
+        (await this.dataPersistence.loadProjectData(projectId, `day_${today}.json`)) || {};
 
       const collaborativeSessions = htaData.collaborative_sessions || [];
       const latestSession = collaborativeSessions[collaborativeSessions.length - 1];
@@ -30,16 +34,19 @@ export class MemorySync {
         completion_patterns: this.analyzeCompletionPatterns(learningHistory),
         energy_trends: this.analyzeEnergyTrends(learningHistory),
         next_logical_areas: this.identifyNextLogicalAreas(htaData, learningHistory),
-        collaborative_generation: collaborativeSessions.length > 0 ? {
-          last_session: latestSession?.timestamp || null,
-          total_sessions: collaborativeSessions.length,
-          recent_branches: latestSession?.branches_populated || []
-        } : undefined,
-        today_progress: todaySchedule.blocks ?
-          `${todaySchedule.blocks.filter(b => b.completed).length}/${todaySchedule.blocks.length} blocks completed` :
-          'No schedule today',
+        collaborative_generation:
+          collaborativeSessions.length > 0
+            ? {
+                last_session: latestSession?.timestamp || null,
+                total_sessions: collaborativeSessions.length,
+                recent_branches: latestSession?.branches_populated || [],
+              }
+            : undefined,
+        today_progress: todaySchedule.blocks
+          ? `${todaySchedule.blocks.filter(b => b.completed).length}/${todaySchedule.blocks.length} blocks completed`
+          : 'No schedule today',
         suggested_memory_queries: this.generateMemoryQueries(config, learningHistory),
-        sync_timestamp: new Date().toISOString()
+        sync_timestamp: new Date().toISOString(),
       };
 
       return memoryContext;
@@ -48,48 +55,56 @@ export class MemorySync {
       return {
         project_id: projectId,
         error: 'Failed to sync project data',
-        sync_timestamp: new Date().toISOString()
+        sync_timestamp: new Date().toISOString(),
       };
     }
   }
 
   async syncForestMemory() {
     try {
-      const globalData = await this.dataPersistence.loadGlobalData('config.json') || {};
+      const globalData = (await this.dataPersistence.loadGlobalData('config.json')) || {};
       const activeProjectId = globalData.activeProject;
 
       if (!activeProjectId) {
         return {
-          content: [{
-            type: 'text',
-            text: 'No active project to sync to memory. Create or switch to a project first.'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: 'No active project to sync to memory. Create or switch to a project first.',
+            },
+          ],
         };
       }
 
       const memoryData = await this.syncActiveProjectToMemory(activeProjectId);
 
       return {
-        content: [{
-          type: 'text',
-          text: `Forest state synced to memory for project: ${activeProjectId}\n\n` +
-               '📊 Memory Context Summary:\n' +
-               `• Goal: ${memoryData.goal}\n` +
-               `• Current Focus: ${memoryData.current_focus}\n` +
-               `• Progress: ${memoryData.progress_summary}\n` +
-               `• Today: ${memoryData.today_progress}\n\n` +
-               `🔍 Suggested Memory Queries:\n${
-                 memoryData.suggested_memory_queries?.map(q => `• ${q}`).join('\n')}` || 'None available'
-        }],
-        forest_memory_sync: memoryData
+        content: [
+          {
+            type: 'text',
+            text:
+              `Forest state synced to memory for project: ${activeProjectId}\n\n` +
+                '📊 Memory Context Summary:\n' +
+                `• Goal: ${memoryData.goal}\n` +
+                `• Current Focus: ${memoryData.current_focus}\n` +
+                `• Progress: ${memoryData.progress_summary}\n` +
+                `• Today: ${memoryData.today_progress}\n\n` +
+                `🔍 Suggested Memory Queries:\n${memoryData.suggested_memory_queries
+                  ?.map(q => `• ${q}`)
+                  .join('\n')}` || 'None available',
+          },
+        ],
+        forest_memory_sync: memoryData,
       };
     } catch (error) {
       await this.dataPersistence.logError('syncForestMemory', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error syncing to memory: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error syncing to memory: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -104,23 +119,33 @@ export class MemorySync {
 
   analyzeCompletionPatterns(learningHistory) {
     const completions = learningHistory.completedTopics || [];
-    if (completions.length < 3) {return 'Insufficient data for pattern analysis';}
+    if (completions.length < 3) {
+      return 'Insufficient data for pattern analysis';
+    }
 
     const recentCompletions = completions.slice(-10);
-    const avgDifficulty = recentCompletions.reduce((sum, c) => sum + (c.difficulty || 3), 0) / recentCompletions.length;
-    const breakthroughRate = recentCompletions.filter(c => c.breakthrough).length / recentCompletions.length;
+    const avgDifficulty =
+      recentCompletions.reduce((sum, c) => sum + (c.difficulty || 3), 0) / recentCompletions.length;
+    const breakthroughRate =
+      recentCompletions.filter(c => c.breakthrough).length / recentCompletions.length;
 
     return `Avg difficulty: ${avgDifficulty.toFixed(1)}/5, Breakthrough rate: ${(breakthroughRate * 100).toFixed(0)}%`;
   }
 
   analyzeEnergyTrends(learningHistory) {
     const completions = learningHistory.completedTopics || [];
-    if (completions.length < 5) {return 'Insufficient data for energy analysis';}
+    if (completions.length < 5) {
+      return 'Insufficient data for energy analysis';
+    }
 
     const recentEnergy = completions.slice(-10).map(c => c.energyAfter || 3);
     const avgEnergy = recentEnergy.reduce((sum, e) => sum + e, 0) / recentEnergy.length;
-    const trend = recentEnergy.length > 1 ?
-      (recentEnergy[recentEnergy.length - 1] > recentEnergy[0] ? 'increasing' : 'stable') : 'stable';
+    const trend =
+      recentEnergy.length > 1
+        ? recentEnergy[recentEnergy.length - 1] > recentEnergy[0]
+          ? 'increasing'
+          : 'stable'
+        : 'stable';
 
     return `Recent avg: ${avgEnergy.toFixed(1)}/5, Trend: ${trend}`;
   }
@@ -131,8 +156,8 @@ export class MemorySync {
 
     // Find nodes that are ready (prerequisites met) but not completed
     const readyNodes = frontierNodes.filter(node => {
-      const prereqsMet = !node.prerequisites ||
-        node.prerequisites.every(prereq => completedTopics.includes(prereq));
+      const prereqsMet =
+        !node.prerequisites || node.prerequisites.every(prereq => completedTopics.includes(prereq));
       const notCompleted = !completedTopics.includes(node.title);
       return prereqsMet && notCompleted;
     });

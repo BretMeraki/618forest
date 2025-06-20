@@ -4,6 +4,10 @@
  */
 
 import { parseTimeWithContext } from './utils/time-helpers.js';
+import { v4 as uuidv4 } from 'uuid';
+import { getForestLogger } from './winston-logger.js';
+
+const logger = getForestLogger({ module: 'ScheduleGenerator' });
 
 export class ScheduleGenerator {
   constructor(dataPersistence, projectManagement) {
@@ -11,7 +15,13 @@ export class ScheduleGenerator {
     this.projectManagement = projectManagement;
   }
 
-  async generateDailySchedule(dateStr = null, energyLevel = 3, availableHours = null, focusType = 'mixed', context = 'User requested schedule') {
+  async generateDailySchedule(
+    dateStr = null,
+    energyLevel = 3,
+    availableHours = null,
+    focusType = 'mixed',
+    context = 'User requested schedule'
+  ) {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
       const config = await this.dataPersistence.loadProjectData(projectId, 'config.json');
@@ -37,36 +47,55 @@ export class ScheduleGenerator {
       const scheduleText = this.formatScheduleForDisplay(schedule);
 
       return {
-        content: [{
-          type: 'text',
-          text: `📅 **Daily Schedule Generated - ${targetDate}**\n\n${scheduleText}\n\n` +
-               `🎯 **Focus**: ${focusType}\n` +
-               `⚡ **Energy Level**: ${energyLevel}/5\n` +
-               `📋 **Total Blocks**: ${schedule.blocks?.length || 0}\n\n` +
-               '✅ Ready to start your structured day!'
-        }],
+        content: [
+          {
+            type: 'text',
+            text:
+              `📅 **Daily Schedule Generated - ${targetDate}**\n\n${scheduleText}\n\n` +
+              `🎯 **Focus**: ${focusType}\n` +
+              `⚡ **Energy Level**: ${energyLevel}/5\n` +
+              `📋 **Total Blocks**: ${schedule.blocks?.length || 0}\n\n` +
+              '✅ Ready to start your structured day!',
+          },
+        ],
         daily_schedule: schedule,
-        date: targetDate
+        date: targetDate,
       };
     } catch (error) {
-      await this.dataPersistence.logError('generateDailySchedule', error, { dateStr, energyLevel, focusType });
+      await this.dataPersistence.logError('generateDailySchedule', error, {
+        dateStr,
+        energyLevel,
+        focusType,
+      });
       return {
-        content: [{
-          type: 'text',
-          text: `Error generating schedule: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error generating schedule: ${error.message}`,
+          },
+        ],
       };
     }
   }
 
-  async generateComprehensiveSchedule(config, projectId, date, energyLevel, availableHours, focusType, context) {
+  async generateComprehensiveSchedule(
+    config,
+    projectId,
+    date,
+    energyLevel,
+    availableHours,
+    focusType,
+    context
+  ) {
     const preferences = config.life_structure_preferences || {};
     const constraints = config.constraints || {};
 
     // Parse time preferences
     const wakeTime = parseTimeWithContext(preferences.wake_time || '7:00 AM', 'wake');
     const sleepTime = parseTimeWithContext(preferences.sleep_time || '10:00 PM', 'sleep');
-    const mealTimes = this.parseMealTimes(preferences.meal_times || ['8:00 AM', '12:00 PM', '6:00 PM']);
+    const mealTimes = this.parseMealTimes(
+      preferences.meal_times || ['8:00 AM', '12:00 PM', '6:00 PM']
+    );
 
     // Get available learning tasks
     const htaData = await this.loadPathHTA(projectId, config.activePath || 'general');
@@ -94,15 +123,15 @@ export class ScheduleGenerator {
       context,
       preferences,
       blocks,
-      generated: new Date().toISOString()
+      generated: new Date().toISOString(),
     };
   }
 
   async loadPathHTA(projectId, pathName) {
     if (pathName === 'general') {
-      return await this.dataPersistence.loadProjectData(projectId, 'hta.json') || {};
+      return (await this.dataPersistence.loadProjectData(projectId, 'hta.json')) || {};
     } else {
-      return await this.dataPersistence.loadPathData(projectId, pathName, 'hta.json') || {};
+      return (await this.dataPersistence.loadPathData(projectId, pathName, 'hta.json')) || {};
     }
   }
 
@@ -110,29 +139,45 @@ export class ScheduleGenerator {
     const nodes = htaData.frontierNodes || [];
     const completedNodeIds = nodes.filter(n => n.completed).map(n => n.id);
 
-    return nodes.filter(node => {
-      if (node.completed) {return false;}
+    return nodes
+      .filter(node => {
+        if (node.completed) {
+          return false;
+        }
 
-      if (node.prerequisites && node.prerequisites.length > 0) {
-        return node.prerequisites.every(prereq =>
-          completedNodeIds.includes(prereq) ||
-          nodes.some(n => n.title === prereq && n.completed)
-        );
-      }
+        if (node.prerequisites && node.prerequisites.length > 0) {
+          return node.prerequisites.every(
+            prereq =>
+              completedNodeIds.includes(prereq) ||
+              nodes.some(n => n.title === prereq && n.completed)
+          );
+        }
 
-      return true;
-    }).sort((a, b) => (b.priority || 200) - (a.priority || 200));
+        return true;
+      })
+      .sort((a, b) => (b.priority || 200) - (a.priority || 200));
   }
 
-  createTimeBlocks(wakeTime, sleepTime, mealTimes, readyTasks, energyLevel, focusType, preferences, constraints, availableHours) {
+  createTimeBlocks(
+    wakeTime,
+    sleepTime,
+    mealTimes,
+    readyTasks,
+    energyLevel,
+    focusType,
+    preferences,
+    constraints,
+    availableHours
+  ) {
     const blocks = [];
     let currentTime = wakeTime;
     const endTime = sleepTime;
     let blockId = 1;
 
     // Parse available hours if provided
-    const priorityHours = availableHours ?
-      availableHours.split(',').map(h => parseInt(h.trim(), 10)) : [];
+    const priorityHours = availableHours
+      ? availableHours.split(',').map(h => parseInt(h.trim(), 10))
+      : [];
 
     // Create blocks from wake to sleep
     while (currentTime < endTime) {
@@ -150,7 +195,7 @@ export class ScheduleGenerator {
           startTime: this.formatTime(currentTime),
           duration: 45, // 45 minutes for meals
           completed: false,
-          priority: 'high'
+          priority: 'high',
         });
         currentTime += 45;
       } else if (isAvailableHour && (readyTasks.length > 0 || focusType === 'learning')) {
@@ -169,13 +214,15 @@ export class ScheduleGenerator {
           taskId: task.id,
           branch: task.branch,
           completed: false,
-          priority: task.priority || 200
+          priority: task.priority || 200,
         });
 
         // Remove task from available list to avoid duplication (only if it was a real task)
         if (task.id !== 'explore_general') {
           const taskIndex = readyTasks.indexOf(task);
-          if (taskIndex > -1) {readyTasks.splice(taskIndex, 1);}
+          if (taskIndex > -1) {
+            readyTasks.splice(taskIndex, 1);
+          }
         }
 
         currentTime += duration;
@@ -189,7 +236,7 @@ export class ScheduleGenerator {
             startTime: this.formatTime(currentTime),
             duration: this.getBreakDuration(preferences),
             completed: false,
-            priority: 'medium'
+            priority: 'medium',
           });
           currentTime += this.getBreakDuration(preferences);
         }
@@ -203,13 +250,15 @@ export class ScheduleGenerator {
           startTime: this.formatTime(currentTime),
           duration: habitBlock.duration,
           completed: false,
-          priority: 'low'
+          priority: 'low',
         });
         currentTime += habitBlock.duration;
       }
 
       // Safety check to prevent infinite loops
-      if (blocks.length > 50) {break;}
+      if (blocks.length > 50) {
+        break;
+      }
     }
 
     return blocks;
@@ -220,12 +269,36 @@ export class ScheduleGenerator {
       // Generate exploration tasks based on time and energy
       const hour = Math.floor(currentTime / 60);
       const explorationTasks = [
-        { title: 'Explore: Industry Research', description: 'Research latest trends and opportunities', difficulty: 2 },
-        { title: 'Explore: Skill Practice', description: 'Practice core skills with new challenges', difficulty: 3 },
-        { title: 'Explore: Network Building', description: 'Connect with professionals and communities', difficulty: 2 },
-        { title: 'Explore: Portfolio Development', description: 'Create or improve portfolio pieces', difficulty: 3 },
-        { title: 'Explore: Learning Resources', description: 'Discover new courses, books, or tutorials', difficulty: 1 },
-        { title: 'Review & Planning', description: 'Review progress and plan next steps', difficulty: 1 }
+        {
+          title: 'Explore: Industry Research',
+          description: 'Research latest trends and opportunities',
+          difficulty: 2,
+        },
+        {
+          title: 'Explore: Skill Practice',
+          description: 'Practice core skills with new challenges',
+          difficulty: 3,
+        },
+        {
+          title: 'Explore: Network Building',
+          description: 'Connect with professionals and communities',
+          difficulty: 2,
+        },
+        {
+          title: 'Explore: Portfolio Development',
+          description: 'Create or improve portfolio pieces',
+          difficulty: 3,
+        },
+        {
+          title: 'Explore: Learning Resources',
+          description: 'Discover new courses, books, or tutorials',
+          difficulty: 1,
+        },
+        {
+          title: 'Review & Planning',
+          description: 'Review progress and plan next steps',
+          difficulty: 1,
+        },
       ];
 
       // Select based on energy and time
@@ -241,7 +314,7 @@ export class ScheduleGenerator {
         title: selectedTask.title,
         description: selectedTask.description,
         difficulty: selectedTask.difficulty,
-        duration: energyLevel >= 4 ? 45 : 30 // This is already a number
+        duration: energyLevel >= 4 ? 45 : 30, // This is already a number
       };
     }
 
@@ -270,22 +343,33 @@ export class ScheduleGenerator {
   }
 
   calculateTaskDuration(task, preferences, energyLevel) {
-    const baseDuration = typeof task.duration === 'number' ? task.duration : this.parseDuration(task.duration || '30 minutes');
+    const baseDuration =
+      typeof task.duration === 'number'
+        ? task.duration
+        : this.parseDuration(task.duration || '30 minutes');
     const focusDuration = preferences.focus_duration || 'flexible';
 
     // Adjust based on focus preference and energy
-    if (focusDuration.includes('25')) {return 25;} // Pomodoro
-    if (focusDuration.includes('1 hour')) {return 60;}
-    if (focusDuration.includes('2 hour')) {return Math.min(120, baseDuration * 2);}
+    if (focusDuration.includes('25')) {
+      return 25;
+    } // Pomodoro
+    if (focusDuration.includes('1 hour')) {
+      return 60;
+    }
+    if (focusDuration.includes('2 hour')) {
+      return Math.min(120, baseDuration * 2);
+    }
 
     // Adjust based on energy level
-    const energyMultiplier = energyLevel >= 4 ? 1.5 : (energyLevel <= 2 ? 0.7 : 1.0);
+    const energyMultiplier = energyLevel >= 4 ? 1.5 : energyLevel <= 2 ? 0.7 : 1.0;
 
     return Math.max(15, Math.min(120, Math.round(baseDuration * energyMultiplier)));
   }
 
   parseTime(timeStr) {
-    if (!timeStr) {return 420;} // Default 7:00 AM in minutes
+    if (!timeStr) {
+      return 420;
+    } // Default 7:00 AM in minutes
 
     const [time, period] = timeStr.split(' ');
     const [hours, minutes] = time.split(':').map(Number);
@@ -305,7 +389,7 @@ export class ScheduleGenerator {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
+    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
 
     return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
   }
@@ -315,26 +399,38 @@ export class ScheduleGenerator {
   }
 
   isMealTime(currentTime, mealTimes) {
-    return mealTimes.some(mealTime =>
-      Math.abs(currentTime - mealTime) <= 15 // Within 15 minutes of meal time
+    return mealTimes.some(
+      mealTime => Math.abs(currentTime - mealTime) <= 15 // Within 15 minutes of meal time
     );
   }
 
   getMealType(currentTime, mealTimes) {
     const hour = Math.floor(currentTime / 60);
 
-    if (hour <= 10) {return 'Breakfast';}
-    if (hour <= 14) {return 'Lunch';}
-    if (hour <= 16) {return 'Snack';}
+    if (hour <= 10) {
+      return 'Breakfast';
+    }
+    if (hour <= 14) {
+      return 'Lunch';
+    }
+    if (hour <= 16) {
+      return 'Snack';
+    }
     return 'Dinner';
   }
 
   getBreakDuration(preferences) {
     const breakPref = preferences.break_preferences || 'every hour';
 
-    if (breakPref.includes('15')) {return 15;}
-    if (breakPref.includes('10')) {return 10;}
-    if (breakPref.includes('5')) {return 5;}
+    if (breakPref.includes('15')) {
+      return 15;
+    }
+    if (breakPref.includes('10')) {
+      return 10;
+    }
+    if (breakPref.includes('5')) {
+      return 5;
+    }
 
     return 15; // Default 15 minute break
   }
@@ -377,22 +473,26 @@ export class ScheduleGenerator {
   }
 
   parseDuration(durationStr) {
-    if (typeof durationStr === 'number') {return durationStr;}
+    if (typeof durationStr === 'number') {
+      return durationStr;
+    }
     if (!durationStr || typeof durationStr !== 'string') {
-      console.log('parseDuration received non-string:', typeof durationStr, durationStr);
+      logger.debug('parseDuration received non-string', { type: typeof durationStr, value: durationStr });
       return 30;
     }
 
     try {
       const matches = durationStr.match(/(\d+)\s*(minute|hour)/i);
-      if (!matches) {return 30;} // Default 30 minutes
+      if (!matches) {
+        return 30;
+      } // Default 30 minutes
 
       const value = parseInt(matches[1], 10);
       const unit = matches[2].toLowerCase();
 
       return unit.startsWith('hour') ? value * 60 : value;
     } catch (error) {
-      console.log('parseDuration error with:', typeof durationStr, durationStr, error);
+      logger.warn('parseDuration error', { type: typeof durationStr, value: durationStr, error: error.message });
       return 30;
     }
   }
@@ -412,12 +512,12 @@ export class ScheduleGenerator {
 
   getBlockIcon(blockType) {
     const icons = {
-      'learning': '📚',
-      'meal': '🍽️',
-      'break': '☕',
-      'habit': '🔄',
-      'exercise': '💪',
-      'work': '💼'
+      learning: '📚',
+      meal: '🍽️',
+      break: '☕',
+      habit: '🔄',
+      exercise: '💪',
+      work: '💼',
     };
 
     return icons[blockType] || '📋';

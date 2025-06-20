@@ -25,7 +25,7 @@ const customLevels = {
     perf: 5, // Performance monitoring
     memory: 6, // Memory usage tracking
     event: 7, // System events (archiving, reasoning, etc.)
-    user: 8 // User actions and interactions
+    user: 8, // User actions and interactions
   },
   colors: {
     error: 'red',
@@ -36,8 +36,8 @@ const customLevels = {
     perf: 'magenta',
     memory: 'gray',
     event: 'brightBlue',
-    user: 'brightGreen'
-  }
+    user: 'brightGreen',
+  },
 };
 
 // Add colors to winston
@@ -64,7 +64,7 @@ export function createWinstonLogger(options = {}) {
     logDirectory = defaultLogDirectory,
     maxFileSize = 50 * 1024 * 1024, // 50MB
     maxFiles = 30, // Keep 30 days of logs
-    enableRealTimeLogging = true
+    enableRealTimeLogging = true,
   } = options;
 
   // Debug logging for path issues and fix absolute root paths
@@ -125,7 +125,7 @@ export function createWinstonLogger(options = {}) {
   // Custom format for structured logging
   const customFormat = winston.format.combine(
     winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss.SSS'
+      format: 'YYYY-MM-DD HH:mm:ss.SSS',
     }),
     winston.format.errors({ stack: true }),
     winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
@@ -154,8 +154,11 @@ export function createWinstonLogger(options = {}) {
       }
 
       // Add metadata if present
-      const metaKeys = Object.keys(meta).filter(key =>
-        !['module', 'component', 'userId', 'projectId', 'timestamp', 'level', 'message'].includes(key)
+      const metaKeys = Object.keys(meta).filter(
+        key =>
+          !['module', 'component', 'userId', 'projectId', 'timestamp', 'level', 'message'].includes(
+            key
+          )
       );
 
       if (metaKeys.length > 0) {
@@ -181,7 +184,7 @@ export function createWinstonLogger(options = {}) {
   const consoleFormat = winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp({
-      format: 'HH:mm:ss.SSS'
+      format: 'HH:mm:ss.SSS',
     }),
     winston.format.printf(({ timestamp, level, message, ...meta }) => {
       let logEntry = `${timestamp} ${level}`;
@@ -198,71 +201,84 @@ export function createWinstonLogger(options = {}) {
   // Create transports array
   const transports = [];
 
-  // Console transport (only if running in a real TTY to avoid MCP protocol interference)
-  if (enableConsole && isInteractive) {
-    transports.push(new winston.transports.Console({
-      level: logLevel,
-      format: consoleFormat,
-      handleExceptions: true,
-      handleRejections: true
-    }));
+  // Console transport
+  // Enabled only when explicitly requested, in an interactive terminal, AND not in a test environment
+  if (enableConsole && isInteractive && process.env.NODE_ENV !== 'test') {
+    transports.push(
+      new winston.transports.Console({
+        level: logLevel,
+        format: consoleFormat,
+        handleExceptions: true,
+        handleRejections: true,
+      })
+    );
   }
 
   // File transports
   if (enableFileLogging) {
     // Main application log (human readable)
-    transports.push(new winston.transports.File({
-      filename: path.join(finalLogDirectory, 'forest-app.log'),
-      level: logLevel,
-      format: customFormat,
-      maxsize: maxFileSize,
-      maxFiles,
-      tailable: true
-    }));
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(finalLogDirectory, 'forest-app.log'),
+        level: logLevel,
+        format: customFormat,
+        maxsize: maxFileSize,
+        maxFiles,
+        tailable: true,
+      })
+    );
 
     // Structured JSON log for machine processing
-    transports.push(new winston.transports.File({
-      filename: path.join(finalLogDirectory, 'forest-structured.json'),
-      level: logLevel,
-      format: jsonFormat,
-      maxsize: maxFileSize,
-      maxFiles,
-      tailable: true
-    }));
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(finalLogDirectory, 'forest-structured.json'),
+        level: logLevel,
+        format: jsonFormat,
+        maxsize: maxFileSize,
+        maxFiles,
+        tailable: true,
+      })
+    );
 
     // Error-only log
-    transports.push(new winston.transports.File({
-      filename: path.join(finalLogDirectory, 'forest-errors.log'),
-      level: 'error',
-      format: customFormat,
-      maxsize: maxFileSize,
-      maxFiles,
-      tailable: true
-    }));
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(finalLogDirectory, 'forest-errors.log'),
+        level: 'error',
+        format: customFormat,
+        maxsize: maxFileSize,
+        maxFiles,
+        tailable: true,
+      })
+    );
 
     // Performance log
-    transports.push(new winston.transports.File({
-      filename: path.join(finalLogDirectory, 'forest-performance.log'),
-      level: 'perf',
-      format: jsonFormat,
-      maxsize: maxFileSize,
-      maxFiles,
-      tailable: true
-    }));
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(finalLogDirectory, 'forest-performance.log'),
+        level: 'perf',
+        format: jsonFormat,
+        maxsize: maxFileSize,
+        maxFiles,
+        tailable: true,
+      })
+    );
 
     // Real-time events log (for live monitoring)
     if (enableRealTimeLogging) {
-      transports.push(new winston.transports.File({
-        filename: path.join(finalLogDirectory, 'forest-realtime.log'),
-        level: 'event',
-        format: winston.format.combine(
-          winston.format.timestamp(),
-          winston.format.printf(({ timestamp, level, message, ...meta }) => {
-            return JSON.stringify({ timestamp, level, message, ...meta });
-          })
-        ),
-        options: { flags: 'a' } // Append mode for real-time watching
-      }));
+      transports.push(
+        new winston.transports.File({
+          filename: path.join(finalLogDirectory, 'forest-realtime.log'),
+          level: 'event',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.printf(({ timestamp, level, message, ...meta }) => {
+              return JSON.stringify({ timestamp, level, message, ...meta });
+            })
+          ),
+          options: { flags: 'a' }, // Append mode for real-time watching
+        })
+      );
     }
   }
 
@@ -272,7 +288,7 @@ export function createWinstonLogger(options = {}) {
     level: logLevel,
     format: customFormat,
     transports,
-    exitOnError: false
+    exitOnError: false,
   });
 
   // Add system context to all logs
@@ -283,7 +299,7 @@ export function createWinstonLogger(options = {}) {
       pid: process.pid,
       timestamp: new Date().toISOString(),
       hostname: os.hostname(),
-      nodeVersion: process.version
+      nodeVersion: process.version,
     };
 
     return originalLog(level, message, enrichedMeta);
@@ -322,8 +338,8 @@ export class ForestLogger {
         cpus: os.cpus().length,
         totalMemory: this.formatBytes(os.totalmem()),
         freeMemory: this.formatBytes(os.freemem()),
-        uptime: process.uptime()
-      }
+        uptime: process.uptime(),
+      },
     });
   }
 
@@ -341,7 +357,7 @@ export class ForestLogger {
           heapTotal: this.formatBytes(memUsage.heapTotal),
           external: this.formatBytes(memUsage.external),
           rss: this.formatBytes(memUsage.rss),
-          threshold: this.formatBytes(this.memoryThreshold)
+          threshold: this.formatBytes(this.memoryThreshold),
         });
       }
 
@@ -351,7 +367,7 @@ export class ForestLogger {
           heapUsed: this.formatBytes(memUsage.heapUsed),
           heapTotal: this.formatBytes(memUsage.heapTotal),
           external: this.formatBytes(memUsage.external),
-          rss: this.formatBytes(memUsage.rss)
+          rss: this.formatBytes(memUsage.rss),
         });
       }
     }, 30000); // Check every 30 seconds
@@ -364,7 +380,7 @@ export class ForestLogger {
         uptime: process.uptime(),
         freeMemory: this.formatBytes(os.freemem()),
         activeHandles: process._getActiveHandles?.()?.length || 0,
-        activeRequests: process._getActiveRequests?.()?.length || 0
+        activeRequests: process._getActiveRequests?.()?.length || 0,
       });
     }, 60000); // Every minute
   }
@@ -394,7 +410,7 @@ export class ForestLogger {
       perf: (message, meta = {}) => this.perf(message, { ...context, ...meta }),
       memory: (message, meta = {}) => this.memory(message, { ...context, ...meta }),
       event: (message, meta = {}) => this.event(message, { ...context, ...meta }),
-      user: (message, meta = {}) => this.user(message, { ...context, ...meta })
+      user: (message, meta = {}) => this.user(message, { ...context, ...meta }),
     };
   }
 
@@ -404,7 +420,7 @@ export class ForestLogger {
   startTimer(label) {
     this.performanceMetrics.set(label, {
       startTime: process.hrtime.bigint(),
-      startCpuUsage: process.cpuUsage()
+      startCpuUsage: process.cpuUsage(),
     });
     this.trace(`Timer started: ${label}`, { module: 'ForestLogger', timer: label });
   }
@@ -428,9 +444,9 @@ export class ForestLogger {
       duration: `${duration.toFixed(2)}ms`,
       cpuUsage: {
         user: `${endCpuUsage.user / 1000}ms`,
-        system: `${endCpuUsage.system / 1000}ms`
+        system: `${endCpuUsage.system / 1000}ms`,
       },
-      ...meta
+      ...meta,
     });
 
     return duration;
@@ -445,7 +461,7 @@ export class ForestLogger {
       projectId,
       itemsArchived: results.learningHistory?.itemsArchived || 0,
       branchesArchived: results.htaData?.branchesArchived || 0,
-      wisdomGenerated: results.wisdomGenerated?.length || 0
+      wisdomGenerated: results.wisdomGenerated?.length || 0,
     });
   }
 
@@ -454,7 +470,7 @@ export class ForestLogger {
       component: 'SystemClock',
       analysisType: type,
       projectId,
-      insightsGenerated: insights?.length || 0
+      insightsGenerated: insights?.length || 0,
     });
   }
 
@@ -464,7 +480,7 @@ export class ForestLogger {
       action,
       projectId,
       userId,
-      ...details
+      ...details,
     });
   }
 
@@ -476,7 +492,7 @@ export class ForestLogger {
       outcome: outcome.outcome,
       breakthrough: outcome.breakthrough,
       difficulty: outcome.difficultyRating,
-      engagement: outcome.engagementLevel
+      engagement: outcome.engagementLevel,
     });
   }
 
@@ -523,7 +539,9 @@ export class ForestLogger {
    * Utility methods
    */
   formatBytes(bytes) {
-    if (bytes === 0) {return '0 Bytes';}
+    if (bytes === 0) {
+      return '0 Bytes';
+    }
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -541,11 +559,11 @@ export class ForestLogger {
         heapUsed: this.formatBytes(memUsage.heapUsed),
         heapTotal: this.formatBytes(memUsage.heapTotal),
         external: this.formatBytes(memUsage.external),
-        rss: this.formatBytes(memUsage.rss)
+        rss: this.formatBytes(memUsage.rss),
       },
       systemLoad: os.loadavg(),
       freeMemory: this.formatBytes(os.freemem()),
-      activeTimers: this.performanceMetrics.size
+      activeTimers: this.performanceMetrics.size,
     };
   }
 
@@ -556,7 +574,7 @@ export class ForestLogger {
     this.info('Forest.os logging system shutting down', {
       module: 'ForestLogger',
       uptime: process.uptime(),
-      finalStats: this.getStats()
+      finalStats: this.getStats(),
     });
 
     this.stopMonitoring();
@@ -579,6 +597,10 @@ export function getForestLogger(options = {}) {
   return forestLoggerInstance;
 }
 
+// Export a default singleton for modules that expect a named 'forestLogger' export.
+// This avoids outdated imports breaking at runtime and keeps backward compatibility.
+export const forestLogger = getForestLogger();
+
 /**
  * Initialize Forest logging system
  */
@@ -591,7 +613,7 @@ export function initForestLogging(options = {}) {
     error: console.error,
     warn: console.warn,
     info: console.info,
-    debug: console.debug
+    debug: console.debug,
   };
 
   console.log = (...args) => {
@@ -620,12 +642,12 @@ export function initForestLogging(options = {}) {
   };
 
   // Handle process events
-  process.on('uncaughtException', (error) => {
+  process.on('uncaughtException', error => {
     logger.error('Uncaught Exception', {
       module: 'Process',
       error: error.message,
       stack: error.stack,
-      code: error.code
+      code: error.code,
     });
   });
 
@@ -633,7 +655,7 @@ export function initForestLogging(options = {}) {
     logger.error('Unhandled Promise Rejection', {
       module: 'Process',
       reason: reason instanceof Error ? reason.message : String(reason),
-      stack: reason instanceof Error ? reason.stack : undefined
+      stack: reason instanceof Error ? reason.stack : undefined,
     });
   });
 

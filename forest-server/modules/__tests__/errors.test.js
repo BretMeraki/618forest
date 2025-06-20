@@ -11,7 +11,7 @@ import {
   ToolDispatchError,
   ValidationError,
   enhanceError,
-  extractErrorInfo
+  extractErrorInfo,
 } from '../errors.js';
 
 describe('ForestError', () => {
@@ -38,7 +38,7 @@ describe('ForestError', () => {
     const cause = new Error('Cause error');
     const error = new ForestError('Test error', {
       cause,
-      context: { key: 'value' }
+      context: { key: 'value' },
     });
 
     const json = error.toJSON();
@@ -64,7 +64,7 @@ describe('ProjectConfigurationError', () => {
 
   test('should include operation context', () => {
     const error = new ProjectConfigurationError('project123', 'config.json', null, {
-      operation: 'loadProject'
+      operation: 'loadProject',
     });
 
     expect(error.context.operation).toBe('loadProject');
@@ -134,7 +134,7 @@ describe('enhanceError', () => {
 describe('extractErrorInfo', () => {
   test('should extract info from ForestError', () => {
     const error = new ForestError('Test error', {
-      context: { key: 'value' }
+      context: { key: 'value' },
     });
     const info = extractErrorInfo(error);
 

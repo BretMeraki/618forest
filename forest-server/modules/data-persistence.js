@@ -18,7 +18,13 @@ export class DataPersistence {
   }
 
   getPathDir(projectId, pathName) {
-    return FileSystem.join(this.dataDir, DIRECTORIES.PROJECTS, projectId, DIRECTORIES.PATHS, pathName);
+    return FileSystem.join(
+      this.dataDir,
+      DIRECTORIES.PROJECTS,
+      projectId,
+      DIRECTORIES.PATHS,
+      pathName
+    );
   }
 
   async loadProjectData(projectId, filename) {
@@ -162,7 +168,7 @@ export class DataPersistence {
       operation,
       error: error.message,
       stack: error.stack,
-      context
+      context,
     };
 
     try {
@@ -266,12 +272,12 @@ export class DataPersistence {
    */
   _getDefaultData(filename, projectId = '', pathName = '') {
     switch (filename) {
-    case FILE_NAMES.LEARNING_HISTORY:
-      return { completions: [], insights: [] };
-    case FILE_NAMES.HTA:
-      return { tree: null, collaborative_sessions: [] };
-    default:
-      break;
+      case FILE_NAMES.LEARNING_HISTORY:
+        return { completions: [], insights: [] };
+      case FILE_NAMES.HTA:
+        return { tree: null, collaborative_sessions: [] };
+      default:
+        break;
     }
 
     if (filename.startsWith('day_')) {

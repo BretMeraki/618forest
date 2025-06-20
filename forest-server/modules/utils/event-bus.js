@@ -5,6 +5,11 @@
  * without direct knowledge of each other.
  */
 
+import { getForestLogger } from '../winston-logger.js';
+
+// Singleton logger for EventBus
+const logger = getForestLogger({ module: 'EventBus' });
+
 class EventBus {
   constructor() {
     this.listeners = {};
@@ -25,11 +30,11 @@ class EventBus {
     this.listeners[event].push({
       callback,
       listenerName,
-      registeredAt: new Date().toISOString()
+      registeredAt: new Date().toISOString(),
     });
 
     if (this.debugMode) {
-      console.log(`🎧 Event listener "${listenerName}" registered for "${event}"`);
+      logger.debug(`🎧 Event listener "${listenerName}" registered for "${event}"`);
     }
   }
 
@@ -41,7 +46,7 @@ class EventBus {
    */
   emit(event, data = {}, emitterName = 'unknown') {
     if (this.debugMode) {
-      console.log(`📢 Event "${event}" emitted by "${emitterName}" with data:`, data);
+      logger.trace(`📢 Event "${event}" emitted by "${emitterName}"`, { data });
     }
 
     if (this.listeners[event]) {
@@ -49,24 +54,27 @@ class EventBus {
         event,
         emittedAt: new Date().toISOString(),
         emittedBy: emitterName,
-        listenerCount: this.listeners[event].length
+        listenerCount: this.listeners[event].length,
       };
 
       this.listeners[event].forEach(({ callback, listenerName }) => {
         try {
           if (this.debugMode) {
-            console.log(`🔄 Calling listener "${listenerName}" for event "${event}"`);
+            logger.trace(`🔄 Calling listener "${listenerName}" for event "${event}"`);
           }
 
           // Pass both the data and metadata to listeners
           callback({ ...data, _eventMetadata: eventMetadata });
         } catch (error) {
-          console.error(`❌ Error in event listener "${listenerName}" for event "${event}":`, error.message);
+          console.error(
+            `❌ Error in event listener "${listenerName}" for event "${event}":`,
+            error.message
+          );
           // Continue processing other listeners even if one fails
         }
       });
     } else if (this.debugMode) {
-      console.log(`📢 Event "${event}" emitted but no listeners registered`);
+      logger.debug(`📢 Event "${event}" emitted but no listeners registered`);
     }
   }
 
@@ -97,7 +105,7 @@ class EventBus {
     const removed = originalLength - this.listeners[event].length;
 
     if (this.debugMode && removed > 0) {
-      console.log(`🗑️ Removed ${removed} listener(s) for event "${event}"`);
+      logger.debug(`🗑️ Removed ${removed} listener(s) for event "${event}"`);
     }
 
     return removed > 0;
@@ -114,8 +122,8 @@ class EventBus {
         listenerCount: listeners.length,
         listeners: listeners.map(l => ({
           name: l.listenerName,
-          registeredAt: l.registeredAt
-        }))
+          registeredAt: l.registeredAt,
+        })),
       };
     }
     return summary;
@@ -127,7 +135,7 @@ class EventBus {
    */
   setDebugMode(enabled) {
     this.debugMode = enabled;
-    console.log(`🐛 Event bus debug mode ${enabled ? 'enabled' : 'disabled'}`);
+    logger.info(`🐛 Event bus debug mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -137,7 +145,7 @@ class EventBus {
     const eventCount = Object.keys(this.listeners).length;
     this.listeners = {};
     if (this.debugMode) {
-      console.log(`🧹 Cleared all listeners for ${eventCount} events`);
+      logger.debug(`🧹 Cleared all listeners for ${eventCount} events`);
     }
   }
 }

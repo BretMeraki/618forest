@@ -6,7 +6,9 @@
 import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { getDatedLogPath, writeJsonLine } from './logger-utils.js';
 import { ToolRegistry } from './utils/tool-registry.js';
-import { debugLogger } from './utils/debug-logger.js';
+import { getForestLogger } from './winston-logger.js';
+
+const logger = getForestLogger({ module: 'ToolRouter' });
 
 export class ToolRouter {
   constructor(server, forestServer) {
@@ -30,21 +32,23 @@ export class ToolRouter {
         tool: toolName,
         argKeys: Object.keys(args || {}),
         argCount: Object.keys(args || {}).length,
-        stack: (new Error().stack?.split('\n').slice(3, 15) || []).map((s) => s.trim()),
+        stack: (new Error().stack?.split('\n').slice(3, 15) || []).map(s => s.trim()),
         pid: process.pid,
         memory: process.memoryUsage(),
         uptime: process.uptime(),
         env: {
           NODE_ENV: process.env.NODE_ENV,
-          DEBUG: process.env.DEBUG
+          DEBUG: process.env.DEBUG,
         },
         // Capture detailed argument info (truncated for safety)
         argsPreview: this.truncateArgsForLogging(args),
-        logTime: startTime
+        logTime: startTime,
       };
 
       writeJsonLine(this.stackTraceLogPath, entry);
-      console.error(`[STACK-TRACE] Written to ${this.stackTraceLogPath} (${Date.now() - startTime}ms)`);
+      console.error(
+        `[STACK-TRACE] Written to ${this.stackTraceLogPath} (${Date.now() - startTime}ms)`
+      );
     } catch (err) {
       console.error(`[STACK-TRACE] Error writing log: ${err.message}`);
       console.error('[STACK-TRACE] Stack trace of logging error:', err.stack);
@@ -55,7 +59,7 @@ export class ToolRouter {
           type: 'stack-trace-error',
           tool: toolName,
           error: err.message,
-          errorStack: err.stack?.split('\n')?.slice(0, 5)
+          errorStack: err.stack?.split('\n')?.slice(0, 5),
         };
         writeJsonLine(this.stackTraceLogPath, errorEntry);
       } catch (secondErr) {
@@ -66,7 +70,9 @@ export class ToolRouter {
 
   // Helper to safely truncate arguments for logging
   truncateArgsForLogging(args) {
-    if (!args || typeof args !== 'object') {return args;}
+    if (!args || typeof args !== 'object') {
+      return args;
+    }
 
     const preview = {};
     for (const [key, value] of Object.entries(args)) {
@@ -94,9 +100,15 @@ export class ToolRouter {
 
     // ENHANCED MCP TOOL LOGGING - only in terminal mode
     if (isTerminal) {
-      console.error(`🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`);
-      console.log(`🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`);
-      console.info(`🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`);
+      console.error(
+        `🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`
+      );
+      logger.debug(
+        `🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`
+      );
+      console.info(
+        `🚀 [MCP-CALL] Tool: ${toolName} | ID: ${executionId} | Args: ${JSON.stringify(Object.keys(args || {}))}`
+      );
     }
 
     // Trigger stack-trace logging for every call
@@ -119,9 +131,15 @@ export class ToolRouter {
       const executionEnd = Date.now();
       const executionDuration = executionEnd - executionStart;
       if (isTerminal) {
-        console.error(`[DISPATCH-${executionId}] Tool execution completed in ${executionDuration}ms`);
-        console.log(`✅ [MCP-COMPLETE] Tool: ${toolName} | ID: ${executionId} | Duration: ${executionDuration}ms`);
-        console.info(`✅ [MCP-COMPLETE] Tool: ${toolName} | ID: ${executionId} | Duration: ${executionDuration}ms`);
+        console.error(
+          `[DISPATCH-${executionId}] Tool execution completed in ${executionDuration}ms`
+        );
+        logger.debug(
+          `✅ [MCP-COMPLETE] Tool: ${toolName} | ID: ${executionId} | Duration: ${executionDuration}ms`
+        );
+        console.info(
+          `✅ [MCP-COMPLETE] Tool: ${toolName} | ID: ${executionId} | Duration: ${executionDuration}ms`
+        );
       }
     }
   }
@@ -132,191 +150,278 @@ export class ToolRouter {
    */
   registerAllTools() {
     // Project Management Tools
-    this.toolRegistry.register('create_project', (args) => this.forestServer.createProject(args), 'project');
-    this.toolRegistry.register('switch_project', (args) => this.forestServer.switchProject(args.project_id), 'project');
+    this.toolRegistry.register(
+      'create_project',
+      args => this.forestServer.createProject(args),
+      'project'
+    );
+    this.toolRegistry.register(
+      'switch_project',
+      args => this.forestServer.switchProject(args.project_id),
+      'project'
+    );
     this.toolRegistry.register('list_projects', () => this.forestServer.listProjects(), 'project');
-    this.toolRegistry.register('get_active_project', () => this.forestServer.getActiveProject(), 'project');
+    this.toolRegistry.register(
+      'get_active_project',
+      () => this.forestServer.getActiveProject(),
+      'project'
+    );
 
     // HTA Tree Tools
-    this.toolRegistry.register('build_hta_tree', (args) => this.forestServer.buildHTATree(
-      args.path_name,
-      args.learning_style || 'mixed',
-      args.focus_areas || []
-    ), 'hta');
+    this.toolRegistry.register(
+      'build_hta_tree',
+      args =>
+        this.forestServer.buildHTATree(
+          args.path_name,
+          args.learning_style || 'mixed',
+          args.focus_areas || []
+        ),
+      'hta'
+    );
     this.toolRegistry.register('get_hta_status', () => this.forestServer.getHTAStatus(), 'hta');
 
     // Scheduling Tools
-    this.toolRegistry.register('generate_daily_schedule', (args) => this.forestServer.generateDailySchedule(
-      args.date || null,
-      args.energy_level ?? 3,
-      args.available_hours || null,
-      args.focus_type || 'mixed',
-      args.schedule_request_context || 'User requested schedule'
-    ), 'scheduling');
-    this.toolRegistry.register('generate_integrated_schedule', (args) => this.forestServer.generateIntegratedSchedule(
-      args.date || null,
-      args.energy_level || 3
-    ), 'scheduling');
+    this.toolRegistry.register(
+      'generate_daily_schedule',
+      args =>
+        this.forestServer.generateDailySchedule(
+          args.date || null,
+          args.energy_level ?? 3,
+          args.available_hours || null,
+          args.focus_type || 'mixed',
+          args.schedule_request_context || 'User requested schedule'
+        ),
+      'scheduling'
+    );
+    this.toolRegistry.register(
+      'generate_integrated_schedule',
+      args =>
+        this.forestServer.generateIntegratedSchedule(args.date || null, args.energy_level || 3),
+      'scheduling'
+    );
 
     // Task Management Tools
-    this.toolRegistry.register('get_next_task', (args) => this.forestServer.getNextTask(
-      args.context_from_memory || '',
-      args.energy_level || 3,
-      args.time_available || '30 minutes'
-    ), 'tasks');
-    this.toolRegistry.register('complete_block', (args) => this.forestServer.completeBlock(args), 'tasks');
-    this.toolRegistry.register('complete_with_opportunities', (args) => this.forestServer.completeBlock({
-      ...args,
-      opportunityContext: {
-        engagementLevel: args.engagement_level || 5,
-        unexpectedResults: args.unexpected_results || [],
-        newSkillsRevealed: args.new_skills_revealed || [],
-        externalFeedback: args.external_feedback || [],
-        socialReactions: args.social_reactions || [],
-        viralPotential: args.viral_potential || false,
-        industryConnections: args.industry_connections || [],
-        serendipitousEvents: args.serendipitous_events || []
-      }
-    }), 'tasks');
-    this.toolRegistry.register('complete_block_and_next', async (args) => {
-      const completion = await this.forestServer.completeBlock(args);
-      // CRITICAL FIX: Pass completion context for momentum building
-      const momentumContext = args.breakthrough ?
-        `BREAKTHROUGH_CONTEXT: Task completed with breakthrough. Outcome: ${args.outcome}. Learned: ${args.learned || 'Key insights gained'}. Ready for advanced momentum building.` :
-        `Task completed. Outcome: ${args.outcome}. ${args.learned ? `Learned: ${args.learned}.` : ''} Looking for momentum building opportunities.`;
+    this.toolRegistry.register(
+      'get_next_task',
+      args =>
+        this.forestServer.getNextTask(
+          args.context_from_memory || '',
+          args.energy_level || 3,
+          args.time_available || '30 minutes'
+        ),
+      'tasks'
+    );
+    this.toolRegistry.register(
+      'complete_block',
+      args => this.forestServer.completeBlock(args),
+      'tasks'
+    );
+    this.toolRegistry.register(
+      'complete_with_opportunities',
+      args =>
+        this.forestServer.completeBlock({
+          ...args,
+          opportunityContext: {
+            engagementLevel: args.engagement_level || 5,
+            unexpectedResults: args.unexpected_results || [],
+            newSkillsRevealed: args.new_skills_revealed || [],
+            externalFeedback: args.external_feedback || [],
+            socialReactions: args.social_reactions || [],
+            viralPotential: args.viral_potential || false,
+            industryConnections: args.industry_connections || [],
+            serendipitousEvents: args.serendipitous_events || [],
+          },
+        }),
+      'tasks'
+    );
+    this.toolRegistry.register(
+      'complete_block_and_next',
+      async args => {
+        const completion = await this.forestServer.completeBlock(args);
+        // CRITICAL FIX: Pass completion context for momentum building
+        const momentumContext = args.breakthrough
+          ? `BREAKTHROUGH_CONTEXT: Task completed with breakthrough. Outcome: ${args.outcome}. Learned: ${args.learned || 'Key insights gained'}. Ready for advanced momentum building.`
+          : `Task completed. Outcome: ${args.outcome}. ${args.learned ? `Learned: ${args.learned}.` : ''} Looking for momentum building opportunities.`;
 
-      const next = await this.forestServer.getNextTask(momentumContext, args.energy_level || 3, '30 minutes');
-      return { ...completion, next_task: next };
-    }, 'tasks');
+        const next = await this.forestServer.getNextTask(
+          momentumContext,
+          args.energy_level || 3,
+          '30 minutes'
+        );
+        return { ...completion, next_task: next };
+      },
+      'tasks'
+    );
 
     // Strategy Tools
-    this.toolRegistry.register('evolve_strategy', (args) => this.forestServer.evolveStrategy(args.feedback || ''), 'strategy');
-    this.toolRegistry.register('current_status', () => this.forestServer.currentStatus(), 'strategy');
+    this.toolRegistry.register(
+      'evolve_strategy',
+      args => this.forestServer.evolveStrategy(args.feedback || ''),
+      'strategy'
+    );
+    this.toolRegistry.register(
+      'current_status',
+      () => this.forestServer.currentStatus(),
+      'strategy'
+    );
 
     // Analysis Tools
-    this.toolRegistry.register('analyze_performance', () => this.forestServer.analyzePerformance(), 'analytics');
-    this.toolRegistry.register('analyze_reasoning', (args) => this.forestServer.analyzeReasoning(args.include_detailed_analysis ?? true), 'analytics');
-    this.toolRegistry.register('analyze_complexity_evolution', () => this.forestServer.analyzeComplexityEvolution(), 'analytics');
-    this.toolRegistry.register('analyze_identity_transformation', () => this.forestServer.analyzeIdentityTransformation(), 'analytics');
+    this.toolRegistry.register(
+      'analyze_performance',
+      () => this.forestServer.analyzePerformance(),
+      'analytics'
+    );
+    this.toolRegistry.register(
+      'analyze_reasoning',
+      args => this.forestServer.analyzeReasoning(args.include_detailed_analysis ?? true),
+      'analytics'
+    );
+    this.toolRegistry.register(
+      'analyze_complexity_evolution',
+      () => this.forestServer.analyzeComplexityEvolution(),
+      'analytics'
+    );
+    this.toolRegistry.register(
+      'analyze_identity_transformation',
+      () => this.forestServer.analyzeIdentityTransformation(),
+      'analytics'
+    );
     this.toolRegistry.register('review_week', () => this.forestServer.reviewPeriod(7), 'analytics');
-    this.toolRegistry.register('review_month', () => this.forestServer.reviewPeriod(30), 'analytics');
+    this.toolRegistry.register(
+      'review_month',
+      () => this.forestServer.reviewPeriod(30),
+      'analytics'
+    );
 
     // Export Tools
-    this.toolRegistry.register('generate_tiimo_export', (args) => this.forestServer.generateTiimoExport(args.include_breaks ?? true), 'export');
+    this.toolRegistry.register(
+      'generate_tiimo_export',
+      args => this.forestServer.generateTiimoExport(args.include_breaks ?? true),
+      'export'
+    );
 
     // Memory Integration Tools
-    this.toolRegistry.register('sync_forest_memory', () => this.forestServer.syncForestMemory(), 'memory');
+    this.toolRegistry.register(
+      'sync_forest_memory',
+      () => this.forestServer.syncForestMemory(),
+      'memory'
+    );
 
     // Learning Path Tools
-    this.toolRegistry.register('focus_learning_path', (args) => this.forestServer.focusLearningPath(
-      args.path_name,
-      args.duration || 'until next switch'
-    ), 'learning');
-    this.toolRegistry.register('list_learning_paths', () => this.forestServer.listLearningPaths(), 'learning');
+    this.toolRegistry.register(
+      'focus_learning_path',
+      args =>
+        this.forestServer.focusLearningPath(args.path_name, args.duration || 'until next switch'),
+      'learning'
+    );
+    this.toolRegistry.register(
+      'list_learning_paths',
+      () => this.forestServer.listLearningPaths(),
+      'learning'
+    );
 
     // Debug Tools
-    this.toolRegistry.register('debug_health_check', () => this.forestServer.debugCommands.healthCheck(), 'debug');
-    this.toolRegistry.register('debug_trace_task', (args) => this.forestServer.debugCommands.traceTask(args.project_id || null), 'debug');
-    this.toolRegistry.register('debug_validate', () => this.forestServer.debugCommands.validateCurrent(), 'debug');
-    this.toolRegistry.register('debug_export', () => this.forestServer.debugCommands.exportLogs(), 'debug');
-    this.toolRegistry.register('debug_summary', () => this.forestServer.debugCommands.getSummary(), 'debug');
-    this.toolRegistry.register('debug_task_sequence', () => this.forestServer.debugTaskSequence(), 'debug');
-    this.toolRegistry.register('repair_sequence', (args) => this.forestServer.repairSequence(args.force_rebuild || false), 'debug');
+    this.toolRegistry.register(
+      'debug_health_check',
+      () => this.forestServer.debugCommands.healthCheck(),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'debug_trace_task',
+      args => this.forestServer.debugCommands.traceTask(args.project_id || null),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'debug_validate',
+      () => this.forestServer.debugCommands.validateCurrent(),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'debug_export',
+      () => this.forestServer.debugCommands.exportLogs(),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'debug_summary',
+      () => this.forestServer.debugCommands.getSummary(),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'debug_task_sequence',
+      () => this.forestServer.debugTaskSequence(),
+      'debug'
+    );
+    this.toolRegistry.register(
+      'repair_sequence',
+      args => this.forestServer.repairSequence(args.force_rebuild || false),
+      'debug'
+    );
 
     // Claude Integration Tools
-    const truthfulHandler = (args) => this.forestServer.askTruthfulClaude(args.prompt);
+    const truthfulHandler = args => this.forestServer.askTruthfulClaude(args.prompt);
     this.toolRegistry.register('ask_truthful', truthfulHandler, 'claude');
     this.toolRegistry.register('ask_truthful_claude', truthfulHandler, 'claude');
     this.toolRegistry.register('mcp_forest_ask_truthful', truthfulHandler, 'claude');
     this.toolRegistry.register('mcp_forest_ask_truthful_claude', truthfulHandler, 'claude');
-    this.toolRegistry.register('request_claude_generation', (args) => this.forestServer.requestClaudeGeneration(
-      args.prompt,
-      args.generation_type || 'tasks',
-      args.context || {}
-    ), 'claude');
+    this.toolRegistry.register(
+      'request_claude_generation',
+      args =>
+        this.forestServer.requestClaudeGeneration(
+          args.prompt,
+          args.generation_type || 'tasks',
+          args.context || {}
+        ),
+      'claude'
+    );
 
     // HTA Task Generation Tools
-    this.toolRegistry.register('generate_hta_tasks', (args) => this.forestServer.storeGeneratedTasks(args.branch_tasks), 'hta');
-    this.toolRegistry.register('get_generation_history', (args) => this.forestServer.getGenerationHistory(args.limit || 10), 'hta');
+    this.toolRegistry.register(
+      'generate_hta_tasks',
+      args => this.forestServer.storeGeneratedTasks(args.branch_tasks),
+      'hta'
+    );
+    this.toolRegistry.register(
+      'get_generation_history',
+      args => this.forestServer.getGenerationHistory(args.limit || 10),
+      'hta'
+    );
   }
 
   setupRouter() {
     const isTerminal = process.stdin.isTTY;
-    debugLogger.logEvent('TOOL_ROUTER_SETUP_START');
+          logger.event('TOOL_ROUTER_SETUP_START');
 
-    if (isTerminal) {
-      console.error('🔧 DEBUG: ToolRouter setupRouter() called with TRUTHFUL VERIFICATION');
-    }
+      if (isTerminal) {
+        console.error('🔧 DEBUG: ToolRouter setupRouter() called with TRUTHFUL VERIFICATION');
+      }
 
-    debugLogger.logEvent('SETTING_CALL_TOOL_HANDLER');
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      debugLogger.logEvent('CALL_TOOL_REQUEST_RECEIVED', { tool: request.params.name });
+      logger.event('SETTING_CALL_TOOL_HANDLER');
+      this.server.setRequestHandler(CallToolRequestSchema, async request => {
+        logger.event('CALL_TOOL_REQUEST_RECEIVED', { tool: request.params.name });
       const { name: toolName, arguments: args } = request.params;
 
       if (isTerminal) {
         console.error(`▶️ Executing tool: ${toolName}`);
       }
 
-      try {
-        // Step 1: Execute the tool as normal.
-        debugLogger.logEvent('DISPATCHING_TOOL', { tool: toolName });
-        const dispatchOpId = debugLogger.logAsyncStart('TOOL_DISPATCH', { tool: toolName });
-        const originalResult = await this.dispatchTool(toolName, args);
-        debugLogger.logAsyncEnd(dispatchOpId, true, { tool: toolName });
-        debugLogger.logEvent('TOOL_DISPATCH_COMPLETE', { tool: toolName });
+              try {
+          // Step 1: Execute the tool as normal.
+          logger.event('DISPATCHING_TOOL', { tool: toolName });
+          const timerLabel = `TOOL_DISPATCH_${toolName}`;
+          logger.startTimer(timerLabel);
+          const originalResult = await this.dispatchTool(toolName, args);
+          logger.endTimer(timerLabel, { tool: toolName });
+          logger.event('TOOL_DISPATCH_COMPLETE', { tool: toolName });
 
-        // Step 2: For data retrieval tools, return the data directly
-        // Only add truthful critique for tools that generate advice/recommendations
-        const dataRetrievalTools = [
-          'list_projects', 'get_active_project', 'get_hta_status',
-          'current_status', 'debug_task_sequence', 'get_generation_history',
-          'list_learning_paths', 'get_logging_status', 'get_archive_status'
-        ];
-
-        if (dataRetrievalTools.includes(toolName)) {
-          // Return data directly without critique
-          return originalResult;
-        }
-
-        // Step 3: For advice/generation tools, include truthful verification
-        const adviceTools = [
-          'get_next_task', 'evolve_strategy', 'analyze_reasoning',
-          'analyze_complexity_evolution', 'analyze_identity_transformation',
-          'request_claude_generation'
-        ];
-
-        if (adviceTools.includes(toolName)) {
-          // Get truthful critique but include it alongside the data
-          const critique = await this.forestServer._getTruthfulCritique(originalResult);
-
-          // Return BOTH the original result AND the critique
-          // The original result should be the primary response
-          if (originalResult.content) {
-            // Append critique to existing content
-            originalResult.content.push({
-              type: 'text',
-              text: `\n---\n🔍 **Truthful Verification** (Confidence: ${critique.confidence_score}%)\n${critique.critique}`
-            });
-          } else {
-            // Add critique as metadata
-            originalResult.truthful_verification = {
-              confidence: critique.confidence_score,
-              assessment: critique.assessment,
-              notes: critique.critique
-            };
-          }
-
-          return originalResult;
-        }
-
-        // Step 4: For all other tools, return the original result
+        // SIMPLIFIED: Return definitive tool response
+        // Tools should provide trustworthy responses the first time
+        // No post-hoc critique that makes output unreliable by design
         return originalResult;
-
       } catch (error) {
-        debugLogger.logCritical('TOOL_EXECUTION_ERROR', {
+        logger.error('TOOL_EXECUTION_ERROR', {
           tool: toolName,
           error: error.message,
-          stack: error.stack
+          stack: error.stack,
         });
         if (isTerminal) {
           console.error('Tool execution failed:', { toolName, error: error.message });
@@ -324,12 +429,12 @@ export class ToolRouter {
         throw new Error(`Tool '${toolName}' failed: ${error.message}`, { cause: error });
       }
     });
-    debugLogger.logEvent('CALL_TOOL_HANDLER_SET');
+    logger.event('CALL_TOOL_HANDLER_SET');
 
     if (isTerminal) {
       console.error('🔧 DEBUG: CallToolRequestSchema handler registration completed');
     }
 
-    debugLogger.logEvent('TOOL_ROUTER_SETUP_COMPLETE');
+    logger.event('TOOL_ROUTER_SETUP_COMPLETE');
   }
 }

@@ -1,0 +1,11 @@
+node_modules/
+*.log
+*.json
+.git/
+coverage/
+dist/
+build/
+logs/
+*.md
+README.md
+package-lock.json 

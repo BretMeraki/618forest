@@ -3,6 +3,11 @@
  * Handles deductive reasoning and context analysis
  */
 
+import { getForestLogger } from './winston-logger.js';
+
+// Structured logger for this module
+const logger = getForestLogger({ module: 'ReasoningEngine' });
+
 export class ReasoningEngine {
   constructor(dataPersistence, projectManagement) {
     this.dataPersistence = dataPersistence;
@@ -24,37 +29,46 @@ export class ReasoningEngine {
         deductions,
         pacingContext,
         recommendations: this.generateRecommendations(deductions, pacingContext),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       const reportText = this.formatReasoningReport(analysis, includeDetailedAnalysis);
 
       return {
-        content: [{
-          type: 'text',
-          text: reportText
-        }],
-        reasoning_analysis: analysis
+        content: [
+          {
+            type: 'text',
+            text: reportText,
+          },
+        ],
+        reasoning_analysis: analysis,
       };
     } catch (error) {
       await this.dataPersistence.logError('analyzeReasoning', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error analyzing reasoning: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error analyzing reasoning: ${error.message}`,
+          },
+        ],
       };
     }
   }
 
   async generateLogicalDeductions(projectId) {
     const config = await this.dataPersistence.loadProjectData(projectId, 'config.json');
-    const learningHistory = await this.loadLearningHistory(projectId, config?.activePath || 'general');
+    const learningHistory = await this.loadLearningHistory(
+      projectId,
+      config?.activePath || 'general'
+    );
 
     const deductions = [];
 
     if (!learningHistory?.completedTopics?.length) {
-      return [{ type: 'insufficient_data', insight: 'Need more completed tasks for pattern analysis' }];
+      return [
+        { type: 'insufficient_data', insight: 'Need more completed tasks for pattern analysis' },
+      ];
     }
 
     const completedTopics = learningHistory.completedTopics;
@@ -65,7 +79,7 @@ export class ReasoningEngine {
       deductions.push({
         type: 'difficulty_pattern',
         insight: difficultyProgression.insight,
-        evidence: difficultyProgression.evidence
+        evidence: difficultyProgression.evidence,
       });
     }
 
@@ -75,7 +89,7 @@ export class ReasoningEngine {
       deductions.push({
         type: 'energy_pattern',
         insight: energyPatterns.insight,
-        evidence: energyPatterns.evidence
+        evidence: energyPatterns.evidence,
       });
     }
 
@@ -85,7 +99,7 @@ export class ReasoningEngine {
       deductions.push({
         type: 'breakthrough_pattern',
         insight: breakthroughPatterns.insight,
-        evidence: breakthroughPatterns.evidence
+        evidence: breakthroughPatterns.evidence,
       });
     }
 
@@ -95,7 +109,7 @@ export class ReasoningEngine {
       deductions.push({
         type: 'velocity_pattern',
         insight: velocityPattern.insight,
-        evidence: velocityPattern.evidence
+        evidence: velocityPattern.evidence,
       });
     }
 
@@ -103,7 +117,9 @@ export class ReasoningEngine {
   }
 
   analyzeDifficultyProgression(completedTopics) {
-    if (completedTopics.length < 3) {return {};}
+    if (completedTopics.length < 3) {
+      return {};
+    }
 
     const recentTasks = completedTopics.slice(-5);
     const difficulties = recentTasks.map(t => t.difficulty || 3);
@@ -117,10 +133,16 @@ export class ReasoningEngine {
 
     if (avgRating > avgDifficulty + 1) {
       insight = 'Tasks are too easy - ready for higher difficulty';
-      evidence = [`Average perceived difficulty: ${avgRating.toFixed(1)}`, `Average assigned difficulty: ${avgDifficulty.toFixed(1)}`];
+      evidence = [
+        `Average perceived difficulty: ${avgRating.toFixed(1)}`,
+        `Average assigned difficulty: ${avgDifficulty.toFixed(1)}`,
+      ];
     } else if (avgRating < avgDifficulty - 1) {
       insight = 'Tasks may be too challenging - consider easier tasks';
-      evidence = [`Average perceived difficulty: ${avgRating.toFixed(1)}`, `Average assigned difficulty: ${avgDifficulty.toFixed(1)}`];
+      evidence = [
+        `Average perceived difficulty: ${avgRating.toFixed(1)}`,
+        `Average assigned difficulty: ${avgDifficulty.toFixed(1)}`,
+      ];
     } else if (Math.max(...difficulties) - Math.min(...difficulties) <= 1) {
       insight = 'Difficulty plateau detected - introduce more challenging tasks';
       evidence = [`Difficulty range: ${Math.min(...difficulties)}-${Math.max(...difficulties)}`];
@@ -130,7 +152,9 @@ export class ReasoningEngine {
   }
 
   analyzeEnergyPatterns(completedTopics) {
-    if (completedTopics.length < 3) {return {};}
+    if (completedTopics.length < 3) {
+      return {};
+    }
 
     const recentTasks = completedTopics.slice(-7);
     const energyLevels = recentTasks.map(t => t.energyAfter || 3);
@@ -143,13 +167,19 @@ export class ReasoningEngine {
 
     if (avgEnergy >= 4 && energyTrend > 0) {
       insight = 'Learning is energizing - high engagement detected';
-      evidence = [`Average energy after tasks: ${avgEnergy.toFixed(1)}/5`, `Energy trend: ${energyTrend > 0 ? 'increasing' : 'stable'}`];
+      evidence = [
+        `Average energy after tasks: ${avgEnergy.toFixed(1)}/5`,
+        `Energy trend: ${energyTrend > 0 ? 'increasing' : 'stable'}`,
+      ];
     } else if (avgEnergy <= 2) {
       insight = 'Learning may be draining - consider shorter sessions or easier tasks';
       evidence = [`Average energy after tasks: ${avgEnergy.toFixed(1)}/5`];
     } else if (energyTrend < -0.5) {
       insight = 'Energy declining over time - may need breaks or variety';
-      evidence = ['Energy trend: declining', `Latest energy: ${energyLevels[energyLevels.length - 1]}/5`];
+      evidence = [
+        'Energy trend: declining',
+        `Latest energy: ${energyLevels[energyLevels.length - 1]}/5`,
+      ];
     }
 
     return { insight, evidence };
@@ -158,7 +188,9 @@ export class ReasoningEngine {
   analyzeBreakthroughPatterns(completedTopics) {
     const breakthroughs = completedTopics.filter(t => t.breakthrough);
 
-    if (breakthroughs.length === 0) {return {};}
+    if (breakthroughs.length === 0) {
+      return {};
+    }
 
     const breakthroughRate = breakthroughs.length / completedTopics.length;
 
@@ -167,24 +199,33 @@ export class ReasoningEngine {
 
     if (breakthroughRate > 0.3) {
       insight = 'High breakthrough rate - excellent learning momentum';
-      evidence = [`${breakthroughs.length} breakthroughs in ${completedTopics.length} tasks (${(breakthroughRate * 100).toFixed(0)}%)`];
+      evidence = [
+        `${breakthroughs.length} breakthroughs in ${completedTopics.length} tasks (${(breakthroughRate * 100).toFixed(0)}%)`,
+      ];
     } else if (breakthroughRate > 0.1) {
       insight = 'Moderate breakthrough rate - good progress';
-      evidence = [`${breakthroughs.length} breakthroughs in ${completedTopics.length} tasks (${(breakthroughRate * 100).toFixed(0)}%)`];
+      evidence = [
+        `${breakthroughs.length} breakthroughs in ${completedTopics.length} tasks (${(breakthroughRate * 100).toFixed(0)}%)`,
+      ];
     }
 
     // Analyze breakthrough triggers
     const breakthroughDifficulties = breakthroughs.map(b => b.difficulty || 3);
     if (breakthroughDifficulties.length > 1) {
-      const avgBreakthroughDifficulty = breakthroughDifficulties.reduce((sum, d) => sum + d, 0) / breakthroughDifficulties.length;
-      evidence.push(`Breakthroughs typically occur at difficulty ${avgBreakthroughDifficulty.toFixed(1)}`);
+      const avgBreakthroughDifficulty =
+        breakthroughDifficulties.reduce((sum, d) => sum + d, 0) / breakthroughDifficulties.length;
+      evidence.push(
+        `Breakthroughs typically occur at difficulty ${avgBreakthroughDifficulty.toFixed(1)}`
+      );
     }
 
     return { insight, evidence };
   }
 
   analyzeVelocityPattern(completedTopics) {
-    if (completedTopics.length < 5) {return {};}
+    if (completedTopics.length < 5) {
+      return {};
+    }
 
     const now = new Date();
     const recentTasks = completedTopics.filter(t => {
@@ -200,13 +241,22 @@ export class ReasoningEngine {
 
     if (velocity >= 1) {
       insight = 'High learning velocity - maintaining excellent pace';
-      evidence = [`${recentTasks.length} tasks completed in last 7 days`, `Average: ${velocity.toFixed(1)} tasks/day`];
+      evidence = [
+        `${recentTasks.length} tasks completed in last 7 days`,
+        `Average: ${velocity.toFixed(1)} tasks/day`,
+      ];
     } else if (velocity >= 0.5) {
       insight = 'Moderate learning velocity - steady progress';
-      evidence = [`${recentTasks.length} tasks completed in last 7 days`, `Average: ${velocity.toFixed(1)} tasks/day`];
+      evidence = [
+        `${recentTasks.length} tasks completed in last 7 days`,
+        `Average: ${velocity.toFixed(1)} tasks/day`,
+      ];
     } else if (velocity > 0) {
       insight = 'Low learning velocity - consider shorter, easier tasks to build momentum';
-      evidence = [`${recentTasks.length} tasks completed in last 7 days`, `Average: ${velocity.toFixed(1)} tasks/day`];
+      evidence = [
+        `${recentTasks.length} tasks completed in last 7 days`,
+        `Average: ${velocity.toFixed(1)} tasks/day`,
+      ];
     } else {
       insight = 'No recent learning activity - time to re-engage';
       evidence = ['No tasks completed in last 7 days'];
@@ -231,7 +281,7 @@ export class ReasoningEngine {
       daysSinceStart,
       progress,
       pacingAnalysis,
-      recommendations: this.generatePacingRecommendations(pacingAnalysis, urgencyLevel)
+      recommendations: this.generatePacingRecommendations(pacingAnalysis, urgencyLevel),
     };
   }
 
@@ -260,17 +310,17 @@ export class ReasoningEngine {
       message,
       expectedProgress,
       actualProgress: progress.percentage,
-      delta: progressDelta
+      delta: progressDelta,
     };
   }
 
   calculateExpectedProgress(urgencyLevel, daysSinceStart) {
     // Expected progress curves based on urgency
     const progressCurves = {
-      'critical': daysSinceStart * 2, // Fast pace
-      'high': daysSinceStart * 1.5,
-      'medium': daysSinceStart * 1,
-      'low': daysSinceStart * 0.7
+      critical: daysSinceStart * 2, // Fast pace
+      high: daysSinceStart * 1.5,
+      medium: daysSinceStart * 1,
+      low: daysSinceStart * 0.7,
     };
 
     return Math.min(100, progressCurves[urgencyLevel] || progressCurves.medium);
@@ -286,13 +336,13 @@ export class ReasoningEngine {
         recommendations.push({
           type: 'difficulty_adjustment',
           action: 'Increase task difficulty to maintain challenge',
-          priority: 'high'
+          priority: 'high',
         });
       } else if (difficultyDeduction.insight.includes('too challenging')) {
         recommendations.push({
           type: 'difficulty_adjustment',
           action: 'Reduce task difficulty to build confidence',
-          priority: 'high'
+          priority: 'high',
         });
       }
     }
@@ -304,13 +354,13 @@ export class ReasoningEngine {
         recommendations.push({
           type: 'energy_management',
           action: 'Take more breaks or try shorter learning sessions',
-          priority: 'medium'
+          priority: 'medium',
         });
       } else if (energyDeduction.insight.includes('energizing')) {
         recommendations.push({
           type: 'energy_management',
           action: 'Consider longer sessions to capitalize on high engagement',
-          priority: 'low'
+          priority: 'low',
         });
       }
     }
@@ -320,13 +370,13 @@ export class ReasoningEngine {
       recommendations.push({
         type: 'pacing_adjustment',
         action: 'Increase learning frequency or focus on easier tasks for momentum',
-        priority: 'high'
+        priority: 'high',
       });
     } else if (pacingContext.pacingAnalysis.status === 'ahead') {
       recommendations.push({
         type: 'pacing_adjustment',
         action: 'Consider exploring advanced topics or taking strategic breaks',
-        priority: 'low'
+        priority: 'low',
       });
     }
 
@@ -350,10 +400,12 @@ export class ReasoningEngine {
   }
 
   calculateTrend(values) {
-    if (values.length < 2) {return 0;}
+    if (values.length < 2) {
+      return 0;
+    }
 
     const n = values.length;
-    const sumX = n * (n - 1) / 2;
+    const sumX = (n * (n - 1)) / 2;
     const sumY = values.reduce((sum, val) => sum + val, 0);
     const sumXY = values.reduce((sum, val, i) => sum + val * i, 0);
     const sumX2 = values.reduce((sum, val, i) => sum + i * i, 0);
@@ -369,7 +421,7 @@ export class ReasoningEngine {
     return {
       completed,
       total,
-      percentage: total > 0 ? Math.round((completed / total) * 100) : 0
+      percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
     };
   }
 
@@ -397,7 +449,7 @@ export class ReasoningEngine {
     if (analysis.recommendations.length > 0) {
       report += '\n💡 **Recommendations**:\n';
       for (const rec of analysis.recommendations) {
-        const priority = rec.priority === 'high' ? '🔥' : (rec.priority === 'medium' ? '⚡' : '💡');
+        const priority = rec.priority === 'high' ? '🔥' : rec.priority === 'medium' ? '⚡' : '💡';
         report += `${priority} ${rec.action}\n`;
       }
     }
@@ -449,23 +501,26 @@ export class ReasoningEngine {
       analysisType = arg2 || 'strategic_overview';
     }
 
-    console.log(`🧠 ReasoningEngine: Performing ${analysisType} analysis`);
+    logger.info(`🧠 ReasoningEngine: Performing ${analysisType} analysis`);
 
     try {
       switch (analysisType) {
-      case 'strategic_overview':
-        return await this.performStrategicOverviewAnalysis(systemState);
-      case 'risk_detection':
-        return await this.performRiskDetectionAnalysis(systemState);
-      case 'opportunity_detection':
-        return await this.performOpportunityDetectionAnalysis(systemState);
-      default:
-        console.error(`❌ Unknown analysis type: ${analysisType}`);
-        return { error: `Unknown analysis type: ${analysisType}` };
+        case 'strategic_overview':
+          return await this.performStrategicOverviewAnalysis(systemState);
+        case 'risk_detection':
+          return await this.performRiskDetectionAnalysis(systemState);
+        case 'opportunity_detection':
+          return await this.performOpportunityDetectionAnalysis(systemState);
+        default:
+          logger.error(`❌ Unknown analysis type: ${analysisType}`);
+          return { error: `Unknown analysis type: ${analysisType}` };
       }
     } catch (error) {
-      console.error('❌ Background analysis failed:', error);
-      await this.dataPersistence.logError(`ReasoningEngine.performBackgroundAnalysis.${analysisType}`, error);
+      logger.error('❌ Background analysis failed', { error, analysisType });
+      await this.dataPersistence.logError(
+        `ReasoningEngine.performBackgroundAnalysis.${analysisType}`,
+        error
+      );
       return { error: error.message };
     }
   }
@@ -477,13 +532,19 @@ export class ReasoningEngine {
    */
   calculateSkillAcceleration(context = {}) {
     const recentCompletions = context.completions || [];
-    const breakthroughRate = recentCompletions.filter(c => c.breakthrough).length / Math.max(recentCompletions.length, 1);
-    const averageDifficulty = recentCompletions.reduce((sum, c) => sum + (c.difficulty ?? 3), 0) / Math.max(recentCompletions.length, 1);
+    const breakthroughRate =
+      recentCompletions.filter(c => c.breakthrough).length / Math.max(recentCompletions.length, 1);
+    const averageDifficulty =
+      recentCompletions.reduce((sum, c) => sum + (c.difficulty ?? 3), 0) /
+      Math.max(recentCompletions.length, 1);
 
     return {
       accelerationFactor: 1 + breakthroughRate * 0.5,
-      recommendedDifficulty: Math.min(5, Math.max(1, averageDifficulty + (breakthroughRate > 0.5 ? 1 : 0))),
-      learningVelocity: breakthroughRate > 0.3 ? 'accelerating' : 'steady'
+      recommendedDifficulty: Math.min(
+        5,
+        Math.max(1, averageDifficulty + (breakthroughRate > 0.5 ? 1 : 0))
+      ),
+      learningVelocity: breakthroughRate > 0.3 ? 'accelerating' : 'steady',
     };
   }
 
@@ -498,30 +559,38 @@ export class ReasoningEngine {
     const learningHistory = systemState.learningHistory || {};
     const htaData = systemState.htaData || {};
 
-    console.log('📊 Performing strategic overview analysis...');
+    logger.debug('📊 Performing strategic overview analysis...');
 
     // Analyze overall trajectory
     const trajectoryInsight = this.analyzeOverallTrajectory(metrics, learningHistory);
-    if (trajectoryInsight) {insights.push(trajectoryInsight);}
+    if (trajectoryInsight) {
+      insights.push(trajectoryInsight);
+    }
 
     // Analyze strategic alignment
     const alignmentInsight = this.analyzeStrategicAlignment(htaData, learningHistory);
-    if (alignmentInsight) {insights.push(alignmentInsight);}
+    if (alignmentInsight) {
+      insights.push(alignmentInsight);
+    }
 
     // Analyze capability gaps
     const gapInsight = this.analyzeCapabilityGaps(htaData, learningHistory);
-    if (gapInsight) {insights.push(gapInsight);}
+    if (gapInsight) {
+      insights.push(gapInsight);
+    }
 
     // Analyze momentum patterns
     const momentumInsight = this.analyzeMomentumPatterns(metrics, systemState.recentSchedules);
-    if (momentumInsight) {insights.push(momentumInsight);}
+    if (momentumInsight) {
+      insights.push(momentumInsight);
+    }
 
     return {
       insights,
       analysisType: 'strategic_overview',
       confidence: this.calculateInsightConfidence(insights),
       nextRecommendedActions: this.generateStrategicActions(insights),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -535,27 +604,37 @@ export class ReasoningEngine {
     const metrics = systemState.metrics || {};
     const learningHistory = systemState.learningHistory || {};
 
-    console.log('⚠️ Performing risk detection analysis...');
+    logger.debug('⚠️ Performing risk detection analysis...');
 
     // Risk 1: Stagnation Detection
     const stagnationRisk = this.detectStagnationRisk(metrics, learningHistory);
-    if (stagnationRisk) {risks.push(stagnationRisk);}
+    if (stagnationRisk) {
+      risks.push(stagnationRisk);
+    }
 
     // Risk 2: Skill Silo Detection
     const skillSiloRisk = this.detectSkillSiloRisk(learningHistory, systemState.htaData);
-    if (skillSiloRisk) {risks.push(skillSiloRisk);}
+    if (skillSiloRisk) {
+      risks.push(skillSiloRisk);
+    }
 
     // Risk 3: Burnout Detection
     const burnoutRisk = this.detectBurnoutRisk(learningHistory, metrics);
-    if (burnoutRisk) {risks.push(burnoutRisk);}
+    if (burnoutRisk) {
+      risks.push(burnoutRisk);
+    }
 
     // Risk 4: Goal Drift Detection
     const goalDriftRisk = this.detectGoalDriftRisk(systemState.htaData, learningHistory);
-    if (goalDriftRisk) {risks.push(goalDriftRisk);}
+    if (goalDriftRisk) {
+      risks.push(goalDriftRisk);
+    }
 
     // Risk 5: Engagement Decline Detection
     const engagementRisk = this.detectEngagementDeclineRisk(learningHistory);
-    if (engagementRisk) {risks.push(engagementRisk);}
+    if (engagementRisk) {
+      risks.push(engagementRisk);
+    }
 
     // Calculate overall risk level
     const overallRiskLevel = this.calculateOverallRiskLevel(risks);
@@ -566,7 +645,7 @@ export class ReasoningEngine {
       riskCount: risks.length,
       highPriorityRisks: risks.filter(r => r.priority === 'high'),
       mitigationStrategies: this.generateRiskMitigationStrategies(risks),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -580,27 +659,43 @@ export class ReasoningEngine {
     const metrics = systemState.metrics || {};
     const learningHistory = systemState.learningHistory || {};
 
-    console.log('🎯 Performing opportunity detection analysis...');
+    logger.debug('🎯 Performing opportunity detection analysis...');
 
     // Opportunity 1: Breakthrough Momentum
     const breakthroughOpportunity = this.detectBreakthroughMomentumOpportunity(learningHistory);
-    if (breakthroughOpportunity) {opportunities.push(breakthroughOpportunity);}
+    if (breakthroughOpportunity) {
+      opportunities.push(breakthroughOpportunity);
+    }
 
     // Opportunity 2: Skill Synergy
-    const synergyOpportunity = this.detectSkillSynergyOpportunity(learningHistory, systemState.htaData);
-    if (synergyOpportunity) {opportunities.push(synergyOpportunity);}
+    const synergyOpportunity = this.detectSkillSynergyOpportunity(
+      learningHistory,
+      systemState.htaData
+    );
+    if (synergyOpportunity) {
+      opportunities.push(synergyOpportunity);
+    }
 
     // Opportunity 3: Difficulty Readiness
     const difficultyOpportunity = this.detectDifficultyReadinessOpportunity(learningHistory);
-    if (difficultyOpportunity) {opportunities.push(difficultyOpportunity);}
+    if (difficultyOpportunity) {
+      opportunities.push(difficultyOpportunity);
+    }
 
     // Opportunity 4: Cross-Pollination
-    const crossPollinationOpportunity = this.detectCrossPollinationOpportunity(systemState.htaData, learningHistory);
-    if (crossPollinationOpportunity) {opportunities.push(crossPollinationOpportunity);}
+    const crossPollinationOpportunity = this.detectCrossPollinationOpportunity(
+      systemState.htaData,
+      learningHistory
+    );
+    if (crossPollinationOpportunity) {
+      opportunities.push(crossPollinationOpportunity);
+    }
 
     // Opportunity 5: Strategic Timing
     const timingOpportunity = this.detectStrategicTimingOpportunity(systemState);
-    if (timingOpportunity) {opportunities.push(timingOpportunity);}
+    if (timingOpportunity) {
+      opportunities.push(timingOpportunity);
+    }
 
     const priorityLevel = this.calculateOpportunityPriority(opportunities);
 
@@ -610,7 +705,7 @@ export class ReasoningEngine {
       opportunityCount: opportunities.length,
       highValueOpportunities: opportunities.filter(o => o.value === 'high'),
       actionableOpportunities: opportunities.filter(o => o.actionable),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -622,7 +717,7 @@ export class ReasoningEngine {
         type: 'trajectory_insufficient_data',
         title: 'Building Learning Foundation',
         insight: 'Still establishing baseline learning patterns. Continue with current approach.',
-        confidence: 0.6
+        confidence: 0.6,
       };
     }
 
@@ -634,7 +729,8 @@ export class ReasoningEngine {
         title: 'Accelerating Growth Trajectory',
         insight: `Excellent momentum with ${momentum} tasks completed recently and ${breakthroughCount} breakthroughs. You're in a high-performance learning state.`,
         confidence: 0.9,
-        actionSuggestion: 'Consider tackling more ambitious challenges while maintaining this momentum.'
+        actionSuggestion:
+          'Consider tackling more ambitious challenges while maintaining this momentum.',
       };
     } else if (momentum <= 1 && metrics.lastActivityDays > 3) {
       return {
@@ -642,7 +738,8 @@ export class ReasoningEngine {
         title: 'Learning Momentum Declining',
         insight: `Only ${momentum} tasks completed recently, with ${metrics.lastActivityDays} days since last activity. Learning velocity is decreasing.`,
         confidence: 0.8,
-        actionSuggestion: 'Focus on re-engaging with smaller, achievable tasks to rebuild momentum.'
+        actionSuggestion:
+          'Focus on re-engaging with smaller, achievable tasks to rebuild momentum.',
       };
     }
 
@@ -650,7 +747,9 @@ export class ReasoningEngine {
   }
 
   analyzeStrategicAlignment(htaData, learningHistory) {
-    if (!htaData || !learningHistory?.completedTopics) {return null;}
+    if (!htaData || !learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-10);
     const branches = recentTasks.map(t => t.branch || 'general');
@@ -662,7 +761,8 @@ export class ReasoningEngine {
         title: 'Highly Focused Learning Path',
         insight: `Last 10 tasks concentrated in '${Array.from(uniqueBranches)[0]}' branch. Deep expertise being developed.`,
         confidence: 0.8,
-        actionSuggestion: 'Consider if this focus aligns with your broader strategic goals, or if diversification is needed.'
+        actionSuggestion:
+          'Consider if this focus aligns with your broader strategic goals, or if diversification is needed.',
       };
     } else if (uniqueBranches.size >= 4) {
       return {
@@ -670,7 +770,8 @@ export class ReasoningEngine {
         title: 'Diverse Skill Development',
         insight: `Recent tasks span ${uniqueBranches.size} different branches. Building well-rounded capabilities.`,
         confidence: 0.7,
-        actionSuggestion: 'Consider identifying which areas provide the highest strategic value and prioritize accordingly.'
+        actionSuggestion:
+          'Consider identifying which areas provide the highest strategic value and prioritize accordingly.',
       };
     }
 
@@ -678,10 +779,14 @@ export class ReasoningEngine {
   }
 
   analyzeCapabilityGaps(htaData, learningHistory) {
-    if (!htaData?.paths || !learningHistory?.completedTopics) {return null;}
+    if (!htaData?.paths || !learningHistory?.completedTopics) {
+      return null;
+    }
 
     const pathNames = Object.keys(htaData.paths);
-    const recentBranches = new Set(learningHistory.completedTopics.slice(-20).map(t => t.branch || 'general'));
+    const recentBranches = new Set(
+      learningHistory.completedTopics.slice(-20).map(t => t.branch || 'general')
+    );
 
     const unexploredPaths = pathNames.filter(path => !recentBranches.has(path));
 
@@ -691,7 +796,7 @@ export class ReasoningEngine {
         title: 'Potential Capability Gaps',
         insight: `${unexploredPaths.length} skill areas haven't been recently practiced: ${unexploredPaths.slice(0, 3).join(', ')}.`,
         confidence: 0.7,
-        actionSuggestion: `Consider whether these areas (${unexploredPaths[0]}, ${unexploredPaths[1]}) are strategically important for your goals.`
+        actionSuggestion: `Consider whether these areas (${unexploredPaths[0]}, ${unexploredPaths[1]}) are strategically important for your goals.`,
       };
     }
 
@@ -699,7 +804,9 @@ export class ReasoningEngine {
   }
 
   analyzeMomentumPatterns(metrics, recentSchedules) {
-    if (!recentSchedules || recentSchedules.length === 0) {return null;}
+    if (!recentSchedules || recentSchedules.length === 0) {
+      return null;
+    }
 
     const scheduledDays = recentSchedules.length;
     const actualMomentum = metrics.momentum || 0;
@@ -711,7 +818,8 @@ export class ReasoningEngine {
         title: 'High Learning Velocity',
         insight: `Completing ${expectedDaily.toFixed(1)} tasks per day on average. Exceptional learning pace.`,
         confidence: 0.9,
-        actionSuggestion: 'Maintain this pace but monitor for sustainability and ensure adequate recovery time.'
+        actionSuggestion:
+          'Maintain this pace but monitor for sustainability and ensure adequate recovery time.',
       };
     } else if (expectedDaily <= 0.3 && scheduledDays >= 3) {
       return {
@@ -719,7 +827,8 @@ export class ReasoningEngine {
         title: 'Low Learning Velocity',
         insight: `Completing only ${expectedDaily.toFixed(1)} tasks per day. Learning pace may be too slow for goal achievement.`,
         confidence: 0.8,
-        actionSuggestion: 'Consider shorter, more achievable tasks or address potential barriers to consistent learning.'
+        actionSuggestion:
+          'Consider shorter, more achievable tasks or address potential barriers to consistent learning.',
       };
     }
 
@@ -741,8 +850,12 @@ export class ReasoningEngine {
         title: 'Learning Stagnation Detected',
         message: `Tasks have maintained difficulty level ${averageDifficulty.toFixed(1)} for last ${recentTasks.length} tasks. Risk of boredom and disengagement.`,
         priority: 'high',
-        evidence: [`Difficulty variance: ${this.calculateDifficultyVariance(recentTasks).toFixed(2)}`, `Days since challenge increase: ${lastActivityDays}`],
-        recommendation: 'Introduce higher-difficulty tasks or new challenge types to reignite growth.'
+        evidence: [
+          `Difficulty variance: ${this.calculateDifficultyVariance(recentTasks).toFixed(2)}`,
+          `Days since challenge increase: ${lastActivityDays}`,
+        ],
+        recommendation:
+          'Introduce higher-difficulty tasks or new challenge types to reignite growth.',
       };
     }
 
@@ -750,7 +863,9 @@ export class ReasoningEngine {
   }
 
   detectSkillSiloRisk(learningHistory, htaData) {
-    if (!learningHistory?.completedTopics || !htaData?.paths) {return null;}
+    if (!learningHistory?.completedTopics || !htaData?.paths) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-15);
     const branches = recentTasks.map(t => t.branch || 'general');
@@ -763,14 +878,22 @@ export class ReasoningEngine {
     const activeBranches = Object.keys(branchCounts).length;
     const dominantBranch = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
 
-    if (dominantBranch && dominantBranch[1] / recentTasks.length > 0.7 && activeBranches < totalBranches / 2) {
+    if (
+      dominantBranch &&
+      dominantBranch[1] / recentTasks.length > 0.7 &&
+      activeBranches < totalBranches / 2
+    ) {
       return {
         type: 'skill_silo_risk',
         title: 'Skill Silo Formation',
         message: `Over-concentration in '${dominantBranch[0]}' branch (${dominantBranch[1]}/${recentTasks.length} recent tasks). Neglecting other strategic areas.`,
         priority: 'medium',
-        evidence: [`Active branches: ${activeBranches}/${totalBranches}`, `Dominant branch: ${dominantBranch[0]} (${Math.round(dominantBranch[1] / recentTasks.length * 100)}%)`],
-        recommendation: 'Diversify learning by including tasks from underutilized branches to maintain strategic balance.'
+        evidence: [
+          `Active branches: ${activeBranches}/${totalBranches}`,
+          `Dominant branch: ${dominantBranch[0]} (${Math.round((dominantBranch[1] / recentTasks.length) * 100)}%)`,
+        ],
+        recommendation:
+          'Diversify learning by including tasks from underutilized branches to maintain strategic balance.',
       };
     }
 
@@ -778,7 +901,9 @@ export class ReasoningEngine {
   }
 
   detectBurnoutRisk(learningHistory, metrics) {
-    if (!learningHistory?.completedTopics) {return null;}
+    if (!learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-7);
     const energyLevels = recentTasks.map(t => t.energyAfter || 3);
@@ -791,8 +916,13 @@ export class ReasoningEngine {
         title: 'Potential Burnout Risk',
         message: `Despite high task completion (${metrics.momentum}), energy levels are low (${avgEnergy.toFixed(1)}/5) and declining.`,
         priority: 'high',
-        evidence: [`Average energy: ${avgEnergy.toFixed(1)}/5`, 'Energy trend: declining', `Tasks completed: ${metrics.momentum}`],
-        recommendation: 'Reduce task intensity, increase break periods, or focus on more energizing activities.'
+        evidence: [
+          `Average energy: ${avgEnergy.toFixed(1)}/5`,
+          'Energy trend: declining',
+          `Tasks completed: ${metrics.momentum}`,
+        ],
+        recommendation:
+          'Reduce task intensity, increase break periods, or focus on more energizing activities.',
       };
     }
 
@@ -800,12 +930,15 @@ export class ReasoningEngine {
   }
 
   detectGoalDriftRisk(htaData, learningHistory) {
-    if (!htaData?.primaryGoal || !learningHistory?.completedTopics) {return null;}
+    if (!htaData?.primaryGoal || !learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-10);
-    const goalAlignment = recentTasks.filter(t =>
-      t.description?.toLowerCase().includes(htaData.primaryGoal.toLowerCase()) ||
-      t.learningNotes?.toLowerCase().includes(htaData.primaryGoal.toLowerCase())
+    const goalAlignment = recentTasks.filter(
+      t =>
+        t.description?.toLowerCase().includes(htaData.primaryGoal.toLowerCase()) ||
+        t.learningNotes?.toLowerCase().includes(htaData.primaryGoal.toLowerCase())
     );
 
     if (goalAlignment.length / recentTasks.length < 0.3 && recentTasks.length >= 5) {
@@ -814,8 +947,11 @@ export class ReasoningEngine {
         title: 'Goal Alignment Drift',
         message: `Only ${goalAlignment.length}/${recentTasks.length} recent tasks directly relate to primary goal: "${htaData.primaryGoal}".`,
         priority: 'medium',
-        evidence: [`Goal alignment: ${Math.round(goalAlignment.length / recentTasks.length * 100)}%`, `Primary goal: ${htaData.primaryGoal}`],
-        recommendation: 'Refocus upcoming tasks to ensure alignment with core strategic objective.'
+        evidence: [
+          `Goal alignment: ${Math.round((goalAlignment.length / recentTasks.length) * 100)}%`,
+          `Primary goal: ${htaData.primaryGoal}`,
+        ],
+        recommendation: 'Refocus upcoming tasks to ensure alignment with core strategic objective.',
       };
     }
 
@@ -823,7 +959,9 @@ export class ReasoningEngine {
   }
 
   detectEngagementDeclineRisk(learningHistory) {
-    if (!learningHistory?.completedTopics) {return null;}
+    if (!learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-8);
     const engagementLevels = recentTasks
@@ -831,7 +969,8 @@ export class ReasoningEngine {
       .filter(level => level !== undefined);
 
     if (engagementLevels.length >= 4) {
-      const avgEngagement = engagementLevels.reduce((sum, e) => sum + e, 0) / engagementLevels.length;
+      const avgEngagement =
+        engagementLevels.reduce((sum, e) => sum + e, 0) / engagementLevels.length;
       const engagementTrend = this.calculateTrend(engagementLevels);
 
       if (avgEngagement <= 3 && engagementTrend < -0.5) {
@@ -840,8 +979,13 @@ export class ReasoningEngine {
           title: 'Declining Engagement',
           message: `Engagement levels declining over recent tasks (avg: ${avgEngagement.toFixed(1)}/5). Risk of learning abandonment.`,
           priority: 'high',
-          evidence: [`Average engagement: ${avgEngagement.toFixed(1)}/5`, 'Trend: declining', `Recent tasks analyzed: ${engagementLevels.length}`],
-          recommendation: 'Introduce variety, reduce difficulty, or explore new learning modalities to reignite interest.'
+          evidence: [
+            `Average engagement: ${avgEngagement.toFixed(1)}/5`,
+            'Trend: declining',
+            `Recent tasks analyzed: ${engagementLevels.length}`,
+          ],
+          recommendation:
+            'Introduce variety, reduce difficulty, or explore new learning modalities to reignite interest.',
         };
       }
     }
@@ -852,7 +996,9 @@ export class ReasoningEngine {
   // Opportunity Detection Helper Methods
 
   detectBreakthroughMomentumOpportunity(learningHistory) {
-    if (!learningHistory?.completedTopics) {return null;}
+    if (!learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-5);
     const recentBreakthroughs = recentTasks.filter(t => t.breakthrough);
@@ -865,8 +1011,9 @@ export class ReasoningEngine {
         value: 'high',
         actionable: true,
         timeWindow: 'next 2-3 days',
-        recommendation: 'Capitalize on this momentum by tackling your most ambitious learning challenges.',
-        confidence: 0.9
+        recommendation:
+          'Capitalize on this momentum by tackling your most ambitious learning challenges.',
+        confidence: 0.9,
       };
     }
 
@@ -874,7 +1021,9 @@ export class ReasoningEngine {
   }
 
   detectSkillSynergyOpportunity(learningHistory, htaData) {
-    if (!learningHistory?.completedTopics || !htaData?.paths) {return null;}
+    if (!learningHistory?.completedTopics || !htaData?.paths) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-8);
     const recentBranches = recentTasks.map(t => t.branch || 'general');
@@ -889,7 +1038,7 @@ export class ReasoningEngine {
         actionable: true,
         timeWindow: 'next week',
         recommendation: `Create integrative tasks that combine insights from: ${Array.from(uniqueBranches).slice(0, 3).join(', ')}.`,
-        confidence: 0.8
+        confidence: 0.8,
       };
     }
 
@@ -897,11 +1046,15 @@ export class ReasoningEngine {
   }
 
   detectDifficultyReadinessOpportunity(learningHistory) {
-    if (!learningHistory?.completedTopics) {return null;}
+    if (!learningHistory?.completedTopics) {
+      return null;
+    }
 
     const recentTasks = learningHistory.completedTopics.slice(-5);
-    const avgRating = recentTasks.reduce((sum, t) => sum + (t.difficultyRating || 3), 0) / recentTasks.length;
-    const avgAssigned = recentTasks.reduce((sum, t) => sum + (t.difficulty || 3), 0) / recentTasks.length;
+    const avgRating =
+      recentTasks.reduce((sum, t) => sum + (t.difficultyRating || 3), 0) / recentTasks.length;
+    const avgAssigned =
+      recentTasks.reduce((sum, t) => sum + (t.difficulty || 3), 0) / recentTasks.length;
 
     if (avgRating > avgAssigned + 1.2 && recentTasks.filter(t => t.energyAfter >= 4).length >= 3) {
       return {
@@ -912,7 +1065,7 @@ export class ReasoningEngine {
         actionable: true,
         timeWindow: 'immediate',
         recommendation: 'Increase task difficulty by 1-2 levels to maintain optimal challenge.',
-        confidence: 0.85
+        confidence: 0.85,
       };
     }
 
@@ -920,13 +1073,20 @@ export class ReasoningEngine {
   }
 
   detectCrossPollinationOpportunity(htaData, learningHistory) {
-    if (!htaData?.paths || !learningHistory?.completedTopics) {return null;}
+    if (!htaData?.paths || !learningHistory?.completedTopics) {
+      return null;
+    }
 
     const allPaths = Object.keys(htaData.paths);
-    const recentBranches = new Set(learningHistory.completedTopics.slice(-15).map(t => t.branch || 'general'));
+    const recentBranches = new Set(
+      learningHistory.completedTopics.slice(-15).map(t => t.branch || 'general')
+    );
     const unexploredPaths = allPaths.filter(path => !recentBranches.has(path));
 
-    if (unexploredPaths.length >= 2 && learningHistory.completedTopics.filter(t => t.breakthrough).length >= 3) {
+    if (
+      unexploredPaths.length >= 2 &&
+      learningHistory.completedTopics.filter(t => t.breakthrough).length >= 3
+    ) {
       return {
         type: 'cross_pollination',
         title: 'Knowledge Cross-Pollination Opportunity',
@@ -935,7 +1095,7 @@ export class ReasoningEngine {
         actionable: true,
         timeWindow: 'next 1-2 weeks',
         recommendation: `Explore ${unexploredPaths[0]} or ${unexploredPaths[1]} to leverage existing knowledge in new contexts.`,
-        confidence: 0.7
+        confidence: 0.7,
       };
     }
 
@@ -949,17 +1109,20 @@ export class ReasoningEngine {
     const hourOfDay = now.getHours();
 
     // Detect optimal timing windows
-    if ((dayOfWeek === 1 || dayOfWeek === 2) && hourOfDay >= 9 && hourOfDay <= 11) { // Monday/Tuesday morning
+    if ((dayOfWeek === 1 || dayOfWeek === 2) && hourOfDay >= 9 && hourOfDay <= 11) {
+      // Monday/Tuesday morning
       if (metrics.momentum >= 2) {
         return {
           type: 'strategic_timing',
           title: 'Peak Performance Window',
-          description: 'Monday/Tuesday morning with existing momentum - optimal time for challenging tasks.',
+          description:
+            'Monday/Tuesday morning with existing momentum - optimal time for challenging tasks.',
           value: 'medium',
           actionable: true,
           timeWindow: 'next 2 hours',
-          recommendation: 'Schedule your most demanding learning objectives during this high-energy window.',
-          confidence: 0.7
+          recommendation:
+            'Schedule your most demanding learning objectives during this high-energy window.',
+          confidence: 0.7,
         };
       }
     }
@@ -970,7 +1133,9 @@ export class ReasoningEngine {
   // Utility Methods for Risk and Opportunity Analysis
 
   isDifficultyPlateaued(tasks) {
-    if (tasks.length < 4) {return false;}
+    if (tasks.length < 4) {
+      return false;
+    }
 
     const difficulties = tasks.map(t => t.difficulty || 3);
     const variance = this.calculateDifficultyVariance(tasks);
@@ -979,7 +1144,9 @@ export class ReasoningEngine {
   }
 
   calculateDifficultyVariance(tasks) {
-    if (tasks.length === 0) {return 0;}
+    if (tasks.length === 0) {
+      return 0;
+    }
 
     const difficulties = tasks.map(t => t.difficulty || 3);
     const mean = difficulties.reduce((sum, d) => sum + d, 0) / difficulties.length;
@@ -989,33 +1156,47 @@ export class ReasoningEngine {
   }
 
   calculateOverallRiskLevel(risks) {
-    if (risks.length === 0) {return 'low';}
+    if (risks.length === 0) {
+      return 'low';
+    }
 
     const highPriorityCount = risks.filter(r => r.priority === 'high').length;
     const mediumPriorityCount = risks.filter(r => r.priority === 'medium').length;
 
-    if (highPriorityCount >= 2) {return 'high';}
-    if (highPriorityCount >= 1 || mediumPriorityCount >= 3) {return 'medium';}
+    if (highPriorityCount >= 2) {
+      return 'high';
+    }
+    if (highPriorityCount >= 1 || mediumPriorityCount >= 3) {
+      return 'medium';
+    }
     return 'low';
   }
 
   calculateOpportunityPriority(opportunities) {
-    if (opportunities.length === 0) {return 'low';}
+    if (opportunities.length === 0) {
+      return 'low';
+    }
 
     const highValueCount = opportunities.filter(o => o.value === 'high').length;
     const actionableCount = opportunities.filter(o => o.actionable).length;
 
-    if (highValueCount >= 2 || actionableCount >= 3) {return 'high';}
-    if (highValueCount >= 1 || actionableCount >= 2) {return 'medium';}
+    if (highValueCount >= 2 || actionableCount >= 3) {
+      return 'high';
+    }
+    if (highValueCount >= 1 || actionableCount >= 2) {
+      return 'medium';
+    }
     return 'low';
   }
 
   calculateInsightConfidence(insights) {
-    if (insights.length === 0) {return 0;}
+    if (insights.length === 0) {
+      return 0;
+    }
 
-    const avgConfidence = insights
-      .filter(i => i.confidence !== undefined)
-      .reduce((sum, i) => sum + i.confidence, 0) / insights.length;
+    const avgConfidence =
+      insights.filter(i => i.confidence !== undefined).reduce((sum, i) => sum + i.confidence, 0) /
+      insights.length;
 
     return avgConfidence || 0.5;
   }
@@ -1026,7 +1207,7 @@ export class ReasoningEngine {
       .map(i => ({
         action: i.actionSuggestion,
         priority: i.confidence > 0.8 ? 'high' : 'medium',
-        relatedInsight: i.title
+        relatedInsight: i.title,
       }))
       .slice(0, 3); // Top 3 actions
   }
@@ -1036,17 +1217,17 @@ export class ReasoningEngine {
       riskType: risk.type,
       mitigation: risk.recommendation,
       priority: risk.priority,
-      timeframe: this.estimateRiskTimeframe(risk.type)
+      timeframe: this.estimateRiskTimeframe(risk.type),
     }));
   }
 
   estimateRiskTimeframe(riskType) {
     const timeframes = {
-      'stagnation_risk': 'immediate',
-      'skill_silo_risk': '1-2 weeks',
-      'burnout_risk': 'immediate',
-      'goal_drift_risk': '1 week',
-      'engagement_decline_risk': 'immediate'
+      stagnation_risk: 'immediate',
+      skill_silo_risk: '1-2 weeks',
+      burnout_risk: 'immediate',
+      goal_drift_risk: '1 week',
+      engagement_decline_risk: 'immediate',
     };
 
     return timeframes[riskType] || 'medium-term';

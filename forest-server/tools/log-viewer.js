@@ -34,7 +34,7 @@ const colors = {
   bgRed: '\x1b[41m',
   bgGreen: '\x1b[42m',
   bgYellow: '\x1b[43m',
-  bgBlue: '\x1b[44m'
+  bgBlue: '\x1b[44m',
 };
 
 class LogViewer {
@@ -58,7 +58,9 @@ class LogViewer {
    */
   async start() {
     console.log(`${colors.bright}${colors.green}🌳 Forest.os Real-Time Log Viewer${colors.reset}`);
-    console.log(`${colors.dim}Watching: ${path.join(this.logDirectory, this.logFile)}${colors.reset}`);
+    console.log(
+      `${colors.dim}Watching: ${path.join(this.logDirectory, this.logFile)}${colors.reset}`
+    );
 
     if (this.filter) {
       console.log(`${colors.dim}Filter: ${this.filter}${colors.reset}`);
@@ -98,7 +100,6 @@ class LogViewer {
       if (this.follow) {
         await this.watchFile(logPath);
       }
-
     } catch (error) {
       console.error(`${colors.red}❌ Error starting log viewer:${colors.reset}`, error.message);
     }
@@ -108,7 +109,7 @@ class LogViewer {
    * Wait for log file to be created
    */
   async waitForFile(filePath) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const dir = path.dirname(filePath);
       const filename = path.basename(filePath);
 
@@ -130,15 +131,17 @@ class LogViewer {
       // Use tail command to get recent lines
       const tail = spawn('tail', ['-n', this.lines.toString(), filePath]);
 
-      tail.stdout.on('data', (data) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
+      tail.stdout.on('data', data => {
+        const lines = data
+          .toString()
+          .split('\n')
+          .filter(line => line.trim());
         lines.forEach(line => this.processLogLine(line));
       });
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         tail.on('close', resolve);
       });
-
     } catch (error) {
       console.error(`${colors.red}Error reading recent lines:${colors.reset}`, error.message);
     }
@@ -152,16 +155,19 @@ class LogViewer {
       // Use tail -f for efficient file following
       const tailProcess = spawn('tail', ['-f', filePath]);
 
-      tailProcess.stdout.on('data', (data) => {
-        const lines = data.toString().split('\n').filter(line => line.trim());
+      tailProcess.stdout.on('data', data => {
+        const lines = data
+          .toString()
+          .split('\n')
+          .filter(line => line.trim());
         lines.forEach(line => this.processLogLine(line));
       });
 
-      tailProcess.stderr.on('data', (data) => {
+      tailProcess.stderr.on('data', data => {
         console.error(`${colors.red}Tail error:${colors.reset}`, data.toString());
       });
 
-      tailProcess.on('close', (code) => {
+      tailProcess.on('close', code => {
         if (this.isRunning) {
           console.log(`${colors.yellow}⚠️  Tail process exited with code ${code}${colors.reset}`);
         }
@@ -177,7 +183,6 @@ class LogViewer {
 
       // Keep the process alive
       await new Promise(() => {}); // Run indefinitely
-
     } catch (error) {
       console.error(`${colors.red}Error watching file:${colors.reset}`, error.message);
     }
@@ -187,7 +192,9 @@ class LogViewer {
    * Process and format a log line
    */
   processLogLine(line) {
-    if (!line.trim()) {return;}
+    if (!line.trim()) {
+      return;
+    }
 
     try {
       // Try to parse as structured log first
@@ -210,7 +217,9 @@ class LogViewer {
       const logEntry = JSON.parse(line);
 
       // Apply filters
-      if (!this.passesFilters(logEntry)) {return;}
+      if (!this.passesFilters(logEntry)) {
+        return;
+      }
 
       // Format for display
       const timestamp = logEntry.timestamp || new Date().toISOString();
@@ -220,7 +229,6 @@ class LogViewer {
 
       const formattedLine = this.formatLogLine(timestamp, level, component, message, logEntry);
       console.log(formattedLine);
-
     } catch (error) {
       // Fallback to text processing
       this.processTextLogLine(line);
@@ -254,7 +262,10 @@ class LogViewer {
     let displayLine = line;
     if (this.search) {
       const searchRegex = new RegExp(`(${this.search})`, 'gi');
-      displayLine = displayLine.replace(searchRegex, `${colors.bgYellow}${colors.red}$1${colors.reset}`);
+      displayLine = displayLine.replace(
+        searchRegex,
+        `${colors.bgYellow}${colors.red}$1${colors.reset}`
+      );
     }
 
     // Color code by log level
@@ -327,7 +338,10 @@ class LogViewer {
     // Highlight search terms
     if (this.search) {
       const searchRegex = new RegExp(`(${this.search})`, 'gi');
-      formattedLine = formattedLine.replace(searchRegex, `${colors.bgYellow}${colors.red}$1${colors.reset}`);
+      formattedLine = formattedLine.replace(
+        searchRegex,
+        `${colors.bgYellow}${colors.red}$1${colors.reset}`
+      );
     }
 
     return formattedLine;
@@ -338,16 +352,26 @@ class LogViewer {
    */
   getLevelColor(level) {
     switch (level.toLowerCase()) {
-    case 'error': return colors.red;
-    case 'warn': return colors.yellow;
-    case 'info': return colors.green;
-    case 'debug': return colors.blue;
-    case 'trace': return colors.cyan;
-    case 'perf': return colors.magenta;
-    case 'memory': return colors.dim;
-    case 'event': return colors.bright + colors.blue;
-    case 'user': return colors.bright + colors.green;
-    default: return colors.white;
+      case 'error':
+        return colors.red;
+      case 'warn':
+        return colors.yellow;
+      case 'info':
+        return colors.green;
+      case 'debug':
+        return colors.blue;
+      case 'trace':
+        return colors.cyan;
+      case 'perf':
+        return colors.magenta;
+      case 'memory':
+        return colors.dim;
+      case 'event':
+        return colors.bright + colors.blue;
+      case 'user':
+        return colors.bright + colors.green;
+      default:
+        return colors.white;
     }
   }
 
@@ -404,7 +428,7 @@ class MultiLogViewer {
       { file: 'forest-app.log', label: 'APP', color: colors.green },
       { file: 'forest-errors.log', label: 'ERR', color: colors.red },
       { file: 'forest-performance.log', label: 'PERF', color: colors.magenta },
-      { file: 'forest-realtime.log', label: 'RT', color: colors.cyan }
+      { file: 'forest-realtime.log', label: 'RT', color: colors.cyan },
     ];
 
     console.log(`${colors.bright}${colors.green}🌳 Forest.os Multi-Log Viewer${colors.reset}`);
@@ -431,8 +455,11 @@ class MultiLogViewer {
   watchFileWithLabel(filePath, label, color) {
     const tail = spawn('tail', ['-f', filePath]);
 
-    tail.stdout.on('data', (data) => {
-      const lines = data.toString().split('\n').filter(line => line.trim());
+    tail.stdout.on('data', data => {
+      const lines = data
+        .toString()
+        .split('\n')
+        .filter(line => line.trim());
       lines.forEach(line => {
         if (this.passesFilter(line)) {
           console.log(`${color}[${label}]${colors.reset} ${line}`);
@@ -469,43 +496,43 @@ if (process.argv[1] === __filename) {
     const arg = args[i];
 
     switch (arg) {
-    case '--file':
-    case '-f':
-      options.logFile = args[++i];
-      break;
-    case '--level':
-    case '-l':
-      options.level = args[++i];
-      break;
-    case '--component':
-    case '-c':
-      options.component = args[++i];
-      break;
-    case '--filter':
-      options.filter = args[++i];
-      break;
-    case '--search':
-    case '-s':
-      options.search = args[++i];
-      break;
-    case '--lines':
-    case '-n':
-      options.lines = parseInt(args[++i], 10);
-      break;
-    case '--no-follow':
-      options.follow = false;
-      break;
-    case '--json':
-    case '-j':
-      options.jsonMode = true;
-      break;
-    case '--multi':
-    case '-m':
-      options.multiMode = true;
-      break;
-    case '--help':
-    case '-h':
-      console.log(`
+      case '--file':
+      case '-f':
+        options.logFile = args[++i];
+        break;
+      case '--level':
+      case '-l':
+        options.level = args[++i];
+        break;
+      case '--component':
+      case '-c':
+        options.component = args[++i];
+        break;
+      case '--filter':
+        options.filter = args[++i];
+        break;
+      case '--search':
+      case '-s':
+        options.search = args[++i];
+        break;
+      case '--lines':
+      case '-n':
+        options.lines = parseInt(args[++i], 10);
+        break;
+      case '--no-follow':
+        options.follow = false;
+        break;
+      case '--json':
+      case '-j':
+        options.jsonMode = true;
+        break;
+      case '--multi':
+      case '-m':
+        options.multiMode = true;
+        break;
+      case '--help':
+      case '-h':
+        console.log(`
 Forest.os Log Viewer
 
 Usage: node log-viewer.js [options]
@@ -530,8 +557,8 @@ Examples:
   node log-viewer.js --filter "archiving"     # Filter for archiving-related logs
   node log-viewer.js -m                       # Watch all log files
         `);
-      process.exit(0);
-      break;
+        process.exit(0);
+        break;
     }
   }
 

@@ -67,5 +67,5 @@ export const ModelUtils = {
       return [];
     }
     return modelArray.map(model => this.toJSON(model));
-  }
+  },
 };

@@ -22,24 +22,24 @@ const logger = getForestLogger({
   logLevel: 'trace',
   enableConsole: true,
   enableFileLogging: true,
-  enableRealTimeLogging: true
+  enableRealTimeLogging: true,
 });
 
 // Create component-specific loggers
 const dataArchiverLogger = logger.child({
   component: 'DataArchiver',
   projectId: 'demo-project',
-  userId: 'demo-user'
+  userId: 'demo-user',
 });
 
 const systemClockLogger = logger.child({
   component: 'SystemClock',
-  projectId: 'demo-project'
+  projectId: 'demo-project',
 });
 
 const userActionLogger = logger.child({
   component: 'UserInterface',
-  userId: 'demo-user'
+  userId: 'demo-user',
 });
 
 console.log('📝 Demonstrating all log levels...\n');
@@ -47,28 +47,28 @@ console.log('📝 Demonstrating all log levels...\n');
 // Demonstrate all log levels
 logger.error('Critical system error detected', {
   errorCode: 'SYS_001',
-  details: 'Database connection failed'
+  details: 'Database connection failed',
 });
 
 logger.warn('Performance threshold exceeded', {
   metric: 'memory_usage',
   current: '450MB',
-  threshold: '400MB'
+  threshold: '400MB',
 });
 
 logger.info('Forest.os logging demo started', {
   version: '2.0',
-  features: ['winston', 'real-time', 'structured']
+  features: ['winston', 'real-time', 'structured'],
 });
 
 logger.debug('Debug information for development', {
   debugLevel: 'verbose',
-  context: 'logging-demo'
+  context: 'logging-demo',
 });
 
 logger.trace('Detailed trace information', {
   function: 'demo-logging-system',
-  line: 58
+  line: 58,
 });
 
 console.log('\n⏱️ Demonstrating performance timing...\n');
@@ -82,7 +82,7 @@ await new Promise(resolve => setTimeout(resolve, 1000));
 logger.endTimer('demo_operation', {
   operation: 'data_processing',
   itemsProcessed: 1500,
-  cacheHits: 87
+  cacheHits: 87,
 });
 
 logger.startTimer('archiving_simulation');
@@ -90,7 +90,7 @@ await new Promise(resolve => setTimeout(resolve, 500));
 logger.endTimer('archiving_simulation', {
   operation: 'archive_simulation',
   itemsArchived: 50,
-  wisdomGenerated: 3
+  wisdomGenerated: 3,
 });
 
 console.log('\n📊 Demonstrating component-specific logging...\n');
@@ -99,26 +99,26 @@ console.log('\n📊 Demonstrating component-specific logging...\n');
 dataArchiverLogger.event('Archiving process started', {
   itemsToArchive: 150,
   estimatedDuration: '45 seconds',
-  archiveThreshold: '18 months'
+  archiveThreshold: '18 months',
 });
 
 dataArchiverLogger.perf('Archive assessment completed', {
   assessmentTime: '2.3s',
   itemsFound: 150,
-  archiveNeeded: true
+  archiveNeeded: true,
 });
 
 systemClockLogger.event('Proactive reasoning triggered', {
   analysisType: 'strategic',
   lastAnalysis: '2 days ago',
-  priority: 'high'
+  priority: 'high',
 });
 
 userActionLogger.user('User completed task', {
   taskId: 'task_123',
   outcome: 'breakthrough',
   difficulty: 4,
-  engagement: 5
+  engagement: 5,
 });
 
 console.log('\n🧠 Demonstrating Forest.os specific events...\n');
@@ -129,28 +129,28 @@ logger.logArchiving('demo-project', {
   htaData: { branchesArchived: 3 },
   wisdomGenerated: [
     { type: 'learning_history_wisdom', insights: 5 },
-    { type: 'strategic_branch_wisdom', principles: 3 }
-  ]
+    { type: 'strategic_branch_wisdom', principles: 3 },
+  ],
 });
 
 logger.logProactiveReasoning('opportunity', 'demo-project', [
   'Skill synergy opportunity detected in JavaScript/TypeScript domains',
   'Breakthrough momentum window identified for next 3 days',
-  'Cross-pollination potential between current learning branches'
+  'Cross-pollination potential between current learning branches',
 ]);
 
 logger.logUserAction('generate_daily_schedule', 'demo-project', 'demo-user', {
   scheduleDate: '2025-06-19',
   energyLevel: 4,
   blocksGenerated: 6,
-  estimatedDuration: '8 hours'
+  estimatedDuration: '8 hours',
 });
 
 logger.logTaskCompletion('task_456', 'demo-project', {
   outcome: 'significant_progress',
   breakthrough: false,
   difficultyRating: 3,
-  engagementLevel: 4
+  engagementLevel: 4,
 });
 
 console.log('\n💾 Demonstrating memory and performance monitoring...\n');
@@ -159,7 +159,7 @@ console.log('\n💾 Demonstrating memory and performance monitoring...\n');
 logger.memory('Demo memory usage spike', {
   simulatedSpike: true,
   heapUsed: '150MB',
-  reason: 'large_data_processing'
+  reason: 'large_data_processing',
 });
 
 // Log system performance metrics
@@ -168,7 +168,7 @@ logger.perf('System performance snapshot', {
   uptime: stats.uptime,
   memoryUsage: stats.memoryUsage,
   systemLoad: stats.systemLoad,
-  activeTimers: stats.activeTimers
+  activeTimers: stats.activeTimers,
 });
 
 console.log('\n📈 Logging demo completed!\n');
@@ -198,7 +198,7 @@ console.log('• view_recent_logs - View and filter recent entries');
 logger.info('Demo logging session completed', {
   totalDemoTime: '~10 seconds',
   logEntriesGenerated: 'Multiple across all levels',
-  nextSteps: 'Use MCP tools or log viewer for monitoring'
+  nextSteps: 'Use MCP tools or log viewer for monitoring',
 });
 
 setTimeout(() => {

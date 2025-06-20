@@ -20,12 +20,18 @@ export function parseTimeWithContext(timeStr = '', context = 'generic') {
   }
 
   const [rawTime, rawPeriod] = timeStr.trim().split(' ');
-  if (!rawTime) {return 0;}
+  if (!rawTime) {
+    return 0;
+  }
 
   const period = (rawPeriod || '').toUpperCase();
   let [hours, minutes] = rawTime.split(':').map(num => parseInt(num, 10));
-  if (Number.isNaN(hours)) {return 0;}
-  if (Number.isNaN(minutes)) {minutes = 0;}
+  if (Number.isNaN(hours)) {
+    return 0;
+  }
+  if (Number.isNaN(minutes)) {
+    minutes = 0;
+  }
 
   // Normalize into 24-hour.
   if (period === 'PM' && hours !== 12) {

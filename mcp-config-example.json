@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["forest-server/servers/memory-server.js"]
+    },
+    "filesystem": {
+      "command": "node",
+      "args": ["forest-server/servers/filesystem-server.js"]
+    },
+    "forest": {
+      "command": "node",
+      "args": ["start-server.js"]
+    },
+    "sequential-thinking": {
+      "command": "node",
+      "args": ["forest-server/servers/sequential-thinking-server.js"]
+    }
+  }
+} 

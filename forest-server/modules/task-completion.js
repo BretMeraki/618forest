@@ -22,13 +22,28 @@ export class TaskCompletion {
     options,
     // Legacy positional args retained for a short transition period – will be removed later.
     outcome,
-    learned = '', nextQuestions = '', energyLevel, difficultyRating = 3, breakthrough = false,
-    engagementLevel = 5, unexpectedResults = [], newSkillsRevealed = [], externalFeedback = [],
-    socialReactions = [], viralPotential = false, industryConnections = [], serendipitousEvents = []
+    learned = '',
+    nextQuestions = '',
+    energyLevel,
+    difficultyRating = 3,
+    breakthrough = false,
+    engagementLevel = 5,
+    unexpectedResults = [],
+    newSkillsRevealed = [],
+    externalFeedback = [],
+    socialReactions = [],
+    viralPotential = false,
+    industryConnections = [],
+    serendipitousEvents = []
   ) {
     // Convert legacy positional call to the new object form.
     let opts;
-    if (typeof options === 'object' && options !== null && !Array.isArray(options) && options.blockId) {
+    if (
+      typeof options === 'object' &&
+      options !== null &&
+      !Array.isArray(options) &&
+      options.blockId
+    ) {
       opts = options;
     } else {
       opts = {
@@ -46,7 +61,7 @@ export class TaskCompletion {
         socialReactions,
         viralPotential,
         industryConnections,
-        serendipitousEvents
+        serendipitousEvents,
       };
     }
 
@@ -65,7 +80,7 @@ export class TaskCompletion {
       socialReactions: reactions = [],
       viralPotential: viral = false,
       industryConnections: connections = [],
-      serendipitousEvents: serendip = []
+      serendipitousEvents: serendip = [],
     } = opts;
 
     try {
@@ -78,7 +93,8 @@ export class TaskCompletion {
 
       // Load today's schedule to find the block
       const today = new Date().toISOString().split('T')[0];
-      const schedule = await this.dataPersistence.loadProjectData(projectId, `day_${today}.json`) || {};
+      const schedule =
+        (await this.dataPersistence.loadProjectData(projectId, `day_${today}.json`)) || {};
 
       // Ensure schedule.blocks exists for later persistence
       if (!Array.isArray(schedule.blocks)) {
@@ -90,17 +106,16 @@ export class TaskCompletion {
 
       // Try other matching fields for backward compatibility
       if (!block) {
-        block = schedule.blocks.find(b =>
-          b.title === blockId ||
-          b.taskId === blockId ||
-          b.nodeId === blockId
+        block = schedule.blocks.find(
+          b => b.title === blockId || b.taskId === blockId || b.nodeId === blockId
         );
       }
 
       // --- FALLBACK: allow completing tasks that were never scheduled ---
       if (!block) {
         // Try to fetch the HTA node so we can pull in metadata
-        const htaData = await this.loadPathHTA(projectId, config.activePath || DEFAULT_PATHS.GENERAL) || {};
+        const htaData =
+          (await this.loadPathHTA(projectId, config.activePath || DEFAULT_PATHS.GENERAL)) || {};
         const node = htaData.frontierNodes?.find(n => n.id === blockId || n.title === blockId);
 
         block = {
@@ -114,7 +129,7 @@ export class TaskCompletion {
           taskId: node?.id || blockId,
           branch: node?.branch || config.activePath || DEFAULT_PATHS.GENERAL,
           completed: false,
-          priority: node?.priority || 200
+          priority: node?.priority || 200,
         };
 
         // Push the synthetic block into the schedule so history is consistent
@@ -141,7 +156,7 @@ export class TaskCompletion {
           socialReactions: reactions,
           viralPotential: viral,
           industryConnections: connections,
-          serendipitousEvents: serendip
+          serendipitousEvents: serendip,
         };
       }
 
@@ -149,15 +164,23 @@ export class TaskCompletion {
       await this.dataPersistence.saveProjectData(projectId, `day_${today}.json`, schedule);
 
       // Update learning history
-      await this.updateLearningHistory(projectId, config.activePath || DEFAULT_PATHS.GENERAL, block);
+      await this.updateLearningHistory(
+        projectId,
+        config.activePath || DEFAULT_PATHS.GENERAL,
+        block
+      );
 
       // Emit block completion event for decoupled strategy evolution
       if (lrnd || nq || br) {
-        this.eventBus.emit('block:completed', {
-          projectId,
-          pathName: config.activePath || DEFAULT_PATHS.GENERAL,
-          block
-        }, 'TaskCompletion');
+        this.eventBus.emit(
+          'block:completed',
+          {
+            projectId,
+            pathName: config.activePath || DEFAULT_PATHS.GENERAL,
+            block,
+          },
+          'TaskCompletion'
+        );
       }
 
       // Handle opportunity detection for impossible dream orchestration
@@ -166,32 +189,35 @@ export class TaskCompletion {
       const responseText = this.generateCompletionResponse(block, opportunityResponse);
 
       return {
-        content: [{
-          type: 'text',
-          text: responseText
-        }],
+        content: [
+          {
+            type: 'text',
+            text: responseText,
+          },
+        ],
         block_completed: block,
         opportunity_analysis: opportunityResponse,
-        next_suggested_action: this.suggestNextAction(block, schedule)
+        next_suggested_action: this.suggestNextAction(block, schedule),
       };
-
     } catch (error) {
       await this.dataPersistence.logError('completeBlock', error, { blockId, outcome: out });
       return {
-        content: [{
-          type: 'text',
-          text: `Error completing block: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error completing block: ${error.message}`,
+          },
+        ],
       };
     }
   }
 
   async updateLearningHistory(projectId, pathName, block) {
-    const learningHistory = await this.loadPathLearningHistory(projectId, pathName) || {
+    const learningHistory = (await this.loadPathLearningHistory(projectId, pathName)) || {
       completedTopics: [],
       insights: [],
       knowledgeGaps: [],
-      skillProgression: {}
+      skillProgression: {},
     };
 
     // Add completed topic
@@ -205,7 +231,7 @@ export class TaskCompletion {
       energyAfter: block.energyAfter,
       breakthrough: block.breakthrough,
       blockId: block.id,
-      taskId: block.taskId
+      taskId: block.taskId,
     });
 
     // Add insights if breakthrough
@@ -214,7 +240,7 @@ export class TaskCompletion {
         insight: block.learned,
         topic: block.title,
         timestamp: block.completedAt,
-        context: block.outcome
+        context: block.outcome,
       });
     }
 
@@ -226,7 +252,7 @@ export class TaskCompletion {
           question: question.trim(),
           relatedTopic: block.title,
           identified: block.completedAt,
-          priority: block.breakthrough ? 'high' : 'medium'
+          priority: block.breakthrough ? 'high' : 'medium',
         });
       }
     }
@@ -237,13 +263,13 @@ export class TaskCompletion {
         learningHistory.skillProgression[block.branch] = {
           level: 1,
           completedTasks: 0,
-          totalEngagement: 0
+          totalEngagement: 0,
         };
       }
 
       const progression = learningHistory.skillProgression[block.branch];
       progression.completedTasks += 1;
-      progression.totalEngagement += (block.opportunityContext?.engagementLevel || 5);
+      progression.totalEngagement += block.opportunityContext?.engagementLevel || 5;
       progression.level = Math.min(10, 1 + Math.floor(progression.completedTasks / 3));
     }
 
@@ -256,7 +282,9 @@ export class TaskCompletion {
 
   async handleOpportunityDetection(projectId, block) {
     const context = block.opportunityContext;
-    if (!context) {return null;}
+    if (!context) {
+      return null;
+    }
 
     const opportunities = [];
 
@@ -265,7 +293,7 @@ export class TaskCompletion {
       opportunities.push({
         type: 'natural_talent_indicator',
         message: `🌟 High engagement detected (${context.engagementLevel}/10)! This suggests natural aptitude.`,
-        action: 'Consider doubling down on this area and exploring advanced techniques.'
+        action: 'Consider doubling down on this area and exploring advanced techniques.',
       });
     }
 
@@ -274,7 +302,7 @@ export class TaskCompletion {
       opportunities.push({
         type: 'serendipitous_discovery',
         message: `🔍 Unexpected discoveries: ${context.unexpectedResults.join(', ')}`,
-        action: 'These discoveries could open new pathways - explore them further.'
+        action: 'These discoveries could open new pathways - explore them further.',
       });
     }
 
@@ -285,7 +313,7 @@ export class TaskCompletion {
         opportunities.push({
           type: 'external_validation',
           message: `👥 Received ${positiveCount} positive feedback responses`,
-          action: 'This external validation suggests market potential - consider networking.'
+          action: 'This external validation suggests market potential - consider networking.',
         });
       }
     }
@@ -295,19 +323,21 @@ export class TaskCompletion {
       opportunities.push({
         type: 'viral_potential',
         message: '🚀 Content has viral potential detected',
-        action: 'Create more content in this style and engage with the audience.'
+        action: 'Create more content in this style and engage with the audience.',
       });
     }
 
     return {
       detected: opportunities.length > 0,
       opportunities,
-      recommendedPath: this.recommendOpportunityPath(opportunities)
+      recommendedPath: this.recommendOpportunityPath(opportunities),
     };
   }
 
   recommendOpportunityPath(opportunities) {
-    if (opportunities.length === 0) {return 'continue_planned_path';}
+    if (opportunities.length === 0) {
+      return 'continue_planned_path';
+    }
 
     const types = opportunities.map(o => o.type);
 
@@ -318,17 +348,20 @@ export class TaskCompletion {
         nextActions: [
           'Create follow-up content to viral piece within 24 hours',
           'Reach out to people who gave positive feedback',
-          'Document what made the content viral for replication'
-        ]
+          'Document what made the content viral for replication',
+        ],
       };
-    } else if (types.includes('natural_talent_indicator') && types.includes('serendipitous_discovery')) {
+    } else if (
+      types.includes('natural_talent_indicator') &&
+      types.includes('serendipitous_discovery')
+    ) {
       return {
         path: 'exploration_amplification_path',
         nextActions: [
           'Spend 2x time on high-engagement activities',
           'Research advanced techniques in discovered talent area',
-          'Connect with experts in this unexpected domain'
-        ]
+          'Connect with experts in this unexpected domain',
+        ],
       };
     } else if (types.includes('external_validation')) {
       return {
@@ -336,8 +369,8 @@ export class TaskCompletion {
         nextActions: [
           'Follow up with feedback providers within 48 hours',
           'Ask for introductions to others in the field',
-          'Share your work with their professional networks'
-        ]
+          'Share your work with their professional networks',
+        ],
       };
     } else {
       return {
@@ -345,8 +378,8 @@ export class TaskCompletion {
         nextActions: [
           'Double down on what created the breakthrough',
           'Document the conditions that led to success',
-          'Plan 3 similar experiments to replicate results'
-        ]
+          'Plan 3 similar experiments to replicate results',
+        ],
       };
     }
   }
@@ -382,7 +415,9 @@ export class TaskCompletion {
           response += `• ${action}\n`;
         }
       } else {
-        const pathRecommendation = this.getPathRecommendationText(opportunityResponse.recommendedPath);
+        const pathRecommendation = this.getPathRecommendationText(
+          opportunityResponse.recommendedPath
+        );
         response += `\n🎯 **Recommended Path**: ${pathRecommendation}\n`;
       }
     }
@@ -396,11 +431,11 @@ export class TaskCompletion {
 
   getPathRecommendationText(pathType) {
     const paths = {
-      'accelerated_professional_path': 'Focus on professional networking and content creation',
-      'exploration_amplification_path': 'Deep dive into discovered talents and interests',
-      'networking_focus_path': 'Prioritize building professional connections',
-      'breakthrough_deepening_path': 'Deepen mastery in breakthrough areas',
-      'continue_planned_path': 'Continue planned learning'
+      accelerated_professional_path: 'Focus on professional networking and content creation',
+      exploration_amplification_path: 'Deep dive into discovered talents and interests',
+      networking_focus_path: 'Prioritize building professional connections',
+      breakthrough_deepening_path: 'Deepen mastery in breakthrough areas',
+      continue_planned_path: 'Continue planned learning',
     };
 
     return paths[pathType] || 'Continue planned learning';
@@ -414,13 +449,13 @@ export class TaskCompletion {
       return {
         type: 'continue_schedule',
         message: `Next: ${nextBlock.title} at ${nextBlock.startTime}`,
-        blockId: nextBlock.id
+        blockId: nextBlock.id,
       };
     } else {
       return {
         type: 'day_complete',
         message: 'All blocks completed! Consider reviewing progress or planning tomorrow.',
-        suggestion: 'Use analyze_reasoning to extract insights from today\'s learning'
+        suggestion: "Use analyze_reasoning to extract insights from today's learning",
       };
     }
   }
@@ -429,15 +464,28 @@ export class TaskCompletion {
     if (pathName === DEFAULT_PATHS.GENERAL) {
       return await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.LEARNING_HISTORY);
     } else {
-      return await this.dataPersistence.loadPathData(projectId, pathName, FILE_NAMES.LEARNING_HISTORY);
+      return await this.dataPersistence.loadPathData(
+        projectId,
+        pathName,
+        FILE_NAMES.LEARNING_HISTORY
+      );
     }
   }
 
   async savePathLearningHistory(projectId, pathName, learningHistory) {
     if (pathName === DEFAULT_PATHS.GENERAL) {
-      return await this.dataPersistence.saveProjectData(projectId, FILE_NAMES.LEARNING_HISTORY, learningHistory);
+      return await this.dataPersistence.saveProjectData(
+        projectId,
+        FILE_NAMES.LEARNING_HISTORY,
+        learningHistory
+      );
     } else {
-      return await this.dataPersistence.savePathData(projectId, pathName, FILE_NAMES.LEARNING_HISTORY, learningHistory);
+      return await this.dataPersistence.savePathData(
+        projectId,
+        pathName,
+        FILE_NAMES.LEARNING_HISTORY,
+        learningHistory
+      );
     }
   }
 

@@ -58,7 +58,7 @@ describe('ToolRegistry', () => {
   describe('execution', () => {
     test('should execute registered tool successfully', async () => {
       let calledWith = null;
-      const mockHandler = (args) => {
+      const mockHandler = args => {
         calledWith = args;
         return Promise.resolve('success');
       };
@@ -84,17 +84,21 @@ describe('ToolRegistry', () => {
     });
 
     test('should handle synchronous tools', async () => {
-      registry.register('sync_tool', (args) => `sync result: ${args.input}`, 'test');
+      registry.register('sync_tool', args => `sync result: ${args.input}`, 'test');
 
       const result = await registry.execute('sync_tool', { input: 'test' });
       expect(result).toBe('sync result: test');
     });
 
     test('should handle asynchronous tools', async () => {
-      registry.register('async_tool', async (args) => {
-        await new Promise(resolve => setTimeout(resolve, 1));
-        return `async result: ${args.input}`;
-      }, 'test');
+      registry.register(
+        'async_tool',
+        async args => {
+          await new Promise(resolve => setTimeout(resolve, 1));
+          return `async result: ${args.input}`;
+        },
+        'test'
+      );
 
       const result = await registry.execute('async_tool', { input: 'test' });
       expect(result).toBe('async result: test');
@@ -126,7 +130,7 @@ describe('ToolRegistry', () => {
       expect(stats.totalCategories).toBe(2);
       expect(stats.toolsByCategory).toEqual({
         category1: 2,
-        category2: 1
+        category2: 1,
       });
       expect(stats.registeredTools).toEqual(['tool1', 'tool2', 'tool3']);
     });

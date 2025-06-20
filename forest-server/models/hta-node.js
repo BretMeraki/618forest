@@ -37,7 +37,7 @@ export class HtaNode {
     completedAt = null,
     opportunityType = null,
     actualDifficulty = null,
-    actualDuration = null
+    actualDuration = null,
   }) {
     // Validation
     if (!id) {
@@ -126,9 +126,7 @@ export class HtaNode {
     if (!Array.isArray(prerequisites)) {
       return [];
     }
-    return prerequisites.filter(prereq =>
-      typeof prereq === 'string' && prereq.trim()
-    );
+    return prerequisites.filter(prereq => typeof prereq === 'string' && prereq.trim());
   }
 
   /**
@@ -211,9 +209,7 @@ export class HtaNode {
     }
 
     // Check if all prerequisites are satisfied
-    return this.prerequisites.every(prereqId =>
-      completedNodeIds.includes(prereqId)
-    );
+    return this.prerequisites.every(prereqId => completedNodeIds.includes(prereqId));
   }
 
   /**
@@ -240,7 +236,7 @@ export class HtaNode {
     const durationMs = this.getDurationInMinutes() * TIME_CONVERSION.MILLISECONDS_PER_MINUTE;
     const overdueThreshold = TIME_CONVERSION.MILLISECONDS_PER_DAY; // 24 hours
 
-    return (currentTime - created) > (durationMs + overdueThreshold);
+    return currentTime - created > durationMs + overdueThreshold;
   }
 
   /**
@@ -263,7 +259,7 @@ export class HtaNode {
       actualDifficulty: this.actualDifficulty,
       actualDuration: this.actualDuration,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
@@ -285,7 +281,12 @@ export class HtaNode {
    * @returns {HtaNode} New HtaNode instance with generated ID
    */
   static create({ title, description, branch, ...options }) {
-    const id = `node_${Date.now()}_${Math.random().toString(MODEL_DEFAULTS.RADIX_BASE_36).slice(MODEL_DEFAULTS.ID_RANDOM_STRING_START, MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH)}`;
+    const id = `node_${Date.now()}_${Math.random()
+      .toString(MODEL_DEFAULTS.RADIX_BASE_36)
+      .slice(
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START,
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH
+      )}`;
     return new HtaNode({ id, title, description, branch, ...options });
   }
 }

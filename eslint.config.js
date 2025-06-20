@@ -1,4 +1,6 @@
 import promisePlugin from 'eslint-plugin-promise';
+import prettier from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-config-prettier';
 
 export default [
   {
@@ -17,35 +19,39 @@ export default [
         setTimeout: 'readonly',
         setInterval: 'readonly',
         clearTimeout: 'readonly',
-        clearInterval: 'readonly'
-      }
+        clearInterval: 'readonly',
+      },
     },
     linterOptions: {
-      reportUnusedDisableDirectives: true
+      reportUnusedDisableDirectives: true,
     },
     plugins: {
-      promise: promisePlugin
+      promise: promisePlugin,
+      prettier,
     },
     rules: {
-      'no-unused-vars': ['warn', { 'args': 'none', 'ignoreRestSiblings': true }],
+      'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true }],
       'no-console': 'off',
       'prefer-const': 'warn',
-      'eqeqeq': ['error', 'always'],
-      'curly': ['warn', 'all'],
-      'semi': ['error', 'always'],
+      eqeqeq: ['error', 'always'],
+      curly: ['warn', 'all'],
+      semi: ['error', 'always'],
 
-      'no-multiple-empty-lines': ['error', { 'max': 1 }],
+      'no-multiple-empty-lines': ['error', { max: 1 }],
       'no-trailing-spaces': 'error',
-      'indent': ['error', 2],
-      'quotes': ['error', 'single', { 'avoidEscape': true }],
+      indent: ['error', 2],
+      quotes: ['error', 'single', { avoidEscape: true }],
       'comma-dangle': ['error', 'never'],
       'object-curly-spacing': ['error', 'always'],
       'array-bracket-spacing': ['error', 'never'],
-      'space-before-function-paren': ['error', {
-        'anonymous': 'always',
-        'named': 'never',
-        'asyncArrow': 'always'
-      }],
+      'space-before-function-paren': [
+        'error',
+        {
+          anonymous: 'always',
+          named: 'never',
+          asyncArrow: 'always',
+        },
+      ],
 
       'no-async-promise-executor': 'error',
       'promise/catch-or-return': 'error',
@@ -68,7 +74,7 @@ export default [
       'no-self-compare': 'error',
       'no-template-curly-in-string': 'warn',
       'no-unmodified-loop-condition': 'error',
-      'no-use-before-define': ['error', { 'functions': false, 'classes': true, 'variables': true }],
+      'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
 
       'default-case': 'warn',
       'dot-notation': 'error',
@@ -81,12 +87,15 @@ export default [
       'no-floating-decimal': 'error',
       'no-implied-eval': 'error',
       'no-lone-blocks': 'error',
-      'no-magic-numbers': ['warn', {
-        'ignore': [-1, 0, 1],
-        'ignoreArrayIndexes': true,
-        'enforceConst': true,
-        'detectObjects': false
-      }],
+      'no-magic-numbers': [
+        'warn',
+        {
+          ignore: [-1, 0, 1],
+          ignoreArrayIndexes: true,
+          enforceConst: true,
+          detectObjects: false,
+        },
+      ],
       'no-multi-spaces': 'error',
       'no-new': 'warn',
       'no-new-func': 'error',
@@ -106,8 +115,8 @@ export default [
       'no-void': 'error',
       'no-with': 'error',
       'prefer-promise-reject-errors': 'error',
-      'radix': 'error',
-      'yoda': 'error',
+      radix: 'error',
+      yoda: 'error',
 
       'no-catch-shadow': 'off',
       'no-delete-var': 'error',
@@ -135,9 +144,14 @@ export default [
       'prefer-spread': 'warn',
       'prefer-template': 'warn',
       'rest-spread-spacing': 'error',
-      'template-curly-spacing': 'error'
-    }
+      'template-curly-spacing': 'error',
+
+      // Prettier integration
+      'prettier/prettier': 'error',
+    },
   },
+  // Prettier config should come last to override conflicting rules
+  prettierConfig,
   {
     files: ['**/*.test.js', '**/test-*.js'],
     languageOptions: {
@@ -152,12 +166,12 @@ export default [
         beforeEach: 'readonly',
         afterEach: 'readonly',
         beforeAll: 'readonly',
-        afterAll: 'readonly'
-      }
+        afterAll: 'readonly',
+      },
     },
     rules: {
       'no-magic-numbers': 'off',
-      'no-unused-expressions': 'off'
-    }
-  }
+      'no-unused-expressions': 'off',
+    },
+  },
 ];

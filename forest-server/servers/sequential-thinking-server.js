@@ -7,12 +7,12 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 const server = new Server(
   {
     name: 'sequential-thinking-server',
-    version: '0.1.0'
+    version: '0.1.0',
   },
   {
     capabilities: {
-      tools: {}
-    }
+      tools: {},
+    },
   }
 );
 
@@ -27,23 +27,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             thoughts: {
               type: 'string',
-              description: 'The thoughts to process'
-            }
+              description: 'The thoughts to process',
+            },
           },
-          required: ['thoughts']
-        }
-      }
-    ]
+          required: ['thoughts'],
+        },
+      },
+    ],
   };
 });
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async request => {
   switch (request.params.name) {
-  case 'thinking': {
-    const { thoughts } = request.params.arguments;
+    case 'thinking': {
+      const { thoughts } = request.params.arguments;
 
-    // Simple thinking processor that structures the thoughts
-    const processedThoughts = `
+      // Simple thinking processor that structures the thoughts
+      const processedThoughts = `
 <thinking>
 ${thoughts}
 </thinking>
@@ -51,13 +51,13 @@ ${thoughts}
 Thoughts processed and structured for better clarity.
       `.trim();
 
-    return {
-      content: [{ type: 'text', text: processedThoughts }]
-    };
-  }
+      return {
+        content: [{ type: 'text', text: processedThoughts }],
+      };
+    }
 
-  default:
-    throw new Error(`Unknown tool: ${request.params.name}`);
+    default:
+      throw new Error(`Unknown tool: ${request.params.name}`);
   }
 });
 

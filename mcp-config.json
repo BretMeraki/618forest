@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": [
+        "forest-server/servers/memory-server.js",
+        "memory.json"
+      ]
+    },
+    "filesystem": {
+      "command": "node",
+      "args": [
+        "forest-server/servers/filesystem-server.js",
+        "--allow", "C:\\Users\\schlansk\\claude-mcp-configs",
+        "--allow", "C:\\Users\\schlansk\\.forest-data",
+        "--allow", "C:\\Users\\schlansk\\claude-mcp-configs\\forest-server\\modules"
+      ]
+    },
+    "forest": {
+      "command": "node",
+      "args": [
+        "start-server.js"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "node",
+      "args": [
+        "forest-server/servers/sequential-thinking-server.js"
+      ]
+    }
+  }
+}

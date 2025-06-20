@@ -18,10 +18,21 @@ async function testMCPIntegration() {
 
     // Check all 15 modules are loaded
     const modules = [
-      'core', 'dataPersistence', 'memorySync', 'projectManagement',
-      'htaTreeBuilder', 'htaStatus', 'scheduleGenerator', 'taskCompletion',
-      'taskIntelligence', 'reasoningEngine', 'llmIntegration', 'identityEngine',
-      'analyticsTools', 'mcpHandlers', 'toolRouter'
+      'core',
+      'dataPersistence',
+      'memorySync',
+      'projectManagement',
+      'htaTreeBuilder',
+      'htaStatus',
+      'scheduleGenerator',
+      'taskCompletion',
+      'taskIntelligence',
+      'reasoningEngine',
+      'llmIntegration',
+      'identityEngine',
+      'analyticsTools',
+      'mcpHandlers',
+      'toolRouter',
     ];
 
     const loadedModules = modules.filter(module => !!forestServer[module]);
@@ -114,7 +125,6 @@ async function testMCPIntegration() {
           console.log('   ⚠️  Filesystem might not have access to Forest data');
         }
       }
-
     } catch (error) {
       console.log('   ❌ Could not read Claude Desktop config:', error.message);
     }
@@ -130,7 +140,6 @@ async function testMCPIntegration() {
     console.log('   1. Restart Claude Desktop to load modular Forest server');
     console.log('   2. Test MCP tools are working in Claude Desktop');
     console.log('   3. All systems should integrate seamlessly!');
-
   } catch (error) {
     console.error('\n❌ Integration test failed:', error.message);
     console.error('🔍 Stack trace:', error.stack);

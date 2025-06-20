@@ -25,7 +25,7 @@ export class ScheduleBlock {
     energyAfter = null,
     difficultyRating = null,
     breakthrough = false,
-    opportunityContext = null
+    opportunityContext = null,
   }) {
     // Validation
     if (!id) {
@@ -124,7 +124,7 @@ export class ScheduleBlock {
     difficultyRating = null,
     breakthrough = false,
     opportunityContext = null,
-    completedAt = null
+    completedAt = null,
   }) {
     this.completed = true;
     this.completedAt = completedAt || new Date().toISOString();
@@ -214,11 +214,11 @@ export class ScheduleBlock {
   getFormattedTimeRange() {
     const start = this.getStartTimeAsDate();
     const end = this.getEndTime();
-    const formatTime = (date) => {
+    const formatTime = date => {
       return date.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
       });
     };
     return `${formatTime(start)} - ${formatTime(end)}`;
@@ -269,7 +269,7 @@ export class ScheduleBlock {
       breakthrough: this.breakthrough,
       opportunityContext: this.opportunityContext,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
@@ -280,24 +280,38 @@ export class ScheduleBlock {
 
   // Create with auto-generated ID
   static create({ title, startTime, duration, ...options }) {
-    const id = `block_${Date.now()}_${Math.random().toString(MODEL_DEFAULTS.RADIX_BASE_36).slice(MODEL_DEFAULTS.ID_RANDOM_STRING_START, MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH)}`;
+    const id = `block_${Date.now()}_${Math.random()
+      .toString(MODEL_DEFAULTS.RADIX_BASE_36)
+      .slice(
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START,
+        MODEL_DEFAULTS.ID_RANDOM_STRING_START + MODEL_DEFAULTS.ID_RANDOM_STRING_LENGTH
+      )}`;
     return new ScheduleBlock({ id, title, startTime, duration, ...options });
   }
 
   // Create a break block
-  static createBreak({ startTime, duration = MODEL_DEFAULTS.SCHEDULE_BREAK_DURATION_MINUTES, title = 'Break' }) {
+  static createBreak({
+    startTime,
+    duration = MODEL_DEFAULTS.SCHEDULE_BREAK_DURATION_MINUTES,
+    title = 'Break',
+  }) {
     return ScheduleBlock.create({
       title,
       startTime,
       duration,
       type: 'break',
       difficulty: TASK_CONFIG.MIN_DIFFICULTY,
-      priority: MODEL_DEFAULTS.SCHEDULE_BREAK_PRIORITY
+      priority: MODEL_DEFAULTS.SCHEDULE_BREAK_PRIORITY,
     });
   }
 
   // Create a habit block
-  static createHabit({ title, startTime, duration = MODEL_DEFAULTS.SCHEDULE_HABIT_DURATION_MINUTES, branch = 'habits' }) {
+  static createHabit({
+    title,
+    startTime,
+    duration = MODEL_DEFAULTS.SCHEDULE_HABIT_DURATION_MINUTES,
+    branch = 'habits',
+  }) {
     return ScheduleBlock.create({
       title,
       startTime,
@@ -305,7 +319,7 @@ export class ScheduleBlock {
       type: 'habit',
       branch,
       difficulty: TASK_CONFIG.MIN_DIFFICULTY,
-      priority: MODEL_DEFAULTS.SCHEDULE_HABIT_PRIORITY
+      priority: MODEL_DEFAULTS.SCHEDULE_HABIT_PRIORITY,
     });
   }
 }

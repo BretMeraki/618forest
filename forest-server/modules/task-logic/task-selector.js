@@ -21,7 +21,20 @@ export class TaskSelector {
    * @param {Object} reasoningAnalysis - Analysis from reasoning engine (optional)
    * @returns {Object|null} Selected task or null if none available
    */
-  static selectOptimalTask(htaData, energyLevel, timeAvailable, contextFromMemory, projectContext, fullConfig = null, reasoningAnalysis = null) {
+  static selectOptimalTask(
+    htaData,
+    energyLevel,
+    timeAvailable,
+    contextFromMemory,
+    projectContext,
+    fullConfig = null,
+    reasoningAnalysis = null
+  ) {
+    // Handle null/undefined inputs gracefully
+    if (!htaData || typeof htaData !== 'object') {
+      return null;
+    }
+    
     const nodes = htaData.frontierNodes || [];
 
     // Pre-compute completed node IDs as a Set for O(1) lookup
@@ -58,7 +71,7 @@ export class TaskSelector {
 
       // Filter by time availability (more than 120% of available time).  This prevents the
       // system from suggesting 20-minute tasks for a 10-minute slot.
-      const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable);
+      const timeInMinutes = TaskScorer.parseTimeToMinutes(timeAvailable || '30 minutes');
       const taskMinutes = TaskScorer.parseTimeToMinutes(node.duration || '30 minutes');
       if (taskMinutes > timeInMinutes * TIME_TOLERANCE_FACTOR) {
         continue; // Too long – try another task
@@ -77,7 +90,15 @@ export class TaskSelector {
     // Score all tasks and collect high-scoring ones for diversity
     const scoredTasks = availableTasks.map(task => ({
       ...task,
-      score: TaskScorer.calculateTaskScore(task, energyLevel, timeInMinutes, contextFromMemory, projectContext, fullConfig, reasoningAnalysis)
+      score: TaskScorer.calculateTaskScore(
+        task,
+        energyLevel,
+        timeInMinutes,
+        contextFromMemory,
+        projectContext,
+        fullConfig,
+        reasoningAnalysis
+      ),
     }));
 
     // Sort by score descending
@@ -122,7 +143,9 @@ export class TaskSelector {
 
       // Lower count = higher priority
       const countDiff = branchCounts[branchA] - branchCounts[branchB];
-      if (countDiff !== 0) { return countDiff; }
+      if (countDiff !== 0) {
+        return countDiff;
+      }
 
       // If same branch rarity, prefer different task types
       const momentumA = a.momentumBuilding ? 1 : 0;

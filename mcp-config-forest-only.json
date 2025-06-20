@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "forest": {
+      "command": "C:\\Users\\schlansk\\local-node\\node-v20.14.0-win-x64\\node.exe",
+      "args": [
+        "C:\\Users\\schlansk\\claude-mcp-configs\\start-server.js"
+      ]
+    }
+  }
+} 

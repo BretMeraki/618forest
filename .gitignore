@@ -6,12 +6,7 @@ node_modules/
 .vscode/
 .idea/
 
-# Logs
-logs/
-*.log
 
-# Forest Data
-.forest-data/
 
 # Snapshots and temporary files
 .snapshots/
@@ -37,6 +32,10 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+# Forest runtime logs
+logs/
+forest-server/logs/
 
 # Coverage directory used by tools like istanbul
 coverage/

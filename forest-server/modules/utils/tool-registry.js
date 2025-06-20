@@ -31,7 +31,7 @@ export class ToolRegistry {
       handler,
       category,
       metadata,
-      registeredAt: new Date().toISOString()
+      registeredAt: new Date().toISOString(),
     });
 
     // Track tools by category
@@ -103,11 +103,13 @@ export class ToolRegistry {
    */
   getToolMetadata(toolName) {
     const tool = this.tools.get(toolName);
-    return tool ? {
-      category: tool.category,
-      metadata: tool.metadata,
-      registeredAt: tool.registeredAt
-    } : null;
+    return tool
+      ? {
+          category: tool.category,
+          metadata: tool.metadata,
+          registeredAt: tool.registeredAt,
+        }
+      : null;
   }
 
   /**
@@ -149,7 +151,7 @@ export class ToolRegistry {
       totalTools: this.tools.size,
       totalCategories: this.toolCategories.size,
       toolsByCategory,
-      registeredTools: this.getToolNames()
+      registeredTools: this.getToolNames(),
     };
   }
 }

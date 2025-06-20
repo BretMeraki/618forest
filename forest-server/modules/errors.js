@@ -23,7 +23,7 @@ export class ForestError extends Error {
       message: this.message,
       timestamp: this.timestamp,
       context: this.context,
-      cause: this.cause?.message || this.cause
+      cause: this.cause?.message || this.cause,
     };
   }
 }
@@ -37,8 +37,8 @@ export class ProjectConfigurationError extends ForestError {
         projectId,
         configPath,
         operation: context.operation || 'unknown',
-        ...context
-      }
+        ...context,
+      },
     });
     this.projectId = projectId;
     this.configPath = configPath;
@@ -47,7 +47,9 @@ export class ProjectConfigurationError extends ForestError {
 
 export class NoActiveProjectError extends ForestError {
   constructor(operation = 'unknown') {
-    super(`No active project available for operation: ${operation}. Create or switch to a project first.`);
+    super(
+      `No active project available for operation: ${operation}. Create or switch to a project first.`
+    );
     this.operation = operation;
   }
 }
@@ -65,7 +67,7 @@ export class DataPersistenceError extends ForestError {
   constructor(operation, filePath, cause, context = {}) {
     super(`Data persistence operation '${operation}' failed for file: ${filePath}`, {
       cause,
-      context: { operation, filePath, ...context }
+      context: { operation, filePath, ...context },
     });
     this.operation = operation;
     this.filePath = filePath;
@@ -76,7 +78,7 @@ export class ToolDispatchError extends ForestError {
   constructor(toolName, cause, args = {}) {
     super(`Tool '${toolName}' execution failed`, {
       cause,
-      context: { toolName, args: Object.keys(args) }
+      context: { toolName, args: Object.keys(args) },
     });
     this.toolName = toolName;
     this.args = args;
@@ -85,9 +87,12 @@ export class ToolDispatchError extends ForestError {
 
 export class ValidationError extends ForestError {
   constructor(field, value, expected, context = {}) {
-    super(`Validation failed for field '${field}': expected ${expected}, got ${typeof value} (${value})`, {
-      context: { field, value, expected, ...context }
-    });
+    super(
+      `Validation failed for field '${field}': expected ${expected}, got ${typeof value} (${value})`,
+      {
+        context: { field, value, expected, ...context },
+      }
+    );
     this.field = field;
     this.value = value;
     this.expected = expected;
@@ -98,7 +103,7 @@ export class MemorySyncError extends ForestError {
   constructor(operation, cause, context = {}) {
     super(`Memory synchronization failed for operation: ${operation}`, {
       cause,
-      context: { operation, ...context }
+      context: { operation, ...context },
     });
     this.operation = operation;
   }
@@ -108,7 +113,7 @@ export class TaskExecutionError extends ForestError {
   constructor(taskId, phase, cause, context = {}) {
     super(`Task execution failed: ${taskId} in phase '${phase}'`, {
       cause,
-      context: { taskId, phase, ...context }
+      context: { taskId, phase, ...context },
     });
     this.taskId = taskId;
     this.phase = phase;
@@ -119,7 +124,7 @@ export class HTATreeError extends ForestError {
   constructor(operation, cause, context = {}) {
     super(`HTA tree operation failed: ${operation}`, {
       cause,
-      context: { operation, ...context }
+      context: { operation, ...context },
     });
     this.operation = operation;
   }
@@ -134,7 +139,7 @@ export function enhanceError(error, context = {}) {
 
   return new ForestError(error.message, {
     cause: error,
-    context
+    context,
   });
 }
 
@@ -148,6 +153,6 @@ export function extractErrorInfo(error) {
     name: error.name || 'Error',
     message: error.message || 'Unknown error',
     timestamp: new Date().toISOString(),
-    stack: error.stack
+    stack: error.stack,
   };
 }

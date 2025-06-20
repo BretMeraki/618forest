@@ -17,30 +17,36 @@ export class AnalyticsTools {
 
       if (!schedule || !schedule.blocks) {
         return {
-          content: [{
-            type: 'text',
-            text: '❌ No schedule found for today. Generate a schedule first with `generate_daily_schedule`.'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: '❌ No schedule found for today. Generate a schedule first with `generate_daily_schedule`.',
+            },
+          ],
         };
       }
 
       const tiimoMarkdown = this.formatTiimoMarkdown(schedule, includeBreaks);
 
       return {
-        content: [{
-          type: 'text',
-          text: `📱 **Tiimo Export - ${today}**\n\n\`\`\`markdown\n${tiimoMarkdown}\n\`\`\``
-        }],
+        content: [
+          {
+            type: 'text',
+            text: `📱 **Tiimo Export - ${today}**\n\n\`\`\`markdown\n${tiimoMarkdown}\n\`\`\``,
+          },
+        ],
         tiimo_export: tiimoMarkdown,
-        date: today
+        date: today,
       };
     } catch (error) {
       await this.dataPersistence.logError('generateTiimoExport', error, { includeBreaks });
       return {
-        content: [{
-          type: 'text',
-          text: `Error generating Tiimo export: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error generating Tiimo export: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -58,19 +64,23 @@ export class AnalyticsTools {
       const reportText = this.formatPerformanceReport(analysis);
 
       return {
-        content: [{
-          type: 'text',
-          text: reportText
-        }],
-        performance_analysis: analysis
+        content: [
+          {
+            type: 'text',
+            text: reportText,
+          },
+        ],
+        performance_analysis: analysis,
       };
     } catch (error) {
       await this.dataPersistence.logError('analyzePerformance', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error analyzing performance: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error analyzing performance: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -88,20 +98,24 @@ export class AnalyticsTools {
       const reportText = this.formatPeriodReview(review, days);
 
       return {
-        content: [{
-          type: 'text',
-          text: reportText
-        }],
+        content: [
+          {
+            type: 'text',
+            text: reportText,
+          },
+        ],
         period_review: review,
-        days_reviewed: days
+        days_reviewed: days,
       };
     } catch (error) {
       await this.dataPersistence.logError('reviewPeriod', error, { days });
       return {
-        content: [{
-          type: 'text',
-          text: `Error reviewing period: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error reviewing period: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -120,10 +134,12 @@ export class AnalyticsTools {
 
       if (!htaData) {
         return {
-          content: [{
-            type: 'text',
-            text: '❌ No HTA tree found. Build an HTA tree first.'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: '❌ No HTA tree found. Build an HTA tree first.',
+            },
+          ],
         };
       }
 
@@ -131,19 +147,23 @@ export class AnalyticsTools {
       const debugText = this.formatDebugReport(debugInfo);
 
       return {
-        content: [{
-          type: 'text',
-          text: debugText
-        }],
-        debug_info: debugInfo
+        content: [
+          {
+            type: 'text',
+            text: debugText,
+          },
+        ],
+        debug_info: debugInfo,
       };
     } catch (error) {
       await this.dataPersistence.logError('debugTaskSequence', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error debugging task sequence: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error debugging task sequence: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -162,30 +182,41 @@ export class AnalyticsTools {
 
       if (!htaData && !forceRebuild) {
         return {
-          content: [{
-            type: 'text',
-            text: '❌ No HTA tree found. Use `build_hta_tree` first or set force_rebuild to true.'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: '❌ No HTA tree found. Use `build_hta_tree` first or set force_rebuild to true.',
+            },
+          ],
         };
       }
 
-      const repairResult = await this.performSequenceRepair(projectId, activePath, htaData, forceRebuild);
+      const repairResult = await this.performSequenceRepair(
+        projectId,
+        activePath,
+        htaData,
+        forceRebuild
+      );
       const repairText = this.formatRepairReport(repairResult);
 
       return {
-        content: [{
-          type: 'text',
-          text: repairText
-        }],
-        repair_result: repairResult
+        content: [
+          {
+            type: 'text',
+            text: repairText,
+          },
+        ],
+        repair_result: repairResult,
       };
     } catch (error) {
       await this.dataPersistence.logError('repairSequence', error, { forceRebuild });
       return {
-        content: [{
-          type: 'text',
-          text: `Error repairing sequence: ${error.message}`
-        }]
+        content: [
+          {
+            type: 'text',
+            text: `Error repairing sequence: ${error.message}`,
+          },
+        ],
       };
     }
   }
@@ -195,7 +226,9 @@ export class AnalyticsTools {
     let markdown = `# Daily Schedule - ${schedule.date}\n\n`;
 
     for (const block of blocks) {
-      if (!includeBreaks && block.type === 'break') {continue;}
+      if (!includeBreaks && block.type === 'break') {
+        continue;
+      }
 
       const icon = this.getTiimoIcon(block.type);
       const duration = `${block.duration}min`;
@@ -219,12 +252,12 @@ export class AnalyticsTools {
 
   getTiimoIcon(blockType) {
     const icons = {
-      'learning': '📚',
-      'meal': '🍽️',
-      'break': '☕',
-      'habit': '🔄',
-      'exercise': '💪',
-      'work': '💼'
+      learning: '📚',
+      meal: '🍽️',
+      break: '☕',
+      habit: '🔄',
+      exercise: '💪',
+      work: '💼',
     };
 
     return icons[blockType] || '📋';
@@ -232,8 +265,8 @@ export class AnalyticsTools {
 
   async performComprehensiveAnalysis(projectId, config) {
     const activePath = config.activePath || 'general';
-    const learningHistory = await this.loadLearningHistory(projectId, activePath) || {};
-    const htaData = await this.loadPathHTA(projectId, activePath) || {};
+    const learningHistory = (await this.loadLearningHistory(projectId, activePath)) || {};
+    const htaData = (await this.loadPathHTA(projectId, activePath)) || {};
 
     const completedTopics = learningHistory.completedTopics || [];
     const insights = learningHistory.insights || [];
@@ -244,38 +277,46 @@ export class AnalyticsTools {
         totalInsights: insights.length,
         averageTaskDifficulty: this.calculateAverageTaskDifficulty(completedTopics),
         averageEnergyAfter: this.calculateAverageEnergyAfter(completedTopics),
-        breakthroughRate: this.calculateBreakthroughRate(completedTopics)
+        breakthroughRate: this.calculateBreakthroughRate(completedTopics),
       },
       patterns: {
         energyTrends: this.analyzeEnergyTrends(completedTopics),
         difficultyProgression: this.analyzeDifficultyProgression(completedTopics),
         completionVelocity: this.analyzeCompletionVelocity(completedTopics),
-        timeOfDayPatterns: this.analyzeTimeOfDayPatterns(completedTopics)
+        timeOfDayPatterns: this.analyzeTimeOfDayPatterns(completedTopics),
       },
-      recommendations: this.generatePerformanceRecommendations(completedTopics, htaData)
+      recommendations: this.generatePerformanceRecommendations(completedTopics, htaData),
     };
   }
 
   calculateAverageTaskDifficulty(completedTopics) {
-    if (completedTopics.length === 0) {return 0;}
+    if (completedTopics.length === 0) {
+      return 0;
+    }
     const sum = completedTopics.reduce((acc, task) => acc + (task.difficulty || 3), 0);
     return (sum / completedTopics.length).toFixed(2);
   }
 
   calculateAverageEnergyAfter(completedTopics) {
-    if (completedTopics.length === 0) {return 0;}
+    if (completedTopics.length === 0) {
+      return 0;
+    }
     const sum = completedTopics.reduce((acc, task) => acc + (task.energyAfter || 3), 0);
     return (sum / completedTopics.length).toFixed(2);
   }
 
   calculateBreakthroughRate(completedTopics) {
-    if (completedTopics.length === 0) {return 0;}
+    if (completedTopics.length === 0) {
+      return 0;
+    }
     const breakthroughs = completedTopics.filter(task => task.breakthrough).length;
     return ((breakthroughs / completedTopics.length) * 100).toFixed(1);
   }
 
   analyzeEnergyTrends(completedTopics) {
-    if (completedTopics.length < 3) {return 'Insufficient data';}
+    if (completedTopics.length < 3) {
+      return 'Insufficient data';
+    }
 
     const recentTasks = completedTopics.slice(-10);
     const energyLevels = recentTasks.map(task => task.energyAfter || 3);
@@ -284,22 +325,24 @@ export class AnalyticsTools {
     const average = energyLevels.reduce((sum, e) => sum + e, 0) / energyLevels.length;
 
     return {
-      trend: trend > 0.1 ? 'increasing' : (trend < -0.1 ? 'decreasing' : 'stable'),
+      trend: trend > 0.1 ? 'increasing' : trend < -0.1 ? 'decreasing' : 'stable',
       average: average.toFixed(2),
-      latest: energyLevels[energyLevels.length - 1]
+      latest: energyLevels[energyLevels.length - 1],
     };
   }
 
   analyzeDifficultyProgression(completedTopics) {
-    if (completedTopics.length < 3) {return 'Insufficient data';}
+    if (completedTopics.length < 3) {
+      return 'Insufficient data';
+    }
 
     const difficulties = completedTopics.map(task => task.difficulty || 3);
     const trend = this.calculateTrend(difficulties);
 
     return {
-      trend: trend > 0.1 ? 'increasing' : (trend < -0.1 ? 'decreasing' : 'stable'),
+      trend: trend > 0.1 ? 'increasing' : trend < -0.1 ? 'decreasing' : 'stable',
       range: `${Math.min(...difficulties)}-${Math.max(...difficulties)}`,
-      current: difficulties[difficulties.length - 1]
+      current: difficulties[difficulties.length - 1],
     };
   }
 
@@ -314,7 +357,7 @@ export class AnalyticsTools {
       const recentTasks = completedTopics.filter(task => new Date(task.completedAt) > cutoff);
       velocity[`${days}day`] = {
         count: recentTasks.length,
-        rate: (recentTasks.length / days).toFixed(2)
+        rate: (recentTasks.length / days).toFixed(2),
       };
     }
 
@@ -331,12 +374,14 @@ export class AnalyticsTools {
       }
     }
 
-    const bestHour = Object.keys(hourCounts).reduce((a, b) =>
-      hourCounts[a] > hourCounts[b] ? a : b, '0');
+    const bestHour = Object.keys(hourCounts).reduce(
+      (a, b) => (hourCounts[a] > hourCounts[b] ? a : b),
+      '0'
+    );
 
     return {
       mostProductiveHour: `${bestHour}:00`,
-      hourlyDistribution: hourCounts
+      hourlyDistribution: hourCounts,
     };
   }
 
@@ -348,12 +393,12 @@ export class AnalyticsTools {
     if (avgEnergy < 2.5) {
       recommendations.push({
         type: 'energy',
-        message: 'Low average energy after tasks - consider shorter sessions or easier tasks'
+        message: 'Low average energy after tasks - consider shorter sessions or easier tasks',
       });
     } else if (avgEnergy > 4) {
       recommendations.push({
         type: 'energy',
-        message: 'High energy levels - consider more challenging tasks or longer sessions'
+        message: 'High energy levels - consider more challenging tasks or longer sessions',
       });
     }
 
@@ -362,7 +407,7 @@ export class AnalyticsTools {
     if (difficultyAnalysis.trend === 'stable' && completedTopics.length > 5) {
       recommendations.push({
         type: 'difficulty',
-        message: 'Difficulty plateau detected - consider progressive difficulty increase'
+        message: 'Difficulty plateau detected - consider progressive difficulty increase',
       });
     }
 
@@ -371,7 +416,7 @@ export class AnalyticsTools {
     if (velocity['7day']?.rate < 0.5) {
       recommendations.push({
         type: 'velocity',
-        message: 'Low completion velocity - consider breaking tasks into smaller pieces'
+        message: 'Low completion velocity - consider breaking tasks into smaller pieces',
       });
     }
 
@@ -381,14 +426,14 @@ export class AnalyticsTools {
   async generatePeriodReview(projectId, config, days) {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const activePath = config.activePath || 'general';
-    const learningHistory = await this.loadLearningHistory(projectId, activePath) || {};
+    const learningHistory = (await this.loadLearningHistory(projectId, activePath)) || {};
 
-    const recentTasks = (learningHistory.completedTopics || []).filter(task =>
-      new Date(task.completedAt) > cutoffDate
+    const recentTasks = (learningHistory.completedTopics || []).filter(
+      task => new Date(task.completedAt) > cutoffDate
     );
 
-    const recentInsights = (learningHistory.insights || []).filter(insight =>
-      new Date(insight.timestamp) > cutoffDate
+    const recentInsights = (learningHistory.insights || []).filter(
+      insight => new Date(insight.timestamp) > cutoffDate
     );
 
     return {
@@ -397,12 +442,16 @@ export class AnalyticsTools {
         tasksCompleted: recentTasks.length,
         insightsGained: recentInsights.length,
         breakthroughs: recentTasks.filter(t => t.breakthrough).length,
-        averageEnergy: recentTasks.length > 0 ?
-          (recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length).toFixed(1) : 0
+        averageEnergy:
+          recentTasks.length > 0
+            ? (
+                recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length
+              ).toFixed(1)
+            : 0,
       },
       highlights: this.extractPeriodHighlights(recentTasks, recentInsights),
       challenges: this.extractPeriodChallenges(recentTasks),
-      nextSteps: this.generateNextSteps(recentTasks, learningHistory)
+      nextSteps: this.generateNextSteps(recentTasks, learningHistory),
     };
   }
 
@@ -463,7 +512,8 @@ export class AnalyticsTools {
         nextSteps.push('Build on recent breakthrough with related advanced topics');
       }
 
-      const avgEnergy = recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length;
+      const avgEnergy =
+        recentTasks.reduce((sum, t) => sum + (t.energyAfter || 3), 0) / recentTasks.length;
       if (avgEnergy >= 4) {
         nextSteps.push('High energy levels - consider more challenging tasks');
       } else if (avgEnergy <= 2) {
@@ -494,7 +544,7 @@ export class AnalyticsTools {
       blockedNodes: blockedNodes.length,
       prerequisiteChains: this.analyzePrerequisiteChains(nodes),
       orphanedNodes: this.findOrphanedNodes(nodes),
-      circularDependencies: this.detectCircularDependencies(nodes)
+      circularDependencies: this.detectCircularDependencies(nodes),
     };
   }
 
@@ -502,12 +552,14 @@ export class AnalyticsTools {
     const completedNodeIds = nodes.filter(n => n.completed).map(n => n.id);
 
     return nodes.filter(node => {
-      if (node.completed) {return false;}
+      if (node.completed) {
+        return false;
+      }
 
       if (node.prerequisites && node.prerequisites.length > 0) {
-        return node.prerequisites.every(prereq =>
-          completedNodeIds.includes(prereq) ||
-          nodes.some(n => n.title === prereq && n.completed)
+        return node.prerequisites.every(
+          prereq =>
+            completedNodeIds.includes(prereq) || nodes.some(n => n.title === prereq && n.completed)
         );
       }
 
@@ -519,12 +571,14 @@ export class AnalyticsTools {
     const completedNodeIds = nodes.filter(n => n.completed).map(n => n.id);
 
     return nodes.filter(node => {
-      if (node.completed) {return false;}
+      if (node.completed) {
+        return false;
+      }
 
       if (node.prerequisites && node.prerequisites.length > 0) {
-        return !node.prerequisites.every(prereq =>
-          completedNodeIds.includes(prereq) ||
-          nodes.some(n => n.title === prereq && n.completed)
+        return !node.prerequisites.every(
+          prereq =>
+            completedNodeIds.includes(prereq) || nodes.some(n => n.title === prereq && n.completed)
         );
       }
 
@@ -541,7 +595,7 @@ export class AnalyticsTools {
           nodeId: node.id,
           title: node.title,
           prerequisites: node.prerequisites,
-          depth: this.calculatePrerequisiteDepth(node, nodes)
+          depth: this.calculatePrerequisiteDepth(node, nodes),
         });
       }
     }
@@ -550,7 +604,9 @@ export class AnalyticsTools {
   }
 
   calculatePrerequisiteDepth(node, nodes, visited = new Set()) {
-    if (visited.has(node.id)) {return 0;} // Circular dependency
+    if (visited.has(node.id)) {
+      return 0;
+    } // Circular dependency
     visited.add(node.id);
 
     if (!node.prerequisites || node.prerequisites.length === 0) {
@@ -638,7 +694,7 @@ export class AnalyticsTools {
       return {
         actions: repairActions,
         success: false,
-        message: 'Use build_hta_tree to create a new learning structure'
+        message: 'Use build_hta_tree to create a new learning structure',
       };
     }
 
@@ -648,9 +704,8 @@ export class AnalyticsTools {
     if (debugInfo.orphanedNodes.length > 0) {
       htaData.frontierNodes = htaData.frontierNodes.map(node => ({
         ...node,
-        prerequisites: node.prerequisites?.filter(prereq =>
-          !debugInfo.orphanedNodes.includes(prereq)
-        ) || []
+        prerequisites:
+          node.prerequisites?.filter(prereq => !debugInfo.orphanedNodes.includes(prereq)) || [],
       }));
       repairActions.push(`Removed ${debugInfo.orphanedNodes.length} orphaned prerequisites`);
     }
@@ -669,7 +724,7 @@ export class AnalyticsTools {
     return {
       actions: repairActions,
       success: true,
-      availableTasksAfterRepair: this.getAvailableNodes(htaData.frontierNodes || []).length
+      availableTasksAfterRepair: this.getAvailableNodes(htaData.frontierNodes || []).length,
     };
   }
 
@@ -686,7 +741,7 @@ export class AnalyticsTools {
         branch: 'exploration',
         priority: 250,
         generated: true,
-        repairTask: true
+        repairTask: true,
       },
       {
         id: `repair_practice_${taskId + 1}`,
@@ -697,8 +752,8 @@ export class AnalyticsTools {
         branch: 'practice',
         priority: 220,
         generated: true,
-        repairTask: true
-      }
+        repairTask: true,
+      },
     ];
   }
 
@@ -814,10 +869,12 @@ export class AnalyticsTools {
   }
 
   calculateTrend(values) {
-    if (values.length < 2) {return 0;}
+    if (values.length < 2) {
+      return 0;
+    }
 
     const n = values.length;
-    const sumX = n * (n - 1) / 2;
+    const sumX = (n * (n - 1)) / 2;
     const sumY = values.reduce((sum, val) => sum + val, 0);
     const sumXY = values.reduce((sum, val, i) => sum + val * i, 0);
     const sumX2 = values.reduce((sum, val, i) => sum + i * i, 0);

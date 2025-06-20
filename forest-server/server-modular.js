@@ -2,105 +2,54 @@
 // @ts-check
 
 /* eslint-disable */
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as http from "http";
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as http from 'http';
 import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-// STEP 1: Detect MCP mode BEFORE importing anything that might console.log
-// MCP mode: When running as MCP server, stdin/stdout are used for JSON-RPC communication
-// More aggressive MCP detection - default to MCP mode unless explicitly interactive
-const isExplicitlyInteractive = process.stdin.isTTY && process.stdout.isTTY && process.argv.includes('--interactive');
-const isMcpMode = !isExplicitlyInteractive;
-// Alias for backward compatibility
-const isInteractive = isExplicitlyInteractive;
+// SIMPLIFIED STARTUP - Single predictable sequence  
+// No complex mode detection, no console redirection
+const isInteractive = process.stdin.isTTY && process.stdout.isTTY;
+const isMcpMode = !isInteractive; // Basic inverse relationship for simplified detection
 
-// Additional MCP detection: if arguments suggest MCP usage
-if (process.argv.includes('--mcp') || process.env.NODE_ENV === 'mcp' || process.env.MCP_MODE === 'true') {
-  process.env.MCP_MODE = 'true';
-}
+// Simple diagnostic mode detection
+const diagnosticMode = process.argv.includes('--diagnostic');
+import { CoreInfrastructure } from './modules/core-infrastructure.js';
+import { McpHandlers } from './modules/mcp-handlers.js';
+import { ToolRouter } from './modules/tool-router.js';
+import { DataPersistence } from './modules/data-persistence.js';
+import { MemorySync } from './modules/memory-sync.js';
+import { ProjectManagement } from './modules/project-management.js';
+import { HtaTreeBuilder } from './modules/hta-tree-builder.js';
+import { HtaStatus } from './modules/hta-status.js';
+import { ScheduleGenerator } from './modules/schedule-generator.js';
+import { TaskCompletion } from './modules/task-completion.js';
+import { ReasoningEngine } from './modules/reasoning-engine.js';
+import { TaskIntelligence } from './modules/task-intelligence.js';
+import { AnalyticsTools } from './modules/analytics-tools.js';
+import { LlmIntegration } from './modules/llm-integration.js';
+import { IdentityEngine } from './modules/identity-engine.js';
+import { IntegratedTaskPool } from './modules/integrated-task-pool.js';
+import { IntegratedScheduleGenerator } from './modules/integrated-schedule-generator.js';
+import { getForestLogger } from './modules/winston-logger.js';
+import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from './modules/constants.js';
+import { bus } from './modules/utils/event-bus.js';
+import { StrategyEvolver } from './modules/strategy-evolver.js';
+import { SystemClock } from './modules/system-clock.js';
+import { ProactiveInsightsHandler } from './modules/proactive-insights-handler.js';
 
-// Debug: Log mode detection to a file (using already imported fs and path)
-const debugLogPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mode-detection.log');
-if (!fs.existsSync(path.dirname(debugLogPath))) {
-  fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
-}
-fs.appendFileSync(debugLogPath, `${new Date().toISOString()} - TTY: stdin=${!!process.stdin.isTTY}, stdout=${!!process.stdout.isTTY}, isExplicitlyInteractive=${isExplicitlyInteractive}, isMcpMode=${isMcpMode}, args=${JSON.stringify(process.argv)}\n`);
+// Enhanced forest.os modules
+import { PerformanceMonitor } from './modules/utils/performance-monitor.js';
+import { BackgroundProcessor } from './modules/utils/background-processor.js';
+import { CacheManager } from './modules/utils/cache-manager.js';
+import { AdaptiveResourceAllocator } from './modules/utils/adaptive-resource-allocator.js';
+import { MetricsDashboard } from './modules/utils/metrics-dashboard.js';
+import { ContextLearningSystem } from './modules/utils/context-learning-system.js';
+import { TaskBatcher } from './modules/utils/task-batcher.js';
 
-// STEP 2: IMMEDIATELY redirect console output if in MCP mode BEFORE error logger setup
-if (isMcpMode) {
-  const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
-  const logDir = path.dirname(logPath);
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  
-  const logStream = fs.createWriteStream(logPath, { flags: 'a' });
-  
-  // Completely silence console output in MCP mode
-  const silentLogger = (...args) => {
-    logStream.write(`${new Date().toISOString()} [CONSOLE]: ${args.join(' ')}\n`);
-  };
-  
-  console.error = silentLogger;
-  console.log = silentLogger;
-  console.warn = silentLogger;
-  console.info = silentLogger;
-  console.debug = silentLogger;
-  
-  // Also redirect process stdout/stderr writes that bypass console
-  const originalStdoutWrite = process.stdout.write;
-  const originalStderrWrite = process.stderr.write;
-  
-  process.stdout.write = function(chunk, encoding, callback) {
-    // Only allow JSON-RPC responses to pass through
-    if (typeof chunk === 'string' && chunk.startsWith('{"')) {
-      return originalStdoutWrite.call(this, chunk, encoding, callback);
-    }
-    logStream.write(`${new Date().toISOString()} [STDOUT]: ${chunk}`);
-    if (callback) callback();
-    return true;
-  };
-  
-  process.stderr.write = function(chunk, encoding, callback) {
-    logStream.write(`${new Date().toISOString()} [STDERR]: ${chunk}`);
-    if (callback) callback();
-    return true;
-  };
-}
-
-// STEP 3: Now safe to import modules that might console.log during initialization
-import { CoreInfrastructure } from "./modules/core-infrastructure.js";
-import { McpHandlers } from "./modules/mcp-handlers.js";
-import { ToolRouter } from "./modules/tool-router.js";
-import { DataPersistence } from "./modules/data-persistence.js";
-import { MemorySync } from "./modules/memory-sync.js";
-import { ProjectManagement } from "./modules/project-management.js";
-import { HtaTreeBuilder } from "./modules/hta-tree-builder.js";
-import { HtaStatus } from "./modules/hta-status.js";
-import { ScheduleGenerator } from "./modules/schedule-generator.js";
-import { TaskCompletion } from "./modules/task-completion.js";
-import { ReasoningEngine } from "./modules/reasoning-engine.js";
-import { TaskIntelligence } from "./modules/task-intelligence.js";
-import { AnalyticsTools } from "./modules/analytics-tools.js";
-import { LlmIntegration } from "./modules/llm-integration.js";
-import { IdentityEngine } from "./modules/identity-engine.js";
-import { IntegratedTaskPool } from "./modules/integrated-task-pool.js";
-import { IntegratedScheduleGenerator } from "./modules/integrated-schedule-generator.js";
-import { getForestLogger } from "./modules/winston-logger.js";
-import { SERVER_CONFIG, FILE_NAMES, DEFAULT_PATHS } from "./modules/constants.js";
-import { bus } from "./modules/utils/event-bus.js";
-import { StrategyEvolver } from "./modules/strategy-evolver.js";
-import { SystemClock } from "./modules/system-clock.js";
-import { ProactiveInsightsHandler } from "./modules/proactive-insights-handler.js";
-
-// Initialize winston-based logger with MCP-safe configuration
-const forestLogger = getForestLogger({
-  enableConsole: isExplicitlyInteractive, // Only enable console in interactive mode
-  enableFileLogging: true, // Always enable file logging
-  logLevel: isMcpMode ? 'error' : 'debug' // Reduce noise in MCP mode
-});
+const topLevelLogger = getForestLogger({ module: 'SERVER_BOOTSTRAP' });
 
 // Minimal debug integration for testing
 class MinimalDebugIntegration {
@@ -113,7 +62,7 @@ class MinimalDebugIntegration {
       traceTask: () => ({ status: 'ok', message: 'Task tracing disabled' }),
       validateCurrent: () => ({ status: 'ok', message: 'Validation disabled' }),
       exportLogs: () => ({ status: 'ok', message: 'Log export disabled' }),
-      getSummary: () => ({ status: 'ok', message: 'Summary disabled' })
+      getSummary: () => ({ status: 'ok', message: 'Summary disabled' }),
     };
   }
   startDebugEnvironment() {
@@ -127,93 +76,64 @@ class MinimalDebugIntegration {
  */
 class CleanForestServer {
   constructor() {
-    // Use logging instead of console.error to avoid MCP interference
-    if (isExplicitlyInteractive) {
-      console.error("🏗️ CleanForestServer constructor starting...");
-    }
+    // Initialize winston-based logger
+    this.logger = getForestLogger({
+        enableConsole: isInteractive, // Only enable console in interactive mode
+        enableFileLogging: true, // Always enable file logging
+        logLevel: diagnosticMode ? 'trace' : 'info', // Simplified logging levels
+    });
 
     // Start comprehensive logging
-    forestLogger.info('CleanForestServer constructor starting', { module: 'CleanForestServer' });
+    this.logger.info('CleanForestServer constructor starting', { module: 'CleanForestServer' });
 
     try {
       // Initialize core infrastructure
-      forestLogger.debug('Initializing core infrastructure', { module: 'CleanForestServer' });
+      this.logger.debug('Initializing core infrastructure', { module: 'CleanForestServer' });
       this.core = new CoreInfrastructure();
-      forestLogger.debug('Core infrastructure complete', { module: 'CleanForestServer' });
+      this.logger.debug('Core infrastructure complete', { module: 'CleanForestServer' });
 
       // Initialize data layer
-      forestLogger.debug('Initializing data persistence', { module: 'CleanForestServer' });
+      this.logger.debug('Initializing data persistence', { module: 'CleanForestServer' });
       this.dataPersistence = new DataPersistence(this.core.getDataDir());
-      forestLogger.debug('Data persistence complete', { module: 'CleanForestServer' });
+      this.logger.debug('Data persistence complete', { module: 'CleanForestServer' });
 
       // Initialize memory and sync layer
       this.memorySync = new MemorySync(this.dataPersistence);
 
       // Initialize project management
-      this.projectManagement = new ProjectManagement(
-        this.dataPersistence,
-        this.memorySync,
-      );
+      this.projectManagement = new ProjectManagement(this.dataPersistence, this.memorySync);
 
       // Expose Claude interface to modules that need reasoning
       const claude = this.core.getClaudeInterface();
 
       // Initialize HTA system - USING CLEAN VERSIONS
       this.htaTreeBuilder = new HtaTreeBuilder(
-        this, // Pass the server instance itself
         this.dataPersistence,
         this.projectManagement,
-        claude,
+        claude
       );
-      this.htaStatus = new HtaStatus(
-        this.dataPersistence,
-        this.projectManagement,
-      );
+      this.htaStatus = new HtaStatus(this.dataPersistence, this.projectManagement);
 
       // Initialize scheduling system
-      this.scheduleGenerator = new ScheduleGenerator(
-        this.dataPersistence,
-        this.projectManagement,
-      );
+      this.scheduleGenerator = new ScheduleGenerator(this.dataPersistence, this.projectManagement);
 
       // Initialize event bus for decoupled module communication
       this.eventBus = bus;
 
-      // Initialize strategy evolver (event-driven HTA evolution)  
-      this.strategyEvolver = new StrategyEvolver(
-        this.dataPersistence,
-        this.projectManagement
-      );
+      // Initialize strategy evolver (event-driven HTA evolution)
+      this.strategyEvolver = new StrategyEvolver(this.dataPersistence, this.projectManagement);
 
       // Initialize task system - USING CLEAN VERSIONS with event bus
-      this.taskCompletion = new TaskCompletion(
-        this.dataPersistence,
-        this.projectManagement
-      );
-      this.taskIntelligence = new TaskIntelligence(
-        this.dataPersistence,
-        this.projectManagement,
-      );
+      this.taskCompletion = new TaskCompletion(this.dataPersistence, this.projectManagement);
+      this.taskIntelligence = new TaskIntelligence(this.dataPersistence, this.projectManagement);
 
       // Initialize intelligence engines
-      this.reasoningEngine = new ReasoningEngine(
-        this.dataPersistence,
-        this.projectManagement,
-      );
-      this.llmIntegration = new LlmIntegration(
-        this.dataPersistence,
-        this.projectManagement,
-      );
-      this.identityEngine = new IdentityEngine(
-        this.dataPersistence,
-        this.projectManagement,
-      );
+      this.reasoningEngine = new ReasoningEngine(this.dataPersistence, this.projectManagement);
+      this.llmIntegration = new LlmIntegration(this.dataPersistence, this.projectManagement);
+      this.identityEngine = new IdentityEngine(this.dataPersistence, this.projectManagement);
 
       // Initialize analytics and tools
-      this.analyticsTools = new AnalyticsTools(
-        this.dataPersistence,
-        this.projectManagement,
-      );
+      this.analyticsTools = new AnalyticsTools(this.dataPersistence, this.projectManagement);
 
       // Initialize proactive reasoning layer - FROM INTELLIGENCE TO WISDOM
       this.systemClock = new SystemClock(
@@ -230,13 +150,73 @@ class CleanForestServer {
         this.eventBus
       );
 
+      // Initialize enhanced forest.os modules
+      this.logger.debug('Initializing enhanced forest.os modules', { module: 'CleanForestServer' });
+      
+      // Initialize performance monitoring
+      this.performanceMonitor = new PerformanceMonitor({
+        metricsInterval: 30000,
+        alertThreshold: 2000,
+        memoryAlertThreshold: 100 * 1024 * 1024
+      });
+      
+      // Initialize background task processor
+      this.backgroundProcessor = new BackgroundProcessor({
+        maxQueueSize: 100,
+        processingInterval: 5000,
+        workerTimeout: 30000
+      });
+      
+      // Initialize task batcher for improved efficiency
+      this.taskBatcher = new TaskBatcher({
+        batchSize: 10,
+        maxWaitTime: 5000,
+        maxBatchAge: 10000
+      });
+      
+      // Initialize context learning system
+      this.contextLearningSystem = new ContextLearningSystem({
+        learningRate: 0.1,
+        contextWindow: 50,
+        adaptationThreshold: 0.8
+      });
+      
+      // Initialize adaptive resource allocator
+      this.adaptiveResourceAllocator = new AdaptiveResourceAllocator(
+        this.performanceMonitor,
+        this.dataPersistence.cacheManager,
+        this.backgroundProcessor
+      );
+      
+      // Initialize comprehensive metrics dashboard
+      this.metricsDashboard = new MetricsDashboard(
+        this.performanceMonitor,
+        this.dataPersistence.cacheManager,
+        this.backgroundProcessor,
+        this.adaptiveResourceAllocator,
+        this.taskBatcher,
+        this.contextLearningSystem
+      );
+      
+      this.logger.info('Enhanced forest.os modules initialized successfully', { 
+        module: 'CleanForestServer',
+        enhancedModules: [
+          'PerformanceMonitor',
+          'BackgroundProcessor', 
+          'TaskBatcher',
+          'ContextLearningSystem',
+          'AdaptiveResourceAllocator',
+          'MetricsDashboard'
+        ]
+      });
+
       // Initialize lightweight logger in MCP mode
-      this.logger = forestLogger;
+      // this.logger = forestLogger; // Already initialized
       this.logger.info('Forest.os server initializing', {
         module: 'CleanForestServer',
         version: '2.0',
         nodeVersion: process.version,
-        pid: process.pid
+        pid: process.pid,
       });
 
       // Initialize debug integration
@@ -247,67 +227,65 @@ class CleanForestServer {
       this.addLLMTools();
 
       // Initialize MCP handlers and routing
-      forestLogger.debug('Initializing MCP handlers', { module: 'CleanForestServer' });
-      this.mcpHandlers = new McpHandlers(this.core.getServer());
-      forestLogger.debug('MCP handlers complete', { module: 'CleanForestServer' });
-      
-      forestLogger.debug('Initializing tool router', { module: 'CleanForestServer' });
+      this.logger.debug('Initializing MCP handlers', { module: 'CleanForestServer' });
+      this.mcpHandlers = new McpHandlers(this.core.getServer(), this);
+      this.logger.debug('MCP handlers complete', { module: 'CleanForestServer' });
+
+      this.logger.debug('Initializing tool router', { module: 'CleanForestServer' });
       this.toolRouter = new ToolRouter(this.core.getServer(), this);
-      forestLogger.debug('Tool router complete', { module: 'CleanForestServer' });
+      this.logger.debug('Tool router complete', { module: 'CleanForestServer' });
 
       // Integrated scheduler
-      this.integratedTaskPool = new IntegratedTaskPool(this.dataPersistence, this.projectManagement);
+      this.integratedTaskPool = new IntegratedTaskPool(
+        this.dataPersistence,
+        this.projectManagement
+      );
       this.integratedScheduleGenerator = new IntegratedScheduleGenerator(
         this.integratedTaskPool,
         this.projectManagement,
         claude,
         this.dataPersistence,
-        this.scheduleGenerator,
+        this.scheduleGenerator
       );
 
-      forestLogger.debug('CONSTRUCTOR_COMPLETE');
-      if (isExplicitlyInteractive) {
-        console.error(
-          "✓ CleanForestServer constructor completed - NO HARDCODED RESPONSES",
-        );
+      this.logger.debug('CONSTRUCTOR_COMPLETE');
+      if (isInteractive) {
+        this.logger.info('✓ CleanForestServer constructor completed - NO HARDCODED RESPONSES');
       }
-
     } catch (/** @type {any} */ error) {
-      forestLogger.error('CONSTRUCTOR_ERROR', {
-        error: error.message,
-        stack: error.stack
+      this.logger.error(`Fatal error during CleanForestServer construction: ${error.message}`, {
+        module: 'CleanForestServer',
+        stack: error.stack,
       });
-      if (isExplicitlyInteractive) {
-        console.error("❌ Error in CleanForestServer constructor:", error.message);
-        console.error("Stack:", error.stack);
-      }
-      throw error;
+      // In case of a constructor failure, we might not be able to rely on the server
+      // running properly, so a console log is a last resort.
+      topLevelLogger.error(`[FATAL] CleanForestServer failed to construct. Check logs for details.`);
+      throw error; // Re-throw the error to prevent a partially initialized server
     }
   }
 
   async setupServer() {
     try {
-      forestLogger.debug('Setup server starting', { module: 'CleanForestServer' });
-      
+      this.logger.debug('Setup server starting', { module: 'CleanForestServer' });
+
       // Setup MCP handlers and tool routing
-      forestLogger.debug('Setting up handlers', { module: 'CleanForestServer' });
+      this.logger.debug('Setting up handlers', { module: 'CleanForestServer' });
       await this.mcpHandlers.setupHandlers();
-      forestLogger.debug('Handlers setup complete', { module: 'CleanForestServer' });
-      
-      forestLogger.debug('Setting up router', { module: 'CleanForestServer' });
+      this.logger.debug('Handlers setup complete', { module: 'CleanForestServer' });
+
+      this.logger.debug('Setting up router', { module: 'CleanForestServer' });
       this.toolRouter.setupRouter();
-      forestLogger.debug('Router setup complete', { module: 'CleanForestServer' });
-      
-      forestLogger.debug('Setup server complete', { module: 'CleanForestServer' });
-      
+      this.logger.debug('Router setup complete', { module: 'CleanForestServer' });
+
+      this.logger.debug('Setup server complete', { module: 'CleanForestServer' });
     } catch (error) {
-      forestLogger.error('Setup server failed', {
+      this.logger.error('Setup server failed', {
         module: 'CleanForestServer',
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
-      console.error("❌ Error in setupServer:", error.message);
-      console.error("Stack:", error.stack);
+      this.logger.error('❌ Error in setupServer:', error.message);
+      this.logger.error('Stack:', error.stack);
       throw error;
     }
   }
@@ -320,9 +298,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.debugCommands.healthCheck
+      handler: this.debugCommands.healthCheck,
     };
 
     this.tools['debug_trace_task'] = {
@@ -332,12 +310,12 @@ class CleanForestServer {
         properties: {
           project_id: {
             type: 'string',
-            description: 'Project ID to trace (uses active if not specified)'
-          }
+            description: 'Project ID to trace (uses active if not specified)',
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.debugCommands.traceTask
+      handler: this.debugCommands.traceTask,
     };
 
     this.tools['debug_validate'] = {
@@ -345,9 +323,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.debugCommands.validateCurrent
+      handler: this.debugCommands.validateCurrent,
     };
 
     this.tools['debug_export'] = {
@@ -355,9 +333,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.debugCommands.exportLogs
+      handler: this.debugCommands.exportLogs,
     };
 
     this.tools['debug_summary'] = {
@@ -365,9 +343,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.debugCommands.getSummary
+      handler: this.debugCommands.getSummary,
     };
 
     // ──────────────────────────────────────────────────────────────
@@ -377,35 +355,46 @@ class CleanForestServer {
     // tests and to prove the "keep calling tools" behaviour.
     // ──────────────────────────────────────────────────────────────
     this.tools['debug_auto_loop'] = {
-      description: 'Run an automated loop: feed prompt to Claude, dispatch each tool call, repeat until day_complete',
+      description:
+        'Run an automated loop: feed prompt to Claude, dispatch each tool call, repeat until day_complete',
       parameters: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Initial user prompt for Claude' },
-          max_turns: { type: 'number', description: 'Safety cap on iterations', default: 8 }
+          max_turns: { type: 'number', description: 'Safety cap on iterations', default: 8 },
         },
-        required: ['prompt']
+        required: ['prompt'],
       },
       handler: async ({ prompt, max_turns = 8 }) => {
         return await this.runToolLoop(prompt, max_turns);
-      }
+      },
+    };
+  }
+
+  // Placeholder for missing method
+  async runToolLoop(prompt, max_turns) {
+    this.logger.warn('runToolLoop is a stub and not fully implemented.', { prompt, max_turns });
+    return {
+      content: [{ type: 'text', text: 'Tool loop is not implemented.' }],
+      status: 'not_implemented'
     };
   }
 
   // ===== LLM / Claude Generation REQUEST TOOL =====
   addLLMTools() {
-    this.tools["request_claude_generation"] = {
-      description: "Request Claude to generate content or answer questions. When generation_type is 'chat' or 'qa', a truthful wrapper is automatically applied.",
+    this.tools['request_claude_generation'] = {
+      description:
+        "Request Claude to generate content or answer questions. When generation_type is 'chat' or 'qa', a truthful wrapper is automatically applied.",
       parameters: {
-        type: "object",
+        type: 'object',
         properties: {
-          prompt: { type: "string" },
-          generation_type: { type: "string" }, // 'framework' | 'tasks' | 'chat' | 'qa'
-          context: { type: "object" },
+          prompt: { type: 'string' },
+          generation_type: { type: 'string' }, // 'framework' | 'tasks' | 'chat' | 'qa'
+          context: { type: 'object' },
         },
-        required: ["prompt", "generation_type"],
+        required: ['prompt', 'generation_type'],
       },
-      handler: async (args) => {
+      handler: async args => {
         const type = (args.generation_type || '').toLowerCase();
         if (type === 'chat' || type === 'qa' || type === 'question') {
           // Route through the truthful wrapper so users don't need to invoke it explicitly
@@ -422,56 +411,211 @@ class CleanForestServer {
       },
     };
 
-    // === COLLABORATIVE HTA TASK INGESTION ===
-    this.tools["generate_hta_tasks"] = {
-      description: "Store Claude-generated tasks in specific HTA branches",
+    // === ENHANCED FOREST.OS PERFORMANCE TOOLS ===
+    this.tools['get_performance_metrics'] = {
+      description: 'Get comprehensive system performance metrics and health status',
       parameters: {
-        type: "object",
+        type: 'object',
         properties: {
-          branch_tasks: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                branch_name: { type: "string" },
-                tasks: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      title: { type: "string" },
-                      description: { type: "string" },
-                      difficulty: { type: "number" },
-                      duration: { type: "number" },
-                      prerequisites: { type: "array", items: { type: "string" } }
-                    },
-                    required: ["title"]
-                  }
-                }
-              },
-              required: ["branch_name", "tasks"]
-            }
-          }
+          include_history: { type: 'boolean', description: 'Include performance history data' },
+          time_range: { type: 'string', description: 'Time range for metrics (1h, 6h, 24h)' }
         },
-        required: ["branch_tasks"]
+        required: []
       },
       handler: async (args) => {
-        return await this.storeGeneratedTasks(args.branch_tasks);
+        const metrics = this.performanceMonitor.getStats();
+        const status = this.performanceMonitor.healthStatus;
+        const cacheStats = this.dataPersistence.getCacheStats();
+        const backgroundStats = this.backgroundProcessor.getStatus();
+        
+        return {
+          content: [{
+            type: 'text',
+            text: `## 📊 Forest.os Performance Metrics
+
+**System Health**: ${status.overall} (CPU: ${status.cpu}, Memory: ${status.memory}, Response Time: ${status.responseTime})
+
+**Performance Statistics**:
+- Average Response Time: ${metrics.averageResponseTime}ms
+- Memory Usage: ${Math.round(metrics.memoryUsage.heapUsed / 1024 / 1024)}MB
+- Active Operations: ${metrics.activeOperations}
+- Success Rate: ${(metrics.successRate * 100).toFixed(1)}%
+
+**Cache Performance**:
+- Hit Rate: ${(cacheStats.hitRate * 100).toFixed(1)}%
+- Total Entries: ${cacheStats.totalEntries}
+- Memory Usage: ${Math.round(cacheStats.memoryUsage / 1024 / 1024)}MB
+
+**Background Processing**:
+- Queue Size: ${backgroundStats.queueSize}
+- Processing Tasks: ${backgroundStats.processingTasks}
+- Efficiency: ${backgroundStats.efficiency}%
+- Tasks Processed: ${backgroundStats.metrics.tasksProcessed}
+
+*Metrics collected at ${new Date().toISOString()}*`
+          }],
+          metrics,
+          status,
+          cacheStats,
+          backgroundStats
+        };
       }
     };
 
-    // === HISTORY RETRIEVAL ===
-    this.tools["get_generation_history"] = {
-      description: "Retrieve collaborative task generation history for active project",
+    this.tools['get_metrics_dashboard'] = {
+      description: 'Get comprehensive metrics dashboard with visual data representation',
       parameters: {
-        type: "object",
+        type: 'object',
         properties: {
-          limit: { type: "number", default: 10 }
-        }
+          widget_types: { 
+            type: 'array', 
+            items: { type: 'string' },
+            description: 'Widget types to include: performance, productivity, system, learning, tasks, resources, trends, alerts' 
+          },
+          time_period: { type: 'string', description: 'Time period for dashboard data' }
+        },
+        required: []
       },
       handler: async (args) => {
-        return await this.getGenerationHistory(args.limit || 10);
+        const dashboard = await this.metricsDashboard.getDashboardData(args.time_period || '1h');
+        return {
+          content: [{
+            type: 'text',
+            text: `## 🎯 Forest.os Metrics Dashboard
+
+${dashboard.summary}
+
+### Performance Overview
+${dashboard.widgets.performance || 'Performance data unavailable'}
+
+### Productivity Metrics
+${dashboard.widgets.productivity || 'Productivity data unavailable'}
+
+### System Resources
+${dashboard.widgets.system || 'System data unavailable'}
+
+### Recent Alerts
+${dashboard.widgets.alerts || 'No recent alerts'}
+
+*Dashboard generated at ${new Date().toISOString()}*`
+          }],
+          dashboard
+        };
       }
+    };
+
+    this.tools['optimize_resources'] = {
+      description: 'Trigger adaptive resource optimization based on current system performance',
+      parameters: {
+        type: 'object',
+        properties: {
+          strategy: { 
+            type: 'string', 
+            enum: ['conservative', 'balanced', 'aggressive'],
+            description: 'Resource allocation strategy' 
+          },
+          force_reallocation: { type: 'boolean', description: 'Force immediate resource reallocation' }
+        },
+        required: []
+      },
+      handler: async (args) => {
+        const strategy = args.strategy || 'balanced';
+        this.adaptiveResourceAllocator.setAllocationStrategy(strategy);
+        const stats = this.adaptiveResourceAllocator.getResourceStats();
+        const systemState = await this.adaptiveResourceAllocator.getSystemState();
+        
+        const result = {
+          success: true,
+          strategy: strategy,
+          allocations: {
+            cpu: this.adaptiveResourceAllocator.resourcePools.cpu.allocated,
+            memory: this.adaptiveResourceAllocator.resourcePools.memory.allocated,
+            cache: this.adaptiveResourceAllocator.resourcePools.cache.allocated,
+            backgroundTasks: this.adaptiveResourceAllocator.resourcePools.backgroundTasks.allocated
+          },
+          projectedImpact: {
+            responseTime: systemState.averageResponseTime,
+            memoryEfficiency: stats.efficiency,
+            overallEfficiency: stats.utilization
+          }
+        };
+        
+        return {
+          content: [{
+            type: 'text',
+            text: `## ⚡ Resource Optimization Complete
+
+**Strategy Applied**: ${strategy}
+**Optimization Result**: ${result.success ? '✅ Successful' : '❌ Failed'}
+
+**Resource Allocation**:
+- CPU: ${result.allocations.cpu}% allocated
+- Memory: ${result.allocations.memory}% allocated  
+- Cache: ${result.allocations.cache}% allocated
+- Background Tasks: ${result.allocations.backgroundTasks} slots
+
+**Performance Impact**:
+- Expected Response Time: ${result.projectedImpact.responseTime}ms
+- Memory Efficiency: ${result.projectedImpact.memoryEfficiency}%
+- Overall Efficiency: ${result.projectedImpact.overallEfficiency}%
+
+*Optimization completed at ${new Date().toISOString()}*`
+          }],
+          result
+        };
+      }
+    };
+
+    // === COLLABORATIVE HTA TASK INGESTION ===
+    this.tools['generate_hta_tasks'] = {
+      description: 'Store Claude-generated tasks in specific HTA branches',
+      parameters: {
+        type: 'object',
+        properties: {
+          branch_tasks: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                branch_name: { type: 'string' },
+                tasks: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      title: { type: 'string' },
+                      description: { type: 'string' },
+                      difficulty: { type: 'number' },
+                      duration: { type: 'number' },
+                      prerequisites: { type: 'array', items: { type: 'string' } },
+                    },
+                    required: ['title'],
+                  },
+                },
+              },
+              required: ['branch_name', 'tasks'],
+            },
+          },
+        },
+        required: ['branch_tasks'],
+      },
+      handler: async args => {
+        return await this.storeGeneratedTasks(args.branch_tasks);
+      },
+    };
+
+    // === HISTORY RETRIEVAL ===
+    this.tools['get_generation_history'] = {
+      description: 'Retrieve collaborative task generation history for active project',
+      parameters: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', default: 10 },
+        },
+      },
+      handler: async args => {
+        return await this.getGenerationHistory(args.limit || 10);
+      },
     };
 
     // Integrated Scheduling Tools
@@ -482,22 +626,22 @@ class CleanForestServer {
         properties: {
           date: {
             type: 'string',
-            description: 'Date in YYYY-MM-DD format'
+            description: 'Date in YYYY-MM-DD format',
           },
           energyLevel: {
             type: 'number',
             description: 'Energy level (1-5)',
             minimum: 1,
-            maximum: 5
-          }
+            maximum: 5,
+          },
         },
-        required: ['date']
+        required: ['date'],
       },
-      handler: this.generateIntegratedSchedule.bind(this)
+      handler: this.generateIntegratedSchedule.bind(this),
     };
 
     // ===== PROACTIVE REASONING LAYER TOOLS =====
-    
+
     this.tools['start_proactive_reasoning'] = {
       description: 'Start the proactive reasoning system for background strategic analysis',
       parameters: {
@@ -507,30 +651,30 @@ class CleanForestServer {
             type: 'number',
             description: 'Hours between strategic analysis (default: 24)',
             minimum: 1,
-            maximum: 168
+            maximum: 168,
           },
           riskDetectionHours: {
             type: 'number',
             description: 'Hours between risk detection (default: 12)',
             minimum: 1,
-            maximum: 72
+            maximum: 72,
           },
           opportunityScansHours: {
             type: 'number',
             description: 'Hours between opportunity scans (default: 6)',
             minimum: 1,
-            maximum: 24
+            maximum: 24,
           },
           identityReflectionDays: {
             type: 'number',
             description: 'Days between identity reflection (default: 7)',
             minimum: 1,
-            maximum: 30
-          }
+            maximum: 30,
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.startProactiveReasoning.bind(this)
+      handler: this.startProactiveReasoning.bind(this),
     };
 
     this.tools['stop_proactive_reasoning'] = {
@@ -538,9 +682,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.stopProactiveReasoning.bind(this)
+      handler: this.stopProactiveReasoning.bind(this),
     };
 
     this.tools['get_proactive_status'] = {
@@ -548,9 +692,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.getProactiveStatus.bind(this)
+      handler: this.getProactiveStatus.bind(this),
     };
 
     this.tools['trigger_immediate_analysis'] = {
@@ -561,12 +705,12 @@ class CleanForestServer {
           analysisType: {
             type: 'string',
             enum: ['strategic', 'risk', 'opportunity', 'identity'],
-            description: 'Type of analysis to perform immediately'
-          }
+            description: 'Type of analysis to perform immediately',
+          },
         },
-        required: ['analysisType']
+        required: ['analysisType'],
       },
-      handler: this.triggerImmediateAnalysis.bind(this)
+      handler: this.triggerImmediateAnalysis.bind(this),
     };
 
     this.tools['get_proactive_insights'] = {
@@ -578,12 +722,12 @@ class CleanForestServer {
             type: 'number',
             description: 'Number of days to look back (default: 7)',
             minimum: 1,
-            maximum: 30
-          }
+            maximum: 30,
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.getProactiveInsights.bind(this)
+      handler: this.getProactiveInsights.bind(this),
     };
 
     this.tools['get_strategic_recommendations'] = {
@@ -594,24 +738,24 @@ class CleanForestServer {
           priority: {
             type: 'string',
             enum: ['all', 'high', 'medium', 'low'],
-            description: 'Filter by priority level (default: all)'
-          }
+            description: 'Filter by priority level (default: all)',
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.getStrategicRecommendations.bind(this)
+      handler: this.getStrategicRecommendations.bind(this),
     };
 
     // ===== DATA ARCHIVER TOOLS =====
-    
+
     this.tools['get_archive_status'] = {
       description: 'Get data archiver status and thresholds',
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.getArchiveStatus.bind(this)
+      handler: this.getArchiveStatus.bind(this),
     };
 
     this.tools['trigger_manual_archiving'] = {
@@ -621,12 +765,12 @@ class CleanForestServer {
         properties: {
           forceArchive: {
             type: 'boolean',
-            description: 'Force archiving even if thresholds not met (default: false)'
-          }
+            description: 'Force archiving even if thresholds not met (default: false)',
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.triggerManualArchiving.bind(this)
+      handler: this.triggerManualArchiving.bind(this),
     };
 
     this.tools['configure_archive_thresholds'] = {
@@ -638,24 +782,24 @@ class CleanForestServer {
             type: 'number',
             description: 'Months after which to archive completed learning topics (default: 18)',
             minimum: 6,
-            maximum: 60
+            maximum: 60,
           },
           htaBranchYears: {
             type: 'number',
             description: 'Years after which to archive completed HTA branches (default: 1)',
             minimum: 0.5,
-            maximum: 10
+            maximum: 10,
           },
           maxWorkingMemorySize: {
             type: 'number',
             description: 'Maximum items in working memory before archiving (default: 10000)',
             minimum: 1000,
-            maximum: 50000
-          }
+            maximum: 50000,
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.configureArchiveThresholds.bind(this)
+      handler: this.configureArchiveThresholds.bind(this),
     };
 
     this.tools['get_wisdom_store'] = {
@@ -665,19 +809,24 @@ class CleanForestServer {
         properties: {
           category: {
             type: 'string',
-            enum: ['all', 'learning_history_wisdom', 'strategic_branch_wisdom', 'collective_strategic_wisdom'],
-            description: 'Type of wisdom to retrieve (default: all)'
+            enum: [
+              'all',
+              'learning_history_wisdom',
+              'strategic_branch_wisdom',
+              'collective_strategic_wisdom',
+            ],
+            description: 'Type of wisdom to retrieve (default: all)',
           },
           limit: {
             type: 'number',
             description: 'Maximum number of wisdom entries to return (default: 10)',
             minimum: 1,
-            maximum: 50
-          }
+            maximum: 50,
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.getWisdomStore.bind(this)
+      handler: this.getWisdomStore.bind(this),
     };
 
     this.tools['get_archive_metrics'] = {
@@ -685,21 +834,21 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.getArchiveMetrics.bind(this)
+      handler: this.getArchiveMetrics.bind(this),
     };
 
     // ===== LOGGING SYSTEM TOOLS =====
-    
+
     this.tools['get_logging_status'] = {
       description: 'Get logging system status and configuration',
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.getLoggingStatus.bind(this)
+      handler: this.getLoggingStatus.bind(this),
     };
 
     this.tools['get_log_stats'] = {
@@ -707,9 +856,9 @@ class CleanForestServer {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
-      handler: this.getLogStats.bind(this)
+      handler: this.getLogStats.bind(this),
     };
 
     this.tools['create_log_entry'] = {
@@ -720,32 +869,32 @@ class CleanForestServer {
           level: {
             type: 'string',
             enum: ['error', 'warn', 'info', 'debug', 'trace', 'perf', 'memory', 'event', 'user'],
-            description: 'Log level (default: info)'
+            description: 'Log level (default: info)',
           },
           message: {
             type: 'string',
-            description: 'Log message content'
+            description: 'Log message content',
           },
           component: {
             type: 'string',
-            description: 'Component or module name'
+            description: 'Component or module name',
           },
           projectId: {
             type: 'string',
-            description: 'Associated project ID'
+            description: 'Associated project ID',
           },
           userId: {
             type: 'string',
-            description: 'Associated user ID'
+            description: 'Associated user ID',
           },
           metadata: {
             type: 'object',
-            description: 'Additional metadata to include with log entry'
-          }
+            description: 'Additional metadata to include with log entry',
+          },
         },
-        required: ['message']
+        required: ['message'],
       },
-      handler: this.createLogEntry.bind(this)
+      handler: this.createLogEntry.bind(this),
     };
 
     this.tools['start_performance_timer'] = {
@@ -755,16 +904,16 @@ class CleanForestServer {
         properties: {
           label: {
             type: 'string',
-            description: 'Unique label for the timer'
+            description: 'Unique label for the timer',
           },
           component: {
             type: 'string',
-            description: 'Component or module name'
-          }
+            description: 'Component or module name',
+          },
         },
-        required: ['label']
+        required: ['label'],
       },
-      handler: this.startPerformanceTimer.bind(this)
+      handler: this.startPerformanceTimer.bind(this),
     };
 
     this.tools['end_performance_timer'] = {
@@ -774,16 +923,16 @@ class CleanForestServer {
         properties: {
           label: {
             type: 'string',
-            description: 'Label of the timer to end'
+            description: 'Label of the timer to end',
           },
           metadata: {
             type: 'object',
-            description: 'Additional metadata to include with performance log'
-          }
+            description: 'Additional metadata to include with performance log',
+          },
         },
-        required: ['label']
+        required: ['label'],
       },
-      handler: this.endPerformanceTimer.bind(this)
+      handler: this.endPerformanceTimer.bind(this),
     };
 
     this.tools['view_recent_logs'] = {
@@ -794,27 +943,32 @@ class CleanForestServer {
           level: {
             type: 'string',
             enum: ['error', 'warn', 'info', 'debug', 'trace', 'perf', 'memory', 'event', 'user'],
-            description: 'Filter by log level'
+            description: 'Filter by log level',
           },
           component: {
             type: 'string',
-            description: 'Filter by component name'
+            description: 'Filter by component name',
           },
           lines: {
             type: 'number',
             description: 'Number of recent lines to show (default: 20)',
             minimum: 1,
-            maximum: 100
+            maximum: 100,
           },
           logFile: {
             type: 'string',
-            enum: ['forest-app.log', 'forest-errors.log', 'forest-performance.log', 'forest-realtime.log'],
-            description: 'Specific log file to view (default: forest-app.log)'
-          }
+            enum: [
+              'forest-app.log',
+              'forest-errors.log',
+              'forest-performance.log',
+              'forest-realtime.log',
+            ],
+            description: 'Specific log file to view (default: forest-app.log)',
+          },
         },
-        required: []
+        required: [],
       },
-      handler: this.viewRecentLogs.bind(this)
+      handler: this.viewRecentLogs.bind(this),
     };
   }
 
@@ -825,8 +979,8 @@ class CleanForestServer {
    * @param {"framework"|"tasks"} generationType
    * @param {any} [context]
    */
-  async requestClaudeGeneration(prompt, generationType = "framework", context = {}) {
-    const handler = this.tools["request_claude_generation"].handler;
+  async requestClaudeGeneration(prompt, generationType = 'framework', context = {}) {
+    const handler = this.tools['request_claude_generation'].handler;
     return handler({ prompt, generation_type: generationType, context });
   }
 
@@ -848,7 +1002,7 @@ class CleanForestServer {
   async listProjects() {
     try {
       // Global config may or may not exist – load gracefully
-      const globalConfig = await this.dataPersistence.loadGlobalData('config.json') || {};
+      const globalConfig = (await this.dataPersistence.loadGlobalData('config.json')) || {};
       const projectsDirPath = path.join(this.dataPersistence.dataDir, 'projects');
 
       // List directories inside the projects folder
@@ -863,13 +1017,16 @@ class CleanForestServer {
       const projects = [];
       for (const projectId of projectDirs) {
         try {
-          const projectConfig = await this.dataPersistence.loadProjectData(projectId, 'config.json');
+          const projectConfig = await this.dataPersistence.loadProjectData(
+            projectId,
+            'config.json'
+          );
           if (projectConfig && Object.keys(projectConfig).length > 0) {
             projects.push({
               id: projectId,
               goal: projectConfig.goal || 'No goal specified',
               created: projectConfig.created_at || 'Unknown',
-              progress: projectConfig.progress || 0
+              progress: projectConfig.progress || 0,
             });
           }
         } catch (error) {
@@ -895,22 +1052,26 @@ class CleanForestServer {
       }
 
       return {
-        content: [{
-          type: 'text',
-          text: output
-        }],
+        content: [
+          {
+            type: 'text',
+            text: output,
+          },
+        ],
         projects,
-        active_project: activeProject
+        active_project: activeProject,
       };
     } catch (error) {
       await this.dataPersistence.logError('listProjects', error);
       return {
-        content: [{
-          type: 'text',
-          text: `Error listing projects: ${error.message}\n\nThe Forest data directory may not be properly initialized.`
-        }],
+        content: [
+          {
+            type: 'text',
+            text: `Error listing projects: ${error.message}\n\nThe Forest data directory may not be properly initialized.`,
+          },
+        ],
         projects: [],
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -934,7 +1095,7 @@ class CleanForestServer {
     return await this.htaTreeBuilder.buildHTATree(
       /** @type {any} */ (pathName),
       learningStyle,
-      focusAreas,
+      focusAreas
     );
   }
 
@@ -957,7 +1118,7 @@ class CleanForestServer {
       energyLevel,
       /** @type {any} */ (availableHours),
       focusType,
-      context,
+      context
     );
   }
 
@@ -973,7 +1134,7 @@ class CleanForestServer {
     return await this.taskIntelligence.getNextTask(
       contextFromMemory,
       energyLevel,
-      /** @type {any} */ (timeAvailable),
+      /** @type {any} */ (timeAvailable)
     );
   }
 
@@ -987,7 +1148,7 @@ class CleanForestServer {
   async evolveStrategy(feedback) {
     // The clean TaskIntelligence currently lacks this method – call dynamically.
     // @ts-ignore
-    return await (/** @type {any} */ (this.taskIntelligence)).evolveStrategy(feedback);
+    return await /** @type {any} */ (this.taskIntelligence).evolveStrategy(feedback);
   }
 
   // ===== STATUS AND CURRENT STATE METHODS =====
@@ -995,29 +1156,23 @@ class CleanForestServer {
   async currentStatus() {
     try {
       const projectId = await this.requireActiveProject();
-      const config = await this.dataPersistence.loadProjectData(
-        projectId,
-        FILE_NAMES.CONFIG,
-      );
+      const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
 
       if (!config) {
         throw new Error(`Project configuration not found for project '${projectId}'`);
       }
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split('T')[0];
 
       // Load schedule with graceful fallback
       let schedule;
       try {
-        schedule = await this.dataPersistence.loadProjectData(
-          projectId,
-          `day_${today}.json`,
-        );
+        schedule = await this.dataPersistence.loadProjectData(projectId, `day_${today}.json`);
       } catch (error) {
         schedule = null; // No schedule for today yet or failed to load
       }
 
-      const activePath = config.activePath || "general";
+      const activePath = config.activePath || 'general';
 
       // Load HTA with graceful fallback
       let htaData;
@@ -1033,10 +1188,10 @@ class CleanForestServer {
 
       // Today's progress
       if (schedule && schedule.blocks) {
-        const completedBlocks = schedule.blocks.filter((b) => b.completed);
+        const completedBlocks = schedule.blocks.filter(b => b.completed);
         statusText += `**Today's Progress**: ${completedBlocks.length}/${schedule.blocks.length} blocks completed\n`;
 
-        const nextBlock = schedule.blocks.find((b) => !b.completed);
+        const nextBlock = schedule.blocks.find(b => !b.completed);
         if (nextBlock) {
           statusText += `**Next Block**: ${nextBlock.title} at ${nextBlock.startTime}\n`;
         } else {
@@ -1056,16 +1211,16 @@ class CleanForestServer {
         const frontierNodes = htaData.frontier_nodes || htaData.frontierNodes || [];
         const completedNodes = htaData.completed_nodes || [];
         allTasks = [...frontierNodes, ...completedNodes];
-        completedCount = completedNodes.length + frontierNodes.filter((n) => n.completed).length;
+        completedCount = completedNodes.length + frontierNodes.filter(n => n.completed).length;
 
-        const availableNodes = frontierNodes.filter((node) => {
+        const availableNodes = frontierNodes.filter(node => {
           if (node.completed) return false;
           if (node.prerequisites && node.prerequisites.length > 0) {
             const completedIds = [
-              ...completedNodes.map((n) => n.id),
-              ...frontierNodes.filter((n) => n.completed).map((n) => n.id),
+              ...completedNodes.map(n => n.id),
+              ...frontierNodes.filter(n => n.completed).map(n => n.id),
             ];
-            return node.prerequisites.every((prereq) => completedIds.includes(prereq));
+            return node.prerequisites.every(prereq => completedIds.includes(prereq));
           }
           return true;
         });
@@ -1088,7 +1243,7 @@ class CleanForestServer {
       return {
         content: [
           {
-            type: "text",
+            type: 'text',
             text: statusText,
           },
         ],
@@ -1097,17 +1252,17 @@ class CleanForestServer {
           goal: config.goal,
           activePath,
           todayProgress: schedule
-            ? `${(schedule.blocks?.filter((b) => b.completed).length) || 0}/${(schedule.blocks?.length) || 0}`
-            : "No schedule",
-          htaProgress: htaData ? `${completedCount}/${allTasks.length}` : "No HTA",
+            ? `${schedule.blocks?.filter(b => b.completed).length || 0}/${schedule.blocks?.length || 0}`
+            : 'No schedule',
+          htaProgress: htaData ? `${completedCount}/${allTasks.length}` : 'No HTA',
         },
       };
     } catch (error) {
-      await this.dataPersistence.logError("currentStatus", error);
+      await this.dataPersistence.logError('currentStatus', error);
       return {
         content: [
           {
-            type: "text",
+            type: 'text',
             text: `Error getting current status: ${error.message}\n\nThis usually means:\n• No active project selected\n• Project data files are missing\n\nTry:\n1. Use \`list_projects\` to see available projects\n2. Use \`switch_project\` to select a project\n3. Use \`build_hta_tree\` if the learning tree is missing`,
           },
         ],
@@ -1117,24 +1272,18 @@ class CleanForestServer {
 
   // ===== UTILITY METHODS =====
 
-  /** @param {string} projectId 
+  /** @param {string} projectId
    *  @param {string} pathName */
   async loadPathHTA(projectId, pathName) {
     if (pathName === DEFAULT_PATHS.GENERAL) {
       // Try path-specific HTA first, fallback to project-level
-      const pathHTA = await this.dataPersistence.loadPathData(
-        projectId,
-        pathName,
-        FILE_NAMES.HTA,
-      );
-      if (pathHTA) {return pathHTA;}
+      const pathHTA = await this.dataPersistence.loadPathData(projectId, pathName, FILE_NAMES.HTA);
+      if (pathHTA) {
+        return pathHTA;
+      }
       return await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.HTA);
     } else {
-      return await this.dataPersistence.loadPathData(
-        projectId,
-        pathName,
-        FILE_NAMES.HTA,
-      );
+      return await this.dataPersistence.loadPathData(projectId, pathName, FILE_NAMES.HTA);
     }
   }
 
@@ -1143,98 +1292,75 @@ class CleanForestServer {
   async run() {
     try {
       const isTerminal = isInteractive;
-      forestLogger.debug('Server run starting', { module: 'CleanForestServer' });
-      
+      this.logger.debug('Server run starting', { module: 'CleanForestServer' });
+
       if (isTerminal) {
-        console.error("🚀 Starting Clean Forest MCP Server...");
+        // Start debug environment in interactive mode
+        this.debugIntegration.startDebugEnvironment();
       }
 
       // Setup the server handlers before connecting
-      forestLogger.debug('Pre-setup server', { module: 'CleanForestServer' });
+      this.logger.debug('Pre-setup server', { module: 'CleanForestServer' });
       await this.setupServer();
-      forestLogger.debug('Post-setup server', { module: 'CleanForestServer' });
+      this.logger.debug('Post-setup server', { module: 'CleanForestServer' });
 
-      forestLogger.debug('Pre-server connect', { module: 'CleanForestServer' });
+      this.logger.debug('Pre-server connect', { module: 'CleanForestServer' });
       const server = this.core.getServer();
       const transport = new StdioServerTransport();
-      
+
       await server.connect(transport);
-      forestLogger.debug('Post-server connect', { module: 'CleanForestServer' });
+      this.logger.debug('Post-server connect', { module: 'CleanForestServer' });
 
-      forestLogger.debug('Server started successfully', { module: 'CleanForestServer' });
-      
+      this.logger.debug('Server started successfully', { module: 'CleanForestServer' });
+
       if (isTerminal) {
-        console.error("🌳 Clean Forest MCP Server v2 started successfully!");
-        console.error("📁 Data directory:", this.core.getDataDir());
-        console.error("✅ NO HARDCODED RESPONSES - All data loaded from files");
+        this.logger.info('✅ Server running. Press Ctrl+C to exit.');
       }
 
-      // Start HTTP API if enabled
-      if (this.core.isHttpApiEnabled()) {
-        this.startHttpApi();
+      // Start the proactive reasoning clock/loop
+      // Removed automatic start to give user more control
+      // await this.startProactiveReasoning();
+
+      if (isInteractive) {
+        // Example: Start proactive reasoning in interactive mode as well
+        this.logger.info('Starting proactive reasoning in interactive mode...');
+        await this.startProactiveReasoning();
       }
 
-      // Start debug environment in development mode
-      if (process.env.NODE_ENV === 'development' || process.env.FOREST_DEBUG === 'true') {
-        if (isTerminal) {
-          console.error('🔍 Starting Forest Debug Environment...');
-        }
-        await this.debugIntegration.startDebugEnvironment();
-      }
+      // Start the optional HTTP API for external monitoring/control
+      this.startHttpApi();
 
-      // Keep the process alive when running as MCP server
-      if (!isTerminal) {
-        // MCP mode - keep process alive and handle graceful shutdown
-        process.on('SIGINT', () => {
-          this.logger.info('MCP server shutting down gracefully', {
-            module: 'CleanForestServer',
-            reason: 'SIGINT'
-          });
-          process.exit(0);
-        });
-
-        process.on('SIGTERM', () => {
-          this.logger.info('MCP server shutting down gracefully', {
-            module: 'CleanForestServer', 
-            reason: 'SIGTERM'
-          });
-          process.exit(0);
-        });
-
-        // In MCP mode, the server should stay alive indefinitely
-        // The MCP connection will handle all communication
-      }
-    } catch (/** @type {any} */ error) {
-      const isTerminal = isInteractive;
-      if (isTerminal) {
-        console.error("❌ Error in run method:", error.message);
-        console.error("Stack:", error.stack);
-      } else {
-        // Log to MCP startup log for debugging
-        const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
-        fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL RUN]: ${error.message}\n${error.stack}\n`);
-      }
+    } catch (error) {
+      this.logger.error('Server run failed', {
+        module: 'CleanForestServer',
+        error: error.message,
+        stack: error.stack,
+      });
+      console.error('❌ Error in server.run():', error.message);
+      console.error('Stack:', error.stack);
       throw error;
     }
   }
 
   startHttpApi() {
     const isTerminal = isInteractive;
-    
+
     const httpServer = http.createServer((req, res) => {
       // Log every incoming request for real-time visibility
       if (isTerminal) {
         console.info(`HTTP ${req.method} ${req.url} from ${req.socket.remoteAddress}`);
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        service: 'Clean Forest MCP Server v2',
-        architecture: 'Modular',
-        modules: 15,
-        status: 'running',
-        dataDir: this.core.getDataDir(),
-        hardcodedResponses: false
-      }));
+      res.end(
+        JSON.stringify({
+          service: 'Clean Forest MCP Server v2',
+          architecture: 'Modular',
+          modules: 15,
+          status: 'running',
+          dataDir: this.core.getDataDir(),
+          hardcodedResponses: false,
+        })
+      );
     });
 
     // Allow overriding port via environment variable and handle EADDRINUSE gracefully
@@ -1243,7 +1369,9 @@ class CleanForestServer {
     httpServer.on('error', (/** @type {any} */ err) => {
       if (err.code === 'EADDRINUSE') {
         if (isTerminal) {
-          console.error(`⚠️ Port ${desiredPort} already in use, selecting a random available port...`);
+          console.error(
+            `⚠️ Port ${desiredPort} already in use, selecting a random available port...`
+          );
         }
         httpServer.listen(0); // 0 lets the OS pick a free port
       } else {
@@ -1295,16 +1423,16 @@ class CleanForestServer {
     if (q.includes('capital')) {
       const capitals = {
         'united states': 'Washington, D.C.',
-        'usa': 'Washington, D.C.',
-        'uk': 'London',
+        usa: 'Washington, D.C.',
+        uk: 'London',
         'united kingdom': 'London',
-        'germany': 'Berlin',
-        'japan': 'Tokyo',
-        'china': 'Beijing',
-        'canada': 'Ottawa',
-        'australia': 'Canberra',
-        'italy': 'Rome',
-        'spain': 'Madrid'
+        germany: 'Berlin',
+        japan: 'Tokyo',
+        china: 'Beijing',
+        canada: 'Ottawa',
+        australia: 'Canberra',
+        italy: 'Rome',
+        spain: 'Madrid',
       };
 
       for (const [country, capital] of Object.entries(capitals)) {
@@ -1380,10 +1508,12 @@ class CleanForestServer {
       confidence_score: critiqueData.confidence_score,
       suggested_improvement: critiqueData.suggested_improvement,
       originalInput: question,
-      content: [{
-        type: 'text',
-        text: `🧠 **Truthful Answer**:\n${answer}\n\n🔍 **Self-Critique**:\n${critiqueData.critique}`
-      }]
+      content: [
+        {
+          type: 'text',
+          text: `🧠 **Truthful Answer**:\n${answer}\n\n🔍 **Self-Critique**:\n${critiqueData.critique}`,
+        },
+      ],
     };
   }
 
@@ -1396,7 +1526,8 @@ class CleanForestServer {
    * @returns {Promise<object>} A promise that resolves to the structured critique from the LLM.
    */
   async _getTruthfulCritique(toolResult) {
-    const resultString = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2);
+    const resultString =
+      typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2);
 
     // Construct the meta-prompt
     const critiquePrompt = `
@@ -1417,24 +1548,29 @@ class CleanForestServer {
     `;
 
     // Send the prompt to Claude (or whichever LLM implementation is configured)
-    const claudeResponse = await this.core.getClaudeInterface().requestIntelligence('critique', { prompt: critiquePrompt });
+    const claudeResponse = await this.core
+      .getClaudeInterface()
+      .requestIntelligence('critique', { prompt: critiquePrompt });
 
     // Attempt to parse the JSON returned by the LLM
     try {
-      const parsed = JSON.parse(claudeResponse.completion || claudeResponse.answer || claudeResponse.text || '{}');
+      const parsed = JSON.parse(
+        claudeResponse.completion || claudeResponse.answer || claudeResponse.text || '{}'
+      );
       return {
         assessment: parsed.assessment || 'Critique generated.',
         critique: parsed.critique || 'The critique engine provided a structured analysis.',
         confidence_score: parsed.confidence_score || 95,
-        suggested_improvement: parsed.suggested_improvement || 'The output is well-formed.'
+        suggested_improvement: parsed.suggested_improvement || 'The output is well-formed.',
       };
     } catch (error) {
       // Fallback – invalid JSON from LLM
       return {
         assessment: 'Critique engine fallback.',
-        critique: "The LLM's critique response was not in a valid JSON format, but the original tool output was processed.",
+        critique:
+          "The LLM's critique response was not in a valid JSON format, but the original tool output was processed.",
         confidence_score: 50,
-        suggested_improvement: 'Ensure LLM consistently returns valid JSON for critiques.'
+        suggested_improvement: 'Ensure LLM consistently returns valid JSON for critiques.',
       };
     }
   }
@@ -1447,7 +1583,7 @@ class CleanForestServer {
     const structured = await this._getTruthfulCritique(toolResult);
     return {
       response: structured.assessment,
-      critique: structured.critique
+      critique: structured.critique,
     };
   }
 
@@ -1477,7 +1613,7 @@ class CleanForestServer {
     return {
       content: [{ type: 'text', text: '📚 **Learning Paths**: relationship_clarity' }],
       learning_paths: ['relationship_clarity'],
-      active_path: 'relationship_clarity'
+      active_path: 'relationship_clarity',
     };
   }
 
@@ -1493,7 +1629,9 @@ class CleanForestServer {
 
     if (!paths.includes(pathName)) {
       return {
-        content: [{ type: 'text', text: `❌ Learning path "${pathName}" not found in this project.` }]
+        content: [
+          { type: 'text', text: `❌ Learning path "${pathName}" not found in this project.` },
+        ],
       };
     }
 
@@ -1504,9 +1642,14 @@ class CleanForestServer {
     await this.memorySync.syncActiveProjectToMemory(projectId);
 
     return {
-      content: [{ type: 'text', text: `🎯 Focus switched to learning path **${pathName}** for ${duration}.` }],
+      content: [
+        {
+          type: 'text',
+          text: `🎯 Focus switched to learning path **${pathName}** for ${duration}.`,
+        },
+      ],
       active_path: pathName,
-      duration
+      duration,
     };
   }
 
@@ -1517,7 +1660,7 @@ class CleanForestServer {
     // Simplified version to avoid timeout
     return {
       content: [{ type: 'text', text: '✅ Forest state synced to memory (simplified)' }],
-      sync_status: 'completed'
+      sync_status: 'completed',
     };
   }
 
@@ -1555,85 +1698,325 @@ class CleanForestServer {
    * Persist Claude-generated tasks into the current HTA frontier.
    * @param {Array<{branch_name:string,tasks:Array}>} branchTasks
    */
+  // ============================================
+  // ENHANCED DEEP TASK STORAGE
+  // ============================================
   async storeGeneratedTasks(branchTasks) {
-    const projectId = await this.requireActiveProject();
-    const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
-    const pathName = config.activePath || DEFAULT_PATHS.GENERAL;
-    const htaData = await this.loadPathHTA(projectId, pathName) || { frontierNodes: [] };
-
-    let nextId = (htaData.frontierNodes?.length || 0) + 1;
-
-    // ----- Collaborative session logging -----
-    const sessionMeta = {
-      timestamp: new Date().toISOString(),
-      session_id: `sess_${Math.random().toString(36).slice(2, 10)}`,
-      tasks_count: branchTasks.reduce((sum, b) => sum + b.tasks.length, 0),
-      branches_populated: branchTasks.map(b => b.branch_name),
-      generation_context: 'collaborative_handoff'
-    };
-
-    htaData.collaborative_sessions = htaData.collaborative_sessions || [];
-    htaData.collaborative_sessions.push(sessionMeta);
-
-    const ensureBranchExists = (branchName) => {
-      htaData.strategicBranches = htaData.strategicBranches || [];
-      const exists = htaData.strategicBranches.find(b =>
-        b.id === branchName || b.title?.toLowerCase() === branchName.toLowerCase()
-      );
-      if (!exists) {
-        const slug = branchName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
-        htaData.strategicBranches.push({
-          id: slug,
-          title: branchName.charAt(0).toUpperCase()+branchName.slice(1),
-          priority: 'medium',
-          completed: false,
-          description: `Auto-added domain for ${branchName}`,
-          expected_duration: '0-3 months',
-          subBranches: []
-        });
+    try {
+      const projectId = await this.requireActiveProject();
+      const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
+      const pathName = config.activePath || DEFAULT_PATHS.GENERAL;
+      
+      let htaData = await this.loadPathHTA(projectId, pathName);
+      if (!htaData) {
+        htaData = {
+          projectId,
+          pathName,
+          created: new Date().toISOString(),
+          strategicBranches: [],
+          frontierNodes: [],
+          completed_nodes: [],
+          collaborative_sessions: [],
+          hierarchy_metadata: {
+            total_depth: 0,
+            total_branches: 0,
+            total_sub_branches: 0,
+            total_tasks: 0,
+            branch_task_distribution: {}
+          }
+        };
       }
+
+      // Session metadata
+      const sessionMeta = {
+        timestamp: new Date().toISOString(),
+        session_id: `sess_${Math.random().toString(36).slice(2, 10)}`,
+        tasks_count: this.countTasksInHierarchy(branchTasks),
+        branches_populated: branchTasks.map(b => b.branch_name),
+        generation_context: 'deep_hierarchical'
+      };
+      
+      htaData.collaborative_sessions = htaData.collaborative_sessions || [];
+      htaData.collaborative_sessions.push(sessionMeta);
+
+      // Process hierarchical branches
+      let stats = {
+        newBranches: 0,
+        newSubBranches: 0,
+        newTasks: 0,
+        maxDepth: 0
+      };
+
+      // Process each main branch
+      for (const branch of branchTasks) {
+        const processedBranch = await this.processHierarchicalBranch(
+          branch, 
+          htaData, 
+          null, // no parent for main branches
+          1,    // depth level 1
+          stats
+        );
+        
+        // Add to strategic branches if new
+        const existingIndex = htaData.strategicBranches.findIndex(b => 
+          b.id === processedBranch.id
+        );
+        
+        if (existingIndex === -1) {
+          htaData.strategicBranches.push(processedBranch);
+          stats.newBranches++;
+        } else {
+          // Merge with existing
+          htaData.strategicBranches[existingIndex] = this.mergeBranches(
+            htaData.strategicBranches[existingIndex], 
+            processedBranch
+          );
+        }
+      }
+
+      // Update hierarchy metadata
+      htaData.hierarchy_metadata = {
+        total_depth: stats.maxDepth,
+        total_branches: htaData.strategicBranches.length,
+        total_sub_branches: stats.newSubBranches,
+        total_tasks: htaData.frontierNodes.length + stats.newTasks,
+        branch_task_distribution: this.calculateTaskDistribution(htaData.strategicBranches)
+      };
+
+      // Save updated HTA
+      await this.savePathHTA(projectId, pathName, htaData);
+      await this.memorySync.syncActiveProjectToMemory(projectId);
+
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ **Deep HTA Structure Successfully Stored!**
+
+**Hierarchy Created**:
+• Main Branches: ${stats.newBranches}
+• Sub-branches: ${stats.newSubBranches}  
+• Maximum Depth: ${stats.maxDepth} levels
+• Total Tasks: ${stats.newTasks}
+
+**Task Distribution**:
+${Object.entries(htaData.hierarchy_metadata.branch_task_distribution)
+  .map(([branch, count]) => `• ${branch}: ${count} tasks`)
+  .join('\n')}
+
+Your goal now has a comprehensive ${stats.maxDepth}-level deep roadmap with ${stats.newTasks} specific tasks!
+
+**Next Step**: Use \`get_next_task\` to begin your journey!`
+        }],
+        storage_summary: {
+          ...stats,
+          hierarchy_metadata: htaData.hierarchy_metadata,
+          session: sessionMeta
+        }
+      };
+    } catch (error) {
+      console.error('Error storing hierarchical tasks:', error);
+      return {
+        content: [{
+          type: 'text',
+          text: `❌ Error storing tasks: ${error.message}`
+        }],
+        error: error.message
+      };
+    }
+  }
+
+  // ============================================
+  // HELPER METHODS
+  // ============================================
+
+  async processHierarchicalBranch(branch, htaData, parentId, depth, stats) {
+    stats.maxDepth = Math.max(stats.maxDepth, depth);
+    
+    const branchSlug = this.createSlug(branch.branch_name);
+    const branchId = parentId ? `${parentId}_${branchSlug}` : branchSlug;
+    
+    const branchData = {
+      id: branchId,
+      title: this.formatBranchTitle(branch.branch_name),
+      description: branch.description || '',
+      priority: this.inferBranchPriority(branch.branch_name),
+      depth: depth,
+      parent_id: parentId,
+      completed: false,
+      created_at: new Date().toISOString(),
+      sub_branches: [],
+      task_count: 0,
+      total_task_count: 0 // includes sub-branch tasks
     };
 
-    for (const branch of branchTasks) {
-      const branchName = branch.branch_name;
-      ensureBranchExists(branchName);
-      for (const t of branch.tasks) {
-        htaData.frontierNodes = htaData.frontierNodes || [];
-        const slug = branchName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
-        htaData.frontierNodes.push({
-          id: `node_${nextId++}`,
-          title: t.title,
-          description: t.description || '',
-          difficulty: t.difficulty || 1,
-          duration: typeof t.duration === 'number' ? `${t.duration} minutes` : (t.duration || '30 minutes'),
-          branch: slug,
-          prerequisites: t.prerequisites || [],
-          generated: true,
-          completed: false,
-          priority: 200
-        });
+    // Process sub-branches if they exist
+    if (branch.sub_branches && branch.sub_branches.length > 0) {
+      for (const subBranch of branch.sub_branches) {
+        const processedSub = await this.processHierarchicalBranch(
+          subBranch,
+          htaData,
+          branchData.id,
+          depth + 1,
+          stats
+        );
+        branchData.sub_branches.push(processedSub);
+        branchData.total_task_count += processedSub.total_task_count;
+        stats.newSubBranches++;
       }
     }
 
-    await this.savePathHTA(projectId, pathName, htaData);
+    // Process tasks if this is a leaf node
+    if (branch.tasks && branch.tasks.length > 0) {
+      let taskIdCounter = htaData.frontierNodes.length + stats.newTasks + 1;
+      
+      for (const task of branch.tasks) {
+        const taskNode = {
+          id: `node_${taskIdCounter++}`,
+          title: task.title,
+          description: task.description || '',
+          difficulty: task.difficulty || 1,
+          duration: this.normalizeDuration(task.duration),
+          branch: branchData.id,
+          branch_path: this.getBranchPath(branchData.id),
+          branch_depth: depth,
+          prerequisites: this.resolvePrerequisites(task.prerequisites, htaData),
+          priority: this.calculateDeepTaskPriority(task, branchData, depth),
+          created_at: new Date().toISOString(),
+          generated: true,
+          completed: false
+        };
+        
+        htaData.frontierNodes.push(taskNode);
+        stats.newTasks++;
+        branchData.task_count++;
+        branchData.total_task_count++;
+      }
+    }
 
+    return branchData;
+  }
+  
+  createSlug(name) {
+    return name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
+  getBranchPath(branchId) {
+    return branchId.split('_')
+      .map(part => this.formatBranchTitle(part))
+      .join(' → ');
+  }
+
+  countTasksInHierarchy(branches) {
+    let count = 0;
+    
+    function countRecursive(branch) {
+      if (branch.tasks) count += branch.tasks.length;
+      if (branch.sub_branches) {
+        branch.sub_branches.forEach(sub => countRecursive(sub));
+      }
+    }
+    
+    branches.forEach(branch => countRecursive(branch));
+    return count;
+  }
+
+  calculateTaskDistribution(branches) {
+    const distribution = {};
+    
+    function countBranchTasks(branch) {
+      if (branch.total_task_count > 0) {
+        distribution[branch.title] = branch.total_task_count;
+      }
+      if (branch.sub_branches) {
+        branch.sub_branches.forEach(sub => countBranchTasks(sub));
+      }
+    }
+    
+    branches.forEach(branch => countBranchTasks(branch));
+    return distribution;
+  }
+
+  calculateDeepTaskPriority(task, branch, depth) {
+    let priority = 50; // Base
+    
+    priority += (5 - depth) * 10;
+    
+    if (branch.priority === 'high') priority += 20;
+    else if (branch.priority === 'low') priority -= 10;
+    
+    priority += (5 - (task.difficulty || 3)) * 3;
+    
+    if (!task.prerequisites || task.prerequisites.length === 0) {
+      priority += 15;
+    }
+    
+    return Math.max(0, Math.min(100, priority));
+  }
+
+  mergeBranches(existing, incoming) {
     return {
-      content: [{ type: 'text', text: `✅ Stored ${branchTasks.reduce((sum,b)=>sum+b.tasks.length,0)} generated tasks into HTA` }],
-      hta_frontier_count: htaData.frontierNodes.length,
-      session: sessionMeta
+      ...existing,
+      description: incoming.description || existing.description,
+      sub_branches: [...existing.sub_branches, ...incoming.sub_branches],
+      task_count: existing.task_count + incoming.task_count,
+      total_task_count: existing.total_task_count + incoming.total_task_count,
+      updated_at: new Date().toISOString()
     };
+  }
+  
+  inferBranchPriority(branchName) {
+    const name = branchName.toLowerCase();
+    if (name.includes('foundation') || name.includes('basic') || name.includes('fundamental')) {
+      return 'high';
+    } else if (name.includes('advanced') || name.includes('master') || name.includes('expert')) {
+      return 'low';
+    }
+    return 'medium';
+  }
+
+  formatBranchTitle(branchName) {
+    return branchName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  normalizeDuration(duration) {
+    if (typeof duration === 'number') {
+      return `${duration} minutes`;
+    }
+    if (typeof duration === 'string' && !duration.includes('minute')) {
+      return `${duration} minutes`;
+    }
+    return duration || '30 minutes';
+  }
+
+  resolvePrerequisites(prerequisites, htaData) {
+    if (!prerequisites || prerequisites.length === 0) return [];
+    
+    return prerequisites.map(prereq => {
+      if (prereq.startsWith('node_')) return prereq;
+      
+      const task = htaData.frontierNodes.find(t => t.title === prereq) ||
+                   htaData.completed_nodes.find(t => t.title === prereq);
+      
+      return task ? task.id : null;
+    }).filter(id => id !== null);
   }
 
   async getGenerationHistory(limit = 10) {
     const projectId = await this.requireActiveProject();
     const config = await this.dataPersistence.loadProjectData(projectId, FILE_NAMES.CONFIG);
     const pathName = config.activePath || DEFAULT_PATHS.GENERAL;
-    const hta = await this.loadPathHTA(projectId, pathName) || {};
+    const hta = (await this.loadPathHTA(projectId, pathName)) || {};
     const sessions = hta.collaborative_sessions || [];
     const sliced = sessions.slice(-limit);
     return {
       content: [{ type: 'text', text: `📜 Last ${sliced.length} generation sessions retrieved` }],
-      sessions: sliced
+      sessions: sliced,
     };
   }
 
@@ -1665,72 +2048,26 @@ class CleanForestServer {
    * Start the proactive reasoning system
    */
   async startProactiveReasoning(config = {}) {
-    try {
-      console.log('🧠 Starting proactive reasoning system...');
-      
-      this.systemClock.start(config);
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `🧠 **Proactive Reasoning System Started**
-
-The Forest system has evolved from reactive to proactive intelligence. Your system is now:
-
-🔮 **Strategic Analysis**: Running every ${config.strategicAnalysisHours || 24} hours
-⚠️ **Risk Detection**: Scanning every ${config.riskDetectionHours || 12} hours  
-🎯 **Opportunity Scanning**: Monitoring every ${config.opportunityScansHours || 6} hours
-🧘 **Identity Reflection**: Deep analysis every ${config.identityReflectionDays || 7} days
-
-**What This Means:**
-• The system will proactively identify learning opportunities and risks
-• You'll receive strategic insights even when not actively using the system
-• Patterns and trends will be detected before they become problems
-• Your learning strategy will continuously evolve based on background analysis
-
-**From Intelligence to Wisdom** - Your Forest system now thinks about your progress even when you're not here, providing the kind of strategic foresight that transforms good learners into exceptional ones.
-
-The system will begin background analysis shortly and notify you of any insights or recommendations.`
-        }],
-        proactive_reasoning_status: this.systemClock.getStatus()
-      };
-    } catch (error) {
-      await this.dataPersistence.logError('CleanForestServer.startProactiveReasoning', error);
-      throw error;
+    if (this.systemClock.isRunning) {
+      this.logger.warn('Proactive reasoning is already running.');
+      return { success: false, message: 'Proactive reasoning is already running.' };
     }
+    this.logger.info('Starting proactive reasoning engine...', { config });
+    this.systemClock.start(config);
+    return { success: true, message: 'Proactive reasoning engine started.' };
   }
 
   /**
    * Stop the proactive reasoning system
    */
   async stopProactiveReasoning() {
-    try {
-      console.log('🛑 Stopping proactive reasoning system...');
-      
-      this.systemClock.stop();
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `🛑 **Proactive Reasoning System Stopped**
-
-The background strategic analysis has been deactivated. The system has returned to reactive mode.
-
-• Strategic analysis: **Stopped**
-• Risk detection: **Stopped**  
-• Opportunity scanning: **Stopped**
-• Identity reflection: **Stopped**
-
-The Forest system will continue to function normally for direct interactions, but will no longer provide proactive insights or background analysis.
-
-To restart proactive reasoning, use the \`start_proactive_reasoning\` tool.`
-        }],
-        proactive_reasoning_status: this.systemClock.getStatus()
-      };
-    } catch (error) {
-      await this.dataPersistence.logError('CleanForestServer.stopProactiveReasoning', error);
-      throw error;
+    if (!this.systemClock.isRunning) {
+      this.logger.warn('Proactive reasoning is not running.');
+      return { success: false, message: 'Proactive reasoning is not running.' };
     }
+    this.logger.info('Stopping proactive reasoning engine...');
+    this.systemClock.stop();
+    return { success: true, message: 'Proactive reasoning engine stopped.' };
   }
 
   /**
@@ -1742,36 +2079,50 @@ To restart proactive reasoning, use the \`start_proactive_reasoning\` tool.`
       const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(
         await this.projectManagement.requireActiveProject()
       );
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `🧠 **Proactive Reasoning System Status**
+        content: [
+          {
+            type: 'text',
+            text: `🧠 **Proactive Reasoning System Status**
 
 **System State**: ${status.isRunning ? '🟢 Active' : '🔴 Stopped'}
 
-${status.isRunning ? `
+${
+  status.isRunning
+    ? `
 **Active Background Processes**:
 ${status.activeIntervals.map(interval => `• ${interval.replace('_', ' ')}`).join('\n')}
 
 **Last Analysis Times**:
-${Object.entries(status.lastAnalyses).map(([type, time]) => 
-  `• ${type.replace('_', ' ')}: ${time ? new Date(time).toLocaleString() : 'Not yet run'}`
-).join('\n')}` : ''}
-
-**Recent Proactive Alerts**: ${recentAlerts.length}
-${recentAlerts.length > 0 ? 
-  recentAlerts.slice(0, 3).map(alert => `• ${alert.title}`).join('\n') : 
-  '• No recent alerts'
+${Object.entries(status.lastAnalyses)
+  .map(
+    ([type, time]) =>
+      `• ${type.replace('_', ' ')}: ${time ? new Date(time).toLocaleString() : 'Not yet run'}`
+  )
+  .join('\n')}`
+    : ''
 }
 
-${status.isRunning ? 
-  'The system is actively monitoring your learning patterns and will provide strategic insights.' :
-  'The system is dormant. Use `start_proactive_reasoning` to activate strategic analysis.'
-}`
-        }],
+**Recent Proactive Alerts**: ${recentAlerts.length}
+${
+  recentAlerts.length > 0
+    ? recentAlerts
+        .slice(0, 3)
+        .map(alert => `• ${alert.title}`)
+        .join('\n')
+    : '• No recent alerts'
+}
+
+${
+  status.isRunning
+    ? 'The system is actively monitoring your learning patterns and will provide strategic insights.'
+    : 'The system is dormant. Use `start_proactive_reasoning` to activate strategic analysis.'
+}`,
+          },
+        ],
         system_status: status,
-        recent_alerts: recentAlerts
+        recent_alerts: recentAlerts,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getProactiveStatus', error);
@@ -1783,58 +2134,15 @@ ${status.isRunning ?
    * Trigger immediate analysis of specific type
    */
   async triggerImmediateAnalysis(analysisType) {
-    try {
-      console.log(`⚡ Triggering immediate ${analysisType} analysis...`);
-      
-      await this.systemClock.triggerImmediateAnalysis(analysisType);
-      
+    if (!this.systemClock.isRunning) {
+      this.logger.warn('Cannot trigger analysis, proactive reasoning engine is not running.');
       return {
-        content: [{
-          type: 'text',
-          text: `⚡ **Immediate ${analysisType.charAt(0).toUpperCase() + analysisType.slice(1)} Analysis Triggered**
-
-The system is now performing an immediate ${analysisType} analysis of your current learning state. This includes:
-
-${analysisType === 'strategic' ? `
-🔮 **Strategic Overview Analysis**:
-• Overall trajectory assessment
-• Strategic alignment evaluation  
-• Capability gap identification
-• Momentum pattern analysis` : ''}
-
-${analysisType === 'risk' ? `
-⚠️ **Risk Detection Analysis**:
-• Stagnation risk assessment
-• Skill silo detection
-• Burnout risk evaluation
-• Goal drift identification
-• Engagement decline monitoring` : ''}
-
-${analysisType === 'opportunity' ? `
-🎯 **Opportunity Detection Analysis**:
-• Breakthrough momentum windows
-• Skill synergy opportunities
-• Difficulty readiness assessment
-• Cross-pollination potential
-• Strategic timing analysis` : ''}
-
-${analysisType === 'identity' ? `
-🧘 **Identity Reflection Analysis**:
-• Identity development momentum
-• Authenticity alignment check
-• Strategic positioning assessment
-• Identity risk identification
-• Development opportunity detection` : ''}
-
-Results will be available shortly through proactive insights and recommendations. Check back in a few moments or use \`get_proactive_insights\` to see the analysis results.`
-        }],
-        analysis_triggered: analysisType,
-        triggered_at: new Date().toISOString()
+        success: false,
+        message: 'Proactive reasoning engine is not running. Please start it first.',
       };
-    } catch (error) {
-      await this.dataPersistence.logError('CleanForestServer.triggerImmediateAnalysis', error);
-      throw error;
     }
+    this.logger.info(`Triggering immediate analysis: ${analysisType}`);
+    return await this.systemClock.triggerImmediateAnalysis(analysisType);
   }
 
   /**
@@ -1843,58 +2151,71 @@ Results will be available shortly through proactive insights and recommendations
   async getProactiveInsights(days = 7) {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
-      
+
       // Get recent alerts and insights
       const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(projectId);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
-      
-      const filteredAlerts = recentAlerts.filter(alert => 
-        new Date(alert.createdAt) >= cutoffDate
-      );
-      
-      // Get insight history
-      const strategicHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'strategic');
-      const riskHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'risks');
-      const opportunityHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'opportunities');
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `🧠 **Proactive Insights & Recommendations** (Last ${days} days)
 
-${filteredAlerts.length === 0 ? `No proactive insights generated in the last ${days} days.
+      const filteredAlerts = recentAlerts.filter(alert => new Date(alert.createdAt) >= cutoffDate);
+
+      // Get insight history
+      const strategicHistory = this.proactiveInsightsHandler.getInsightHistory(
+        projectId,
+        'strategic'
+      );
+      const riskHistory = this.proactiveInsightsHandler.getInsightHistory(projectId, 'risks');
+      const opportunityHistory = this.proactiveInsightsHandler.getInsightHistory(
+        projectId,
+        'opportunities'
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🧠 **Proactive Insights & Recommendations** (Last ${days} days)
+
+${
+  filteredAlerts.length === 0
+    ? `No proactive insights generated in the last ${days} days.
 
 This could mean:
 • The proactive reasoning system hasn't been running long enough
 • Your learning patterns are stable and not triggering alerts
 • The system is in observation mode building baseline patterns
 
-Try using \`trigger_immediate_analysis\` to generate fresh insights.` : 
-
-`**Recent Strategic Alerts** (${filteredAlerts.length}):
-${filteredAlerts.slice(0, 5).map(alert => `
+Try using \`trigger_immediate_analysis\` to generate fresh insights.`
+    : `**Recent Strategic Alerts** (${filteredAlerts.length}):
+${filteredAlerts
+  .slice(0, 5)
+  .map(
+    alert => `
 📋 **${alert.title}** 
    ${alert.message}
-   *${new Date(alert.createdAt).toLocaleDateString()}*`).join('\n')}
+   *${new Date(alert.createdAt).toLocaleDateString()}*`
+  )
+  .join('\n')}
 
 **Analysis Activity**:
 • Strategic insights: ${strategicHistory.length} recent analyses
 • Risk assessments: ${riskHistory.length} recent scans  
 • Opportunity detection: ${opportunityHistory.length} recent scans
 
-**System Wisdom**: Your proactive reasoning system is ${filteredAlerts.length >= 3 ? 'highly active' : filteredAlerts.length >= 1 ? 'moderately active' : 'building baseline'}, providing ${filteredAlerts.filter(a => a.urgency === 'high').length} high-priority insights.`}
-`
-        }],
+**System Wisdom**: Your proactive reasoning system is ${filteredAlerts.length >= 3 ? 'highly active' : filteredAlerts.length >= 1 ? 'moderately active' : 'building baseline'}, providing ${filteredAlerts.filter(a => a.urgency === 'high').length} high-priority insights.`
+}
+`,
+          },
+        ],
         insights_summary: {
           total_alerts: filteredAlerts.length,
           high_priority: filteredAlerts.filter(a => a.urgency === 'high').length,
           strategic_analyses: strategicHistory.length,
           risk_assessments: riskHistory.length,
           opportunity_scans: opportunityHistory.length,
-          days_analyzed: days
+          days_analyzed: days,
         },
-        recent_alerts: filteredAlerts
+        recent_alerts: filteredAlerts,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getProactiveInsights', error);
@@ -1909,18 +2230,18 @@ ${filteredAlerts.slice(0, 5).map(alert => `
     try {
       const projectId = await this.projectManagement.requireActiveProject();
       const recentAlerts = await this.proactiveInsightsHandler.getRecentAlerts(projectId);
-      
+
       // Filter alerts that contain recommendations
-      let recommendations = recentAlerts.filter(alert => 
-        alert.type === 'strategic' || alert.items?.some(item => item.recommendation)
+      let recommendations = recentAlerts.filter(
+        alert => alert.type === 'strategic' || alert.items?.some(item => item.recommendation)
       );
-      
+
       if (priority !== 'all') {
-        recommendations = recommendations.filter(rec => 
-          rec.urgency === priority || rec.items?.some(item => item.priority === priority)
+        recommendations = recommendations.filter(
+          rec => rec.urgency === priority || rec.items?.some(item => item.priority === priority)
         );
       }
-      
+
       // Sort by urgency and recency
       recommendations.sort((a, b) => {
         const urgencyOrder = { high: 3, medium: 2, low: 1 };
@@ -1928,47 +2249,61 @@ ${filteredAlerts.slice(0, 5).map(alert => `
         if (urgencyDiff !== 0) return urgencyDiff;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-      
-      return {
-        content: [{
-          type: 'text',
-          text: `🎯 **Strategic Recommendations** ${priority !== 'all' ? `(${priority} priority)` : ''}
 
-${recommendations.length === 0 ? 
-  `No strategic recommendations available${priority !== 'all' ? ` for ${priority} priority items` : ''}.
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🎯 **Strategic Recommendations** ${priority !== 'all' ? `(${priority} priority)` : ''}
+
+${
+  recommendations.length === 0
+    ? `No strategic recommendations available${priority !== 'all' ? ` for ${priority} priority items` : ''}.
 
 To generate fresh recommendations:
 • Use \`trigger_immediate_analysis strategic\` for strategic insights
 • Use \`trigger_immediate_analysis opportunity\` for opportunity recommendations
 • Ensure the proactive reasoning system is running with \`start_proactive_reasoning\`
 
-The system provides its most valuable recommendations when it has sufficient learning history and activity to analyze.` :
+The system provides its most valuable recommendations when it has sufficient learning history and activity to analyze.`
+    : `**Current Strategic Recommendations**:
 
-`**Current Strategic Recommendations**:
-
-${recommendations.slice(0, 5).map((rec, index) => `
+${recommendations
+  .slice(0, 5)
+  .map(
+    (rec, index) => `
 **${index + 1}. ${rec.title}** ${rec.urgency === 'high' ? '🔥' : rec.urgency === 'medium' ? '⚡' : '💡'}
 ${rec.message}
 
-${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item => 
-  `• ${item.recommendation}`
-).join('\n') || ''}
+${
+  rec.items
+    ?.filter(item => item.recommendation)
+    .slice(0, 2)
+    .map(item => `• ${item.recommendation}`)
+    .join('\n') || ''
+}
 
-*Generated: ${new Date(rec.createdAt).toLocaleString()}*`).join('\n')}
+*Generated: ${new Date(rec.createdAt).toLocaleString()}*`
+  )
+  .join('\n')}
 
-**Strategic Focus**: ${recommendations.filter(r => r.urgency === 'high').length > 0 ? 
-  'High-priority strategic adjustments needed' : 
-  'Maintain current trajectory with minor optimizations'}`}
-`
-        }],
+**Strategic Focus**: ${
+        recommendations.filter(r => r.urgency === 'high').length > 0
+          ? 'High-priority strategic adjustments needed'
+          : 'Maintain current trajectory with minor optimizations'
+      }`
+}
+`,
+          },
+        ],
         recommendations_summary: {
           total_count: recommendations.length,
           high_priority: recommendations.filter(r => r.urgency === 'high').length,
           medium_priority: recommendations.filter(r => r.urgency === 'medium').length,
           low_priority: recommendations.filter(r => r.urgency === 'low').length,
-          filter_applied: priority
+          filter_applied: priority,
         },
-        strategic_recommendations: recommendations.slice(0, 10)
+        strategic_recommendations: recommendations.slice(0, 10),
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getStrategicRecommendations', error);
@@ -1986,11 +2321,12 @@ ${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item =>
       const archiverStatus = this.systemClock.dataArchiver.getStatus();
       const projectId = await this.projectManagement.requireActiveProject();
       const archiveNeeded = await this.systemClock.dataArchiver.assessArchiveNeeds(projectId);
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📦 **Data Archiver Status**
+        content: [
+          {
+            type: 'text',
+            text: `📦 **Data Archiver Status**
 
 **System Status**: ${archiverStatus.isActive ? '🟢 Active' : '🔴 Inactive'}
 
@@ -2004,11 +2340,12 @@ ${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item =>
 
 **Last Archive Check**: ${archiverStatus.lastArchiveCheck}
 
-**Long-term Scalability**: The archiver ensures your Forest system remains fast and efficient even after years of learning data accumulation by intelligently moving old data to archives while preserving the wisdom and insights.`
-        }],
+**Long-term Scalability**: The archiver ensures your Forest system remains fast and efficient even after years of learning data accumulation by intelligently moving old data to archives while preserving the wisdom and insights.`,
+          },
+        ],
         archiver_status: archiverStatus,
         archive_needed: archiveNeeded,
-        project_id: projectId
+        project_id: projectId,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getArchiveStatus', error);
@@ -2022,17 +2359,18 @@ ${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item =>
   async triggerManualArchiving({ forceArchive = false } = {}) {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
-      
-      console.log('📦 Manual archiving triggered by user');
-      
+
+      this.logger.info('📦 Manual archiving triggered by user');
+
       if (!forceArchive) {
         // Check if archiving is actually needed
         const archiveNeeded = await this.systemClock.dataArchiver.assessArchiveNeeds(projectId);
         if (!archiveNeeded) {
           return {
-            content: [{
-              type: 'text',
-              text: `📦 **Manual Archiving Assessment**
+            content: [
+              {
+                type: 'text',
+                text: `📦 **Manual Archiving Assessment**
 
 ✅ **No archiving needed** - Current data sizes are within optimal thresholds.
 
@@ -2041,21 +2379,23 @@ ${rec.items?.filter(item => item.recommendation).slice(0, 2).map(item =>
 • HTA branches: No old completed branches detected
 • Working memory: Operating efficiently
 
-To force archiving anyway, use the \`forceArchive: true\` parameter.`
-            }],
+To force archiving anyway, use the \`forceArchive: true\` parameter.`,
+              },
+            ],
             archive_needed: false,
-            forced: false
+            forced: false,
           };
         }
       }
-      
+
       // Perform archiving
       const archiveResults = await this.systemClock.dataArchiver.performArchiving({ projectId });
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📦 **Data Archiving Completed Successfully**
+        content: [
+          {
+            type: 'text',
+            text: `📦 **Data Archiving Completed Successfully**
 
 **Learning History Archiving**:
 • Items archived: ${archiveResults.learningHistory.itemsArchived || 0}
@@ -2077,10 +2417,11 @@ To force archiving anyway, use the \`forceArchive: true\` parameter.`
 
 **Next Steps**: The archived data remains accessible through archive files, and the extracted wisdom will enhance future strategic recommendations.
 
-*Archived at: ${new Date(archiveResults.archivedAt).toLocaleString()}*`
-        }],
+*Archived at: ${new Date(archiveResults.archivedAt).toLocaleString()}*`,
+          },
+        ],
         archive_results: archiveResults,
-        forced: forceArchive
+        forced: forceArchive,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.triggerManualArchiving', error);
@@ -2094,13 +2435,14 @@ To force archiving anyway, use the \`forceArchive: true\` parameter.`
   async configureArchiveThresholds(newThresholds = {}) {
     try {
       this.systemClock.dataArchiver.configureThresholds(newThresholds);
-      
+
       const updatedThresholds = this.systemClock.dataArchiver.getStatus().archiveThresholds;
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📦 **Archive Thresholds Updated**
+        content: [
+          {
+            type: 'text',
+            text: `📦 **Archive Thresholds Updated**
 
 **New Configuration**:
 • Learning history archiving: ${updatedThresholds.learningHistoryMonths} months
@@ -2110,10 +2452,11 @@ To force archiving anyway, use the \`forceArchive: true\` parameter.`
 
 **Impact**: These thresholds determine when the system automatically archives old data to maintain optimal performance. Lower values mean more frequent archiving and leaner working memory. Higher values preserve more data in active memory.
 
-**Recommendation**: The default values are optimized for most use cases. Adjust only if you have specific performance requirements or data retention needs.`
-        }],
+**Recommendation**: The default values are optimized for most use cases. Adjust only if you have specific performance requirements or data retention needs.`,
+          },
+        ],
         updated_thresholds: updatedThresholds,
-        changes_applied: Object.keys(newThresholds)
+        changes_applied: Object.keys(newThresholds),
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.configureArchiveThresholds', error);
@@ -2127,16 +2470,17 @@ To force archiving anyway, use the \`forceArchive: true\` parameter.`
   async getWisdomStore({ category = 'all', limit = 10 } = {}) {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
-      
+
       // Load wisdom store
       let wisdomStore;
       try {
         wisdomStore = await this.dataPersistence.loadProjectData(projectId, 'wisdom.json');
       } catch (error) {
         return {
-          content: [{
-            type: 'text',
-            text: `📚 **Wisdom Store**
+          content: [
+            {
+              type: 'text',
+              text: `📚 **Wisdom Store**
 
 💡 **No wisdom entries found** - This indicates either:
 • No data has been archived yet
@@ -2148,41 +2492,53 @@ To force archiving anyway, use the \`forceArchive: true\` parameter.`
 2. Ensure you have sufficient completed learning topics and HTA branches
 3. Let the system run for several months to accumulate archivable data
 
-**What Is Wisdom?**: The Forest system extracts high-level insights, patterns, and strategic principles from your archived learning history, preserving the essence of your experience without the bulk of detailed data.`
-          }],
+**What Is Wisdom?**: The Forest system extracts high-level insights, patterns, and strategic principles from your archived learning history, preserving the essence of your experience without the bulk of detailed data.`,
+            },
+          ],
           wisdom_count: 0,
-          categories_available: []
+          categories_available: [],
         };
       }
-      
+
       let entries = wisdomStore.wisdomEntries || [];
-      
+
       // Filter by category if specified
       if (category !== 'all') {
         entries = entries.filter(entry => entry.type === category);
       }
-      
+
       // Sort by recency and limit
-      entries.sort((a, b) => new Date(b.generatedAt || b.dateArchived).getTime() - new Date(a.generatedAt || a.dateArchived).getTime());
+      entries.sort(
+        (a, b) =>
+          new Date(b.generatedAt || b.dateArchived).getTime() -
+          new Date(a.generatedAt || a.dateArchived).getTime()
+      );
       entries = entries.slice(0, limit);
-      
+
       const categories = [...new Set((wisdomStore.wisdomEntries || []).map(e => e.type))];
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📚 **Distilled Wisdom Store** ${category !== 'all' ? `(${category})` : ''}
+        content: [
+          {
+            type: 'text',
+            text: `📚 **Distilled Wisdom Store** ${category !== 'all' ? `(${category})` : ''}
 
 **Total Wisdom Entries**: ${wisdomStore.wisdomEntries?.length || 0}
 **Categories Available**: ${categories.join(', ') || 'None'}
 **Showing**: ${entries.length} most recent entries
 
-${entries.length === 0 ? '💡 No wisdom entries match your criteria.' : 
-entries.map((entry, index) => `
+${
+  entries.length === 0
+    ? '💡 No wisdom entries match your criteria.'
+    : entries
+        .map(
+          (entry, index) => `
 **${index + 1}. ${entry.type.replace(/_/g, ' ').toUpperCase()}**
 📅 *Generated: ${new Date(entry.generatedAt || entry.dateArchived).toLocaleDateString()}*
 
-${entry.type === 'learning_history_wisdom' ? `
+${
+  entry.type === 'learning_history_wisdom'
+    ? `
 📊 **Learning Period**: ${entry.timespan?.itemCount || 0} topics completed
 🚀 **Breakthrough Rate**: ${entry.insights?.breakthroughRate || 'Unknown'}
 ⭐ **Average Difficulty**: ${entry.insights?.averageDifficulty || 'Unknown'}
@@ -2191,11 +2547,20 @@ ${entry.type === 'learning_history_wisdom' ? `
 💡 **Summary**: ${entry.summaryLearning || 'No summary available'}
 
 📋 **Key Learnings**:
-${(entry.insights?.keyLearnings || []).slice(0, 3).map(learning => `• ${learning.substring(0, 100)}${learning.length > 100 ? '...' : ''}`).join('\n') || '• No key learnings recorded'}
+${
+  (entry.insights?.keyLearnings || [])
+    .slice(0, 3)
+    .map(learning => `• ${learning.substring(0, 100)}${learning.length > 100 ? '...' : ''}`)
+    .join('\n') || '• No key learnings recorded'
+}
 
-🎯 **Applicable When**: ${(entry.applicableContexts?.applicableWhen || []).join(', ') || 'General learning contexts'}` : ''}
+🎯 **Applicable When**: ${(entry.applicableContexts?.applicableWhen || []).join(', ') || 'General learning contexts'}`
+    : ''
+}
 
-${entry.type === 'strategic_branch_wisdom' ? `
+${
+  entry.type === 'strategic_branch_wisdom'
+    ? `
 🎯 **Branch**: ${entry.branchTitle}
 📅 **Duration**: ${entry.branchMetadata?.duration || 'Unknown'}
 ✅ **Achievements**: ${entry.achievements?.totalTasks || 0} tasks, ${entry.achievements?.breakthroughs || 0} breakthroughs (${entry.achievements?.breakthroughRate || '0%'})
@@ -2206,9 +2571,13 @@ ${entry.type === 'strategic_branch_wisdom' ? `
 🌟 **Future Relevance**: ${entry.futureRelevance || 'Unknown'}
 
 📋 **Applicable Principles**:
-${(entry.applicablePrinciples || []).map(principle => `• ${principle}`).join('\n') || '• No principles extracted'}` : ''}
+${(entry.applicablePrinciples || []).map(principle => `• ${principle}`).join('\n') || '• No principles extracted'}`
+    : ''
+}
 
-${entry.type === 'collective_strategic_wisdom' ? `
+${
+  entry.type === 'collective_strategic_wisdom'
+    ? `
 📊 **Scope**: ${entry.scope?.branchCount || 0} branches, ${entry.scope?.totalTasks || 0} tasks, ${entry.scope?.totalBreakthroughs || 0} breakthroughs
 
 🔮 **Strategic Patterns**:
@@ -2220,18 +2589,24 @@ ${entry.type === 'collective_strategic_wisdom' ? `
 ${(entry.distilledPrinciples || []).map(principle => `• ${principle}`).join('\n') || '• No principles available'}
 
 🎯 **Future Recommendations**:
-${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || '• No recommendations available'}` : ''}`).join('\n\n---\n')}
+${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || '• No recommendations available'}`
+    : ''
+}`
+        )
+        .join('\n\n---\n')
+}
 
-**Wisdom Evolution**: This knowledge base grows richer over time as the system archives more of your learning journey, building a personalized repository of strategic insights.`
-        }],
+**Wisdom Evolution**: This knowledge base grows richer over time as the system archives more of your learning journey, building a personalized repository of strategic insights.`,
+          },
+        ],
         wisdom_summary: {
           total_entries: wisdomStore.wisdomEntries?.length || 0,
           categories_available: categories,
           entries_shown: entries.length,
           filter_applied: category,
-          last_updated: wisdomStore.metadata?.lastUpdated
+          last_updated: wisdomStore.metadata?.lastUpdated,
         },
-        wisdom_entries: entries
+        wisdom_entries: entries,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getWisdomStore', error);
@@ -2245,53 +2620,64 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
   async getArchiveMetrics() {
     try {
       const projectId = await this.projectManagement.requireActiveProject();
-      
+
       // Load archive-related files
       const archivePromises = [
         this.dataPersistence.loadProjectData(projectId, 'learning_history.json').catch(() => null),
-        this.dataPersistence.loadProjectData(projectId, 'learning_history_archive.json').catch(() => null),
+        this.dataPersistence
+          .loadProjectData(projectId, 'learning_history_archive.json')
+          .catch(() => null),
         this.dataPersistence.loadProjectData(projectId, 'hta.json').catch(() => null),
         this.dataPersistence.loadProjectData(projectId, 'hta_archive.json').catch(() => null),
         this.dataPersistence.loadProjectData(projectId, 'wisdom.json').catch(() => null),
-        this.dataPersistence.loadProjectData(projectId, 'archive_log.json').catch(() => null)
+        this.dataPersistence.loadProjectData(projectId, 'archive_log.json').catch(() => null),
       ];
-      
-      const [learningHistory, learningArchive, htaData, htaArchive, wisdomStore, archiveLog] = await Promise.all(archivePromises);
-      
+
+      const [learningHistory, learningArchive, htaData, htaArchive, wisdomStore, archiveLog] =
+        await Promise.all(archivePromises);
+
       // Calculate metrics
       const metrics = {
         working_memory: {
           learning_topics: learningHistory?.completedTopics?.length || 0,
           hta_branches: htaData?.strategicBranches?.length || 0,
-          hta_tasks: (htaData?.strategicBranches || []).reduce((sum, branch) => sum + (branch.tasks?.length || 0), 0)
+          hta_tasks: (htaData?.strategicBranches || []).reduce(
+            (sum, branch) => sum + (branch.tasks?.length || 0),
+            0
+          ),
         },
         archived_data: {
           learning_topics: learningArchive?.archivedTopics?.length || 0,
           hta_branches: htaArchive?.archivedBranches?.length || 0,
-          hta_tasks: htaArchive?.archiveMetadata?.totalArchivedTasks || 0
+          hta_tasks: htaArchive?.archiveMetadata?.totalArchivedTasks || 0,
         },
         wisdom_generated: {
           total_entries: wisdomStore?.wisdomEntries?.length || 0,
           categories: Object.keys(wisdomStore?.metadata?.categories || {}),
-          last_generated: wisdomStore?.metadata?.lastUpdated
+          last_generated: wisdomStore?.metadata?.lastUpdated,
         },
         archiving_activity: {
           total_sessions: archiveLog?.metadata?.totalSessions || 0,
           total_items_archived: archiveLog?.metadata?.totalItemsArchived || 0,
           total_wisdom_generated: archiveLog?.metadata?.totalWisdomGenerated || 0,
-          last_archived: archiveLog?.metadata?.lastArchived
-        }
+          last_archived: archiveLog?.metadata?.lastArchived,
+        },
       };
-      
+
       // Calculate scalability scores
-      const totalWorkingMemory = metrics.working_memory.learning_topics + metrics.working_memory.hta_tasks;
+      const totalWorkingMemory =
+        metrics.working_memory.learning_topics + metrics.working_memory.hta_tasks;
       const archiveThresholds = this.systemClock.dataArchiver.getStatus().archiveThresholds;
-      const scalabilityScore = Math.max(0, 100 - (totalWorkingMemory / archiveThresholds.maxWorkingMemorySize) * 100);
-      
+      const scalabilityScore = Math.max(
+        0,
+        100 - (totalWorkingMemory / archiveThresholds.maxWorkingMemorySize) * 100
+      );
+
       return {
-        content: [{
-          type: 'text',
-          text: `📊 **Archive Metrics & Scalability Report**
+        content: [
+          {
+            type: 'text',
+            text: `📊 **Archive Metrics & Scalability Report**
 
 **Working Memory (Active Data)**:
 • Learning topics: ${metrics.working_memory.learning_topics.toLocaleString()}
@@ -2319,11 +2705,12 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
 
 **System Capacity**: ${totalWorkingMemory.toLocaleString()} / ${archiveThresholds.maxWorkingMemorySize.toLocaleString()} items (${((totalWorkingMemory / archiveThresholds.maxWorkingMemorySize) * 100).toFixed(1)}% utilized)
 
-**Long-term Outlook**: ${totalWorkingMemory < archiveThresholds.maxWorkingMemorySize * 0.5 ? 'System has ample capacity for continued growth' : totalWorkingMemory < archiveThresholds.maxWorkingMemorySize * 0.8 ? 'System approaching optimal archiving point' : 'System would benefit from archiving to maintain performance'}`
-        }],
+**Long-term Outlook**: ${totalWorkingMemory < archiveThresholds.maxWorkingMemorySize * 0.5 ? 'System has ample capacity for continued growth' : totalWorkingMemory < archiveThresholds.maxWorkingMemorySize * 0.8 ? 'System approaching optimal archiving point' : 'System would benefit from archiving to maintain performance'}`,
+          },
+        ],
         archive_metrics: metrics,
         scalability_score: scalabilityScore,
-        capacity_utilization: (totalWorkingMemory / archiveThresholds.maxWorkingMemorySize) * 100
+        capacity_utilization: (totalWorkingMemory / archiveThresholds.maxWorkingMemorySize) * 100,
       };
     } catch (error) {
       await this.dataPersistence.logError('CleanForestServer.getArchiveMetrics', error);
@@ -2340,16 +2727,16 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
     try {
       const stats = this.logger.getStats();
       const logDirectory = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'logs');
-      
+
       // Check which log files exist
       const logFiles = [
         'forest-app.log',
-        'forest-errors.log', 
+        'forest-errors.log',
         'forest-performance.log',
         'forest-realtime.log',
-        'forest-structured.json'
+        'forest-structured.json',
       ];
-      
+
       const fileStatus = {};
       for (const file of logFiles) {
         const filePath = path.join(logDirectory, file);
@@ -2358,17 +2745,18 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
           fileStatus[file] = {
             exists: true,
             size: this.logger.formatBytes(stat.size),
-            modified: stat.mtime.toISOString()
+            modified: stat.mtime.toISOString(),
           };
         } catch (error) {
           fileStatus[file] = { exists: false };
         }
       }
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📝 **Logging System Status**
+        content: [
+          {
+            type: 'text',
+            text: `📝 **Logging System Status**
 
 **System Health**: 🟢 Active and Running
 **Log Directory**: ${logDirectory}
@@ -2380,11 +2768,13 @@ ${(entry.recommendationsForFuture || []).map(rec => `• ${rec}`).join('\n') || 
 • Active timers: ${stats.activeTimers}
 
 **Log Files**:
-${Object.entries(fileStatus).map(([file, status]) => 
-  status.exists ? 
-    `• 🟢 ${file}: ${status.size} (modified: ${new Date(status.modified).toLocaleString()})` :
-    `• 🔴 ${file}: Not created yet`
-).join('\n')}
+${Object.entries(fileStatus)
+  .map(([file, status]) =>
+    status.exists
+      ? `• 🟢 ${file}: ${status.size} (modified: ${new Date(status.modified).toLocaleString()})`
+      : `• 🔴 ${file}: Not created yet`
+  )
+  .join('\n')}
 
 **Real-Time Monitoring**:
 📺 To view logs in real-time, use the log viewer:
@@ -2396,19 +2786,20 @@ node forest-server/tools/log-viewer.js
 • \`node tools/log-viewer.js -l error\` - Show only errors
 • \`node tools/log-viewer.js -c DataArchiver\` - Show only DataArchiver logs
 • \`node tools/log-viewer.js -m\` - Watch all log files
-• \`node tools/log-viewer.js --filter "archiving"\` - Filter specific terms`
-        }],
+• \`node tools/log-viewer.js --filter "archiving"\` - Filter specific terms`,
+          },
+        ],
         logging_status: {
           active: true,
           logDirectory,
           fileStatus,
-          systemStats: stats
-        }
+          systemStats: stats,
+        },
       };
     } catch (error) {
       this.logger.error('Error getting logging status', {
         module: 'CleanForestServer',
-        error: error.message
+        error: error.message,
       });
       throw error;
     }
@@ -2420,11 +2811,12 @@ node forest-server/tools/log-viewer.js
   async getLogStats() {
     try {
       const stats = this.logger.getStats();
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📊 **Logging Performance Statistics**
+        content: [
+          {
+            type: 'text',
+            text: `📊 **Logging Performance Statistics**
 
 **System Performance**:
 • Uptime: ${Math.floor(stats.uptime / 3600)}h ${Math.floor((stats.uptime % 3600) / 60)}m
@@ -2441,14 +2833,15 @@ node forest-server/tools/log-viewer.js
 • error, warn, info, debug, trace
 • perf (performance), memory, event, user
 
-**Recent Activity**: Logging system is actively capturing all Forest.os operations including proactive reasoning, data archiving, and user interactions.`
-        }],
-        detailed_stats: stats
+**Recent Activity**: Logging system is actively capturing all Forest.os operations including proactive reasoning, data archiving, and user interactions.`,
+          },
+        ],
+        detailed_stats: stats,
       };
     } catch (error) {
       this.logger.error('Error getting log stats', {
         module: 'CleanForestServer',
-        error: error.message
+        error: error.message,
       });
       throw error;
     }
@@ -2463,15 +2856,16 @@ node forest-server/tools/log-viewer.js
         component: component || 'UserInput',
         projectId,
         userId,
-        ...metadata
+        ...metadata,
       };
-      
+
       this.logger[level](message, logMeta);
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `📝 **Log Entry Created**
+        content: [
+          {
+            type: 'text',
+            text: `📝 **Log Entry Created**
 
 **Level**: ${level.toUpperCase()}
 **Message**: ${message}
@@ -2479,8 +2873,9 @@ node forest-server/tools/log-viewer.js
 ${projectId ? `**Project**: ${projectId}` : ''}
 ${userId ? `**User**: ${userId}` : ''}
 
-✅ Log entry has been written to the Forest.os logging system and is available in real-time monitoring.`
-        }],
+✅ Log entry has been written to the Forest.os logging system and is available in real-time monitoring.`,
+          },
+        ],
         log_entry: {
           level,
           message,
@@ -2488,15 +2883,15 @@ ${userId ? `**User**: ${userId}` : ''}
           projectId,
           userId,
           metadata,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
     } catch (error) {
       this.logger.error('Error creating log entry', {
         module: 'CleanForestServer',
         error: error.message,
         requestedLevel: level,
-        requestedMessage: message
+        requestedMessage: message,
       });
       throw error;
     }
@@ -2508,30 +2903,32 @@ ${userId ? `**User**: ${userId}` : ''}
   async startPerformanceTimer({ label, component }) {
     try {
       this.logger.startTimer(label);
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `⏱️ **Performance Timer Started**
+        content: [
+          {
+            type: 'text',
+            text: `⏱️ **Performance Timer Started**
 
 **Timer Label**: ${label}
 **Component**: ${component || 'Unknown'}
 **Started At**: ${new Date().toLocaleTimeString()}
 
-📊 The timer is now tracking performance metrics. Use \`end_performance_timer\` with the same label to complete the measurement.`
-        }],
+📊 The timer is now tracking performance metrics. Use \`end_performance_timer\` with the same label to complete the measurement.`,
+          },
+        ],
         timer: {
           label,
           component,
           started: true,
-          startTime: new Date().toISOString()
-        }
+          startTime: new Date().toISOString(),
+        },
       };
     } catch (error) {
       this.logger.error('Error starting performance timer', {
         module: 'CleanForestServer',
         error: error.message,
-        timerLabel: label
+        timerLabel: label,
       });
       throw error;
     }
@@ -2543,45 +2940,49 @@ ${userId ? `**User**: ${userId}` : ''}
   async endPerformanceTimer({ label, metadata = {} }) {
     try {
       const duration = this.logger.endTimer(label, metadata);
-      
+
       if (duration === undefined) {
         return {
-          content: [{
-            type: 'text',
-            text: `⚠️ **Timer Not Found**
+          content: [
+            {
+              type: 'text',
+              text: `⚠️ **Timer Not Found**
 
 **Timer Label**: ${label}
 
-The specified timer was not found. Make sure you've started a timer with this label using \`start_performance_timer\`.`
-          }],
-          timer_found: false
+The specified timer was not found. Make sure you've started a timer with this label using \`start_performance_timer\`.`,
+            },
+          ],
+          timer_found: false,
         };
       }
-      
+
       return {
-        content: [{
-          type: 'text',
-          text: `⏱️ **Performance Timer Completed**
+        content: [
+          {
+            type: 'text',
+            text: `⏱️ **Performance Timer Completed**
 
 **Timer Label**: ${label}
 **Duration**: ${duration.toFixed(2)}ms
 **Completed At**: ${new Date().toLocaleTimeString()}
 
-📊 Performance data has been logged and is available in the performance log file for analysis.`
-        }],
+📊 Performance data has been logged and is available in the performance log file for analysis.`,
+          },
+        ],
         timer: {
           label,
           duration: `${duration.toFixed(2)}ms`,
           completed: true,
           endTime: new Date().toISOString(),
-          metadata
-        }
+          metadata,
+        },
       };
     } catch (error) {
       this.logger.error('Error ending performance timer', {
         module: 'CleanForestServer',
         error: error.message,
-        timerLabel: label
+        timerLabel: label,
       });
       throw error;
     }
@@ -2594,12 +2995,13 @@ The specified timer was not found. Make sure you've started a timer with this la
     try {
       const logDirectory = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'logs');
       const logPath = path.join(logDirectory, logFile);
-      
+
       if (!fs.existsSync(logPath)) {
         return {
-          content: [{
-            type: 'text',
-            text: `📝 **Log File Not Found**
+          content: [
+            {
+              type: 'text',
+              text: `📝 **Log File Not Found**
 
 **Requested File**: ${logFile}
 **Path**: ${logPath}
@@ -2612,50 +3014,48 @@ The specified timer was not found. Make sure you've started a timer with this la
 **Available Options**:
 • Try \`forest-app.log\` for general application logs
 • Use \`get_logging_status\` to see which files exist
-• Start some Forest.os operations to generate logs`
-          }],
-          file_exists: false
+• Start some Forest.os operations to generate logs`,
+            },
+          ],
+          file_exists: false,
         };
       }
-      
+
       // Read recent lines from the file
       const { spawn } = require('child_process');
       const tailProcess = spawn('tail', ['-n', lines.toString(), logPath]);
-      
+
       let logContent = '';
-      
+
       return new Promise((resolve, reject) => {
-        tailProcess.stdout.on('data', (data) => {
+        tailProcess.stdout.on('data', data => {
           logContent += data.toString();
         });
-        
-        tailProcess.on('close', (code) => {
+
+        tailProcess.on('close', code => {
           if (code !== 0) {
             reject(new Error(`Failed to read log file: exit code ${code}`));
             return;
           }
-          
+
           let lines = logContent.split('\n').filter(line => line.trim());
-          
+
           // Apply filters
           if (level) {
-            lines = lines.filter(line => 
-              line.toLowerCase().includes(`[${level.toLowerCase()}]`)
-            );
+            lines = lines.filter(line => line.toLowerCase().includes(`[${level.toLowerCase()}]`));
           }
-          
+
           if (component) {
-            lines = lines.filter(line => 
-              line.toLowerCase().includes(component.toLowerCase())
-            );
+            lines = lines.filter(line => line.toLowerCase().includes(component.toLowerCase()));
           }
-          
+
           const displayLines = lines.slice(-20); // Show last 20 matching lines
-          
+
           resolve({
-            content: [{
-              type: 'text',
-              text: `📝 **Recent Log Entries** (${logFile})
+            content: [
+              {
+                type: 'text',
+                text: `📝 **Recent Log Entries** (${logFile})
 
 **Filters Applied**:
 ${level ? `• Level: ${level}` : ''}
@@ -2667,15 +3067,16 @@ ${component ? `• Component: ${component}` : ''}
 ${displayLines.join('\n')}
 \`\`\`
 
-📺 **Real-time viewing**: Use \`node forest-server/tools/log-viewer.js\` for live log monitoring.`
-            }],
+📺 **Real-time viewing**: Use \`node forest-server/tools/log-viewer.js\` for live log monitoring.`,
+              },
+            ],
             log_entries: displayLines,
             total_lines: lines.length,
-            file_path: logPath
+            file_path: logPath,
           });
         });
-        
-        tailProcess.on('error', (error) => {
+
+        tailProcess.on('error', error => {
           reject(error);
         });
       });
@@ -2683,47 +3084,47 @@ ${displayLines.join('\n')}
       this.logger.error('Error viewing recent logs', {
         module: 'CleanForestServer',
         error: error.message,
-        requestedFile: logFile
+        requestedFile: logFile,
       });
       throw error;
     }
   }
 }
 
-// ===== MAIN EXECUTION =====
-
-// Detect interactive (human) run vs MCP/pipe (already declared above)
-// MCP mode detection and console redirection is now handled at the top of the file
-
-// Create and run the server
-if (!isMcpMode) {
-  console.error("🚀 Starting Clean Forest MCP Server - NO HARDCODED RESPONSES...");
-}
-
-try {
-  const server = new CleanForestServer();
-  server.run().catch((/** @type {any} */ error) => {
-    if (isMcpMode) {
-      // For MCP mode, write error to log file and exit cleanly
-      const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
-      fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL]: ${error.message}\n${error.stack}\n`);
-    } else {
-      console.error("❌ Error in server.run():", error.message);
-      console.error("Stack:", error.stack);
-    }
-    process.exit(1);
-  });
-} catch (/** @type {any} */ error) {
-  if (isMcpMode) {
-    // For MCP mode, write error to log file and exit cleanly
-    const logPath = path.join(path.dirname(new URL(import.meta.url).pathname), 'logs', 'mcp-startup.log');
-    fs.appendFileSync(logPath, `${new Date().toISOString()} [FATAL]: ${error.message}\n${error.stack}\n`);
-  } else {
-    console.error("❌ Error creating/running server:", error.message);
-    console.error("Stack:", error.stack);
+/**
+ * Main application entry point.
+ * This function sets up and runs the CleanForestServer.
+ */
+async function main() {
+  if (isInteractive) {
+    topLevelLogger.info('🌲 Welcome to Forest.os v2.0 🌲');
+    topLevelLogger.info('Running in interactive mode. Type "help" for a list of commands.');
   }
-  process.exit(1);
+
+  // Create an instance of the server. The constructor now handles initialization.
+  const forestServer = new CleanForestServer();
+  
+  // Await the server setup and run it.
+  try {
+    await forestServer.setupServer();
+    await forestServer.run();
+  } catch (error) {
+    // The logger might not be available if the constructor failed,
+    // so we use console.error as a fallback.
+    const logger = forestServer.logger || console;
+    logger.error(`Unhandled exception in main: ${error.message}`, {
+      stack: error.stack,
+      module: 'main'
+    });
+    process.exit(1);
+  }
 }
 
-export { CleanForestServer };
-export { CleanForestServer as ModularForestServer };
+// Check if this script is the main module being run
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}
+
+
+// For testing purposes, we export the server class
+export { CleanForestServer, main };
